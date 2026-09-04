@@ -385,3 +385,24 @@ Work Log:
 Stage Summary:
 - Root cause class: unprefixed max-w-* on DialogContent loses to default sm:max-w-lg — same pattern audited across ALL modules; only sales had it
 - 4 dialogs fixed in src/components/modules/sales/index.tsx; no other files touched
+
+---
+Task ID: 5 (backup-upload-header + setup-update)
+Agent: coordinator (main)
+Task: Backup upload/restore + header backup options + updated setup.exe (v1.0.1) that upgrades the installed app
+
+Work Log:
+- backup.ts: added validateSqliteDbBuffer (SQLite magic + User/Setting/Product tables scan), restoreFromBuffer (safety backup via createBackup → $disconnect → purge wal/shm → atomic tmp+rename → reconnect → SELECT COUNT(*) FROM "User" test → rollback safety on failure), restoreFromBackupFile
+- audit.ts: added 'backup_restore' action
+- /api/admin/backup POST: now 3-way — JSON {} create | JSON {restore} restore-from-list | multipart file upload-restore (512MB cap, friendly Dari errors, rolledBack flag)
+- New src/components/shared/backup-menu.tsx: header dropdown (admin-only) — بکاپ فوری / آپلود بکاپ و بازیابی (hidden file input + destructive AlertDialog + XHR upload w/ live % progress, bypasses offline fetch interceptor) / مدیریت بکاپ‌ها → settings tab; mounted in page.tsx header after theme toggle
+- Settings module: per-row بازیابی button + آپلود و بازیابی button + shared restore AlertDialog; clearOfflineCache + auto reload after restore
+- Verified E2E in browser: backup-now toast (backup-20260904-172558.db), curl multipart restore 200 w/ safetyBackup, header UI upload → confirm dialog (screenshot) → restore → auto reload → dashboard data intact, safety backup on disk, audit log shows backup_restore w/ source+safety names; settings has upload+restore buttons
+- Desktop update build: installer.nsi VERSION 1.0.1.0 + taskkill running app + RMDir old resources/server; build-desktop.sh now prunes traced junk (download/desktop-dist/skills/tool-results/src/dev.log etc. — win-unpacked 1.4G→544M); package.json 0.2.1→1.0.1
+- Rebuilt: win-unpacked 544M, Setup.exe 143MB (verified MZ + UTF16 '1.0.1.0'), Portable.zip 236MB; packaged-server smoke test on :37899 → GET / 200 + admin login JSON + auth guard; backup feature chunk present in packaged static
+- Release v1.0.1 (id 382908270) with Dari upgrade notes; uploaded Setup.exe (149,888,248B) + Portable.zip (246,580,951B), both state=uploaded; README download links → releases/latest + upgrade instructions
+
+Stage Summary:
+- Header now has 💾 menu (admin): backup now / upload & restore w/ progress / manage; Settings has per-backup restore + upload
+- Restore is safe: always auto safety-backup, schema validation, atomic swap, auto-rollback on invalid file, full audit trail
+- Update path for installed Windows app: run v1.0.1 Setup.exe → closes app, replaces files, keeps %APPDATA%\ManufacturingERP data

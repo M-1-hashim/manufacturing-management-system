@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 
 import DashboardModule from '@/components/modules/dashboard'
+import BackupMenu from '@/components/shared/backup-menu'
 import ProductsModule from '@/components/modules/products'
 import MaterialsModule from '@/components/modules/materials'
 import FormulasModule from '@/components/modules/formulas'
@@ -416,6 +417,8 @@ function Shell() {
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={toggleTheme} aria-label={t('تغییر تم', 'ټینګ بدلول', 'Toggle theme')}>
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+
+              <BackupMenu onGoSettings={() => setActiveTab('settings')} />
             </div>
           </header>
 

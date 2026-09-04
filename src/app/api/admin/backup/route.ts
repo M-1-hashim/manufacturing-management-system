@@ -11,6 +11,8 @@ import {
   getBackupKeep,
   saveBackupConfig,
   isValidBackupName,
+  restoreFromBuffer,
+  restoreFromBackupFile,
 } from '@/lib/backup'
 
 // همه مسیرهای /api/admin فقط برای ادمین (middleware) — اینجا هم دوباره بررسی می‌شود
@@ -65,12 +67,60 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/admin/backup — ایجاد نسخه پشتیبان جدید (دستی)
+// POST /api/admin/backup
+//  — JSON {}                        → ایجاد نسخه پشتیبان جدید (دستی)
+//  — JSON {restore: "backup-….db"}  → بازیابی از یکی از پشتیبان‌های موجود
+//  — multipart/form-data (file)     → آپلود فایل پشتیبان و بازیابی آن
 export async function POST(req: Request) {
   try {
     const guard = await requireAdmin(req)
     if (guard.error) return guard.error
-    const created = await createBackup('manual', { uid: guard.session!.uid, username: guard.session!.username })
+    const actor = { uid: guard.session!.uid, username: guard.session!.username }
+    const contentType = req.headers.get('content-type') || ''
+
+    // آپلود فایل پشتیبان و بازیابی
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData()
+      const file = form.get('file')
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: 'فایل پشتیبان ارسال نشده است' }, { status: 400 })
+      }
+      if (file.size > 512 * 1024 * 1024) {
+        return NextResponse.json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر ۵۱۲ مگابایت)' }, { status: 400 })
+      }
+      const buf = Buffer.from(await file.arrayBuffer())
+      try {
+        const result = await restoreFromBuffer(buf, actor, file.name || 'upload')
+        return NextResponse.json({ ok: true, restored: true, safetyBackup: result.safetyBackup })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'بازیابی ناموفق بود'
+        const bad = msg.includes('معتبر نیست') || msg.includes('سازگار نبود')
+        return NextResponse.json(
+          { error: msg, rolledBack: bad },
+          { status: bad ? 400 : 500 }
+        )
+      }
+    }
+
+    const body = (await req.json().catch(() => ({}))) as { restore?: string }
+
+    // بازیابی از فایل پشتیبان موجود
+    if (body.restore) {
+      if (!isValidBackupName(body.restore)) {
+        return NextResponse.json({ error: 'نام فایل نامعتبر است' }, { status: 400 })
+      }
+      try {
+        const result = await restoreFromBackupFile(body.restore, actor)
+        return NextResponse.json({ ok: true, restored: true, safetyBackup: result.safetyBackup })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'بازیابی ناموفق بود'
+        const bad = msg.includes('سازگار نبود')
+        return NextResponse.json({ error: msg, rolledBack: bad }, { status: bad ? 400 : 500 })
+      }
+    }
+
+    // ایجاد نسخه پشتیبان جدید
+    const created = await createBackup('manual', actor)
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error('backup POST', e)

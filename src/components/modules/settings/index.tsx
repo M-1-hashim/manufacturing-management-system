@@ -1,8 +1,8 @@
 'use client'
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
-import { useEffect, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
 import { useFetch } from '@/lib/hooks'
 import { apiPut, apiDelete, apiPost } from '@/lib/api'
+import { clearOfflineCache } from '@/lib/offline-client'
 import { toast } from 'sonner'
 
 interface BackupFileT {
@@ -116,6 +127,54 @@ export default function SettingsModule() {
       toast.error(e instanceof Error ? e.message : t('خطا در حذف', 'د حذف ستونزه', 'Delete failed'))
     } finally {
       setBDeleting(null)
+    }
+  }
+
+  // ---------- بازیابی (از فایل موجود یا آپلود) ----------
+  const [restoreTarget, setRestoreTarget] = useState<string | null>(null) // نام فایل پشتیبان موجود
+  const [restoreFile, setRestoreFile] = useState<File | null>(null) // فایل آپلودی
+  const [restoring, setRestoring] = useState(false)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+
+  function pickRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] || null
+    e.target.value = ''
+    if (f) setRestoreFile(f)
+  }
+
+  async function doRestore(payload: { restore?: string; file?: File }) {
+    setRestoring(true)
+    try {
+      let res: Response
+      if (payload.file) {
+        const fd = new FormData()
+        fd.append('file', payload.file)
+        res = await fetch('/api/admin/backup', { method: 'POST', body: fd })
+      } else {
+        res = await fetch('/api/admin/backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restore: payload.restore }),
+        })
+      }
+      const body = (await res.json().catch(() => ({}))) as { error?: string; safetyBackup?: string }
+      if (!res.ok) throw new Error(body.error || t('بازیابی ناموفق بود', 'بیا رغونه ناکامې شوه', 'Restore failed'))
+      toast.success(
+        t(
+          `بازیابی انجام شد — بکاپ امنیتی ${body.safetyBackup} گرفته شد`,
+          `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
+          `Restored — safety backup ${body.safetyBackup} created`
+        ),
+        { duration: 6000 }
+      )
+      setRestoreTarget(null)
+      setRestoreFile(null)
+      clearOfflineCache()
+      setTimeout(() => window.location.reload(), 900)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('بازیابی ناموفق بود', 'بیا رغونه ناکامې شوه', 'Restore failed'), { duration: 7000 })
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -337,6 +396,10 @@ export default function SettingsModule() {
                 <Button onClick={backup.refetch} variant="outline" size="sm" className="gap-1.5" aria-label="refresh">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
+                <Button onClick={() => uploadInputRef.current?.click()} variant="outline" size="sm" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  {t('آپلود و بازیابی', 'پورته کول او بیا رغونه', 'Upload & restore')}
+                </Button>
                 <Button onClick={createBackupNow} disabled={bCreating} size="sm" className="gap-2">
                   <HardDriveDownload className="h-4 w-4" />
                   {bCreating ? t('در حال تهیه...', 'چمتو کول...', 'Creating...') : t('پشتیبان بگیر', 'بیک اپ واخله', 'Backup now')}
@@ -369,6 +432,10 @@ export default function SettingsModule() {
                         <td className="px-3 py-2 text-muted-foreground">{fmtDate(f.createdAt)}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1 justify-end">
+                            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-amber-600 hover:text-amber-600" onClick={() => setRestoreTarget(f.name)} disabled={restoring}>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              {t('بازیابی', 'بیا رغونه', 'Restore')}
+                            </Button>
                             <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => downloadBackupFile(f.name)}>
                               <Download className="h-3.5 w-3.5" />
                               {t('دانلود', 'ښکته کړئ', 'Download')}
@@ -388,6 +455,56 @@ export default function SettingsModule() {
             <p className="text-xs text-muted-foreground">
               {t('توصیه: فایل پشتیبان را به‌صورت دوره‌ای دانلود و در فلش یا محل امن نگه‌داری کنید.', 'مشوره: د بیک اپ فایل په دوره يي ډول ښکته کړئ او په خوندي ځای کې یې وساتئ.', 'Tip: periodically download a backup file and keep it on a USB drive or safe location.')}
             </p>
+
+            {/* اینپوت مخفی آپلود بکاپ */}
+            <input ref={uploadInputRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={pickRestoreFile} />
+
+            {/* تأیید بازیابی — از فایل موجود یا آپلودی */}
+            <AlertDialog open={!!restoreTarget || !!restoreFile} onOpenChange={(o) => { if (!o && !restoring) { setRestoreTarget(null); setRestoreFile(null) } }}>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4 text-destructive" />
+                    {t('بازیابی نسخه پشتیبان', 'بیک اپ بیا رغونه', 'Restore backup')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2 text-sm">
+                    <span className="block">
+                      {restoreFile ? (
+                        <>
+                          {t('فایل انتخاب‌شده', 'غوره شوی فایل', 'Selected file')}:{' '}
+                          <b dir="ltr">{restoreFile.name}</b>
+                        </>
+                      ) : (
+                        <>
+                          {t('بازیابی از فایل', 'له فایل څخه بیا رغونه', 'Restore from file')}:{' '}
+                          <b dir="ltr">{restoreTarget}</b>
+                        </>
+                      )}
+                    </span>
+                    <span className="block font-medium text-destructive">
+                      {t('تمام دیتای فعلی با محتوای این فایل جایگزین می‌شود!', 'ټول اوسني معلومات د دې فایل سره بدلېږي!', 'All current data will be replaced with this file!')}
+                    </span>
+                    <span className="block text-muted-foreground">
+                      {t('قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک بکاپ امنیتی گرفته می‌شود.', 'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.', 'A safety backup of current data is created automatically first.')}
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={restoring}>{t('لغو', 'لغوه', 'Cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (restoreFile) void doRestore({ file: restoreFile })
+                      else if (restoreTarget) void doRestore({ restore: restoreTarget })
+                    }}
+                    disabled={restoring}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    {restoring ? t('در حال بازیابی…', 'په بیا رغولو…', 'Restoring…') : t('بازیابی و تعویض دیتا', 'بیا رغونه او بدلون', 'Restore & replace data')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       )}

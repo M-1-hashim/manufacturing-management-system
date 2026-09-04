@@ -138,6 +138,88 @@ export function backupAbsPath(name: string): string {
   return path.join(backupsDir(), name)
 }
 
+// ---------------- بازیابی نسخه پشتیبان (Restore) ----------------
+const SQLITE_MAGIC = Buffer.from('SQLite format 3\0')
+const RESTORE_MAX_BYTES = 512 * 1024 * 1024 // حداکثر ۵۱۲ مگابایت
+
+/** بررسی سریع صحت فایل دیتابیس: امضای SQLite + وجود جداول کلیدی اسکیما */
+export function validateSqliteDbBuffer(buf: Buffer): boolean {
+  if (buf.length < 4096 || buf.length > RESTORE_MAX_BYTES) return false
+  if (!buf.subarray(0, 16).equals(SQLITE_MAGIC)) return false
+  // جداول اصلی برنامه باید در فایل موجود باشند (اسکن بایت‌های صفحات اول)
+  const head = buf.subarray(0, Math.min(buf.length, 8 * 1024 * 1024)).toString('latin1')
+  return head.includes('User') && head.includes('Setting') && head.includes('Product')
+}
+
+export interface RestoreResult {
+  safetyBackup: string
+}
+
+/**
+ * تعویض کامل دیتابیس با فایل پشتیبان.
+ * ترتیب ایمن: بکاپ امنیتی از وضعیت فعلی → قطع اتصال Prisma → پاک‌سازی WAL/SHM
+ * → تعویض اتمیک فایل → اتصال مجدد → تست → در صورت خطا بازگرداندن بکاپ امنیتی
+ */
+export async function restoreFromBuffer(
+  dbBytes: Buffer,
+  actor?: AuditActor | null,
+  sourceLabel = 'upload'
+): Promise<RestoreResult> {
+  if (!validateSqliteDbBuffer(dbBytes)) {
+    throw new Error('فایل ارسالی یک دیتابیس معتبر سامانه نیست')
+  }
+
+  // ۱) بکاپ امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+  const safety = await createBackup('manual', actor)
+
+  // ۲) قطع اتصال‌ها و تعویض فایل
+  await db.$disconnect().catch(() => {})
+  const dbPath = dbFilePath()
+  const tmpPath = `${dbPath}.restore-tmp`
+  try {
+    for (const suffix of ['-wal', '-shm']) {
+      await fsp.unlink(dbPath + suffix).catch(() => {})
+    }
+    await fsp.writeFile(tmpPath, dbBytes)
+    await fsp.rename(tmpPath, dbPath) // تعویض اتمیک
+  } catch (e) {
+    await db.$queryRaw`SELECT 1`.catch(() => {})
+    throw e
+  }
+
+  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، بکاپ امنیتی برمی‌گردد
+  try {
+    await db.$queryRaw`SELECT COUNT(*) FROM "User"`
+    await logAudit(actor ?? null, 'backup_restore', 'system', undefined, `${sourceLabel} — safety: ${safety.name}`)
+    return { safetyBackup: safety.name }
+  } catch (restoreErr) {
+    console.error('[backup] restore validation failed, rolling back', restoreErr)
+    try {
+      await db.$disconnect().catch(() => {})
+      for (const suffix of ['-wal', '-shm']) {
+        await fsp.unlink(dbPath + suffix).catch(() => {})
+      }
+      const rollbackTmp = `${dbPath}.rollback-tmp`
+      await fsp.copyFile(path.join(backupsDir(), safety.name), rollbackTmp)
+      await fsp.rename(rollbackTmp, dbPath)
+      await db.$queryRaw`SELECT 1`
+    } catch (rbErr) {
+      console.error('[backup] rollback failed', rbErr)
+    }
+    throw new Error('فایل پشتیبان سازگار نبود — دیتابیس قبلی بازگردانده شد')
+  }
+}
+
+/** بازیابی از یکی از فایل‌های پشتیبان موجود در پوشه backups */
+export async function restoreFromBackupFile(
+  name: string,
+  actor?: AuditActor | null
+): Promise<RestoreResult> {
+  if (!isValidBackupName(name)) throw new Error('invalid backup name')
+  const buf = await fsp.readFile(path.join(backupsDir(), name))
+  return restoreFromBuffer(buf, actor, name)
+}
+
 // ---------------- زمان‌بند خودکار (یک‌نمونه در هر پروسه) ----------------
 type BackupGlobal = typeof globalThis & {
   __mfgBackupTimer?: ReturnType<typeof setInterval>

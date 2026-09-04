@@ -64,10 +64,14 @@ bun run dev        # http://localhost:3000
 
 | فایل | حجم | توضیح |
 |---|---|---|
-| [**ManufacturingERP-Setup.exe**](https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.0/ManufacturingERP-Setup.exe) | 143MB | نصب‌کننده واقعی ویندوز (NSIS) — پیشنهادی ✅ |
-| [**ManufacturingERP-Windows-Portable.zip**](https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.0/ManufacturingERP-Windows-Portable.zip) | 235MB | نسخه پرتابل — بدون نصب، اکسترکت و اجرا |
+| [**ManufacturingERP-Setup.exe**](https://github.com/M-1-hashim/manufacturing-management-system/releases/latest/download/ManufacturingERP-Setup.exe) | ~143MB | نصب‌کننده واقعی ویندوز (NSIS) — پیشنهادی ✅ |
+| [**ManufacturingERP-Windows-Portable.zip**](https://github.com/M-1-hashim/manufacturing-management-system/releases/latest/download/ManufacturingERP-Windows-Portable.zip) | ~236MB | نسخه پرتابل — بدون نصب، اکسترکت و اجرا |
 
-📄 [راهنمای کامل نصب (دری)](download/README-DESKTOP.md) · [Release Notes](https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.0)
+> 🔄 **آپدیت نسخه نصب‌شده:** فایل `Setup.exe` جدید را دانلود و اجرا کنید — روی نسخه قبلی نصب می‌شود و دیتای شما در `%APPDATA%\ManufacturingERP` حفظ می‌شود.
+>
+> To update an installed copy: just run the latest Setup.exe — it upgrades in place and keeps your data.
+
+📄 [راهنمای کامل نصب (دری)](download/README-DESKTOP.md) · [همه نسخه‌ها / All Releases](https://github.com/M-1-hashim/manufacturing-management-system/releases) · [یادداشت v1.0.1](https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.1)
 
 > ⚠️ نصب‌کننده امضای دیجیتال ندارد → ویندوز SmartScreen: **More info → Run anyway**
 > حساب پیش‌فرض: `admin` / `admin123` — دیتا: `%APPDATA%\ManufacturingERP\data\custom.db`

@@ -15,6 +15,7 @@ export type AuditAction =
   | 'backup'
   | 'backup_auto'
   | 'backup_delete'
+  | 'backup_restore'
 
 export interface AuditActor {
   uid?: string

@@ -43,6 +43,13 @@ bunx electron-builder --win dir --config electron-builder.yml
 echo "[5b/6] Copying standalone server into win-unpacked (cp -a keeps hidden dirs + node_modules)..."
 rm -rf desktop-dist/win-unpacked/resources/server
 cp -a .next-electron/standalone desktop-dist/win-unpacked/resources/server
+# Prune junk that Next's file tracing may have pulled in from the project root
+# (build artifacts, docs, logs — the packaged server needs only its runtime).
+(
+  cd desktop-dist/win-unpacked/resources/server
+  rm -rf download desktop-dist skills tool-results tests examples mini-services src electron .zscripts .agent-ctx db 2>/dev/null || true
+  rm -f dev.log server.log .env 2>/dev/null || true
+)
 # Defensive: main.js uses only node builtins — no deps may ship in resources/app
 rm -rf desktop-dist/win-unpacked/resources/app/node_modules
 

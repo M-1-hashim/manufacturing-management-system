@@ -16,7 +16,7 @@ Unicode true
 
 !define APPNAME "ManufacturingERP"
 !define COMPANY "Afghan Manufacturing ERP"
-!define VERSION "1.0.0.0"
+!define VERSION "1.0.1.0"
 
 Name "${APPNAME}"
 OutFile "..\download\ManufacturingERP-Setup.exe"
@@ -49,7 +49,15 @@ VIAddVersionKey "LegalCopyright" "${COMPANY}"
 
 ; ------------------------------------------------ install
 Section "Install"
+  ; اگر برنامه در حال اجراست ببند — تا فایل‌ها قابل تعویض باشند (آپدیت روی نسخه نصب‌شده)
+  DetailPrint "Closing ${APPNAME} if running..."
+  ExecWait "taskkill /IM ${APPNAME}.exe /F"
+  Sleep 600
+
   SetOutPath "$INSTDIR"
+
+  ; پاک‌سازی نسخه قبلی سرور تعبیه‌شده — تا فایل‌های قدیمی build باقی نمانند
+  RMDir /r "$INSTDIR\resources\server"
 
   ; Full Electron app (exe, dlls, resources\app, resources\server, resources\demo-db)
   ; POSIX makensis: forward slashes; recursion pulls in entire sub-trees
