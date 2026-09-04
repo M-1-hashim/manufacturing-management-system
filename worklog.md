@@ -350,3 +350,21 @@ Work Log:
 
 Stage Summary:
 - Browser-verified E2E: offline ON → category POST → "آفلاین ذخیره شد" toast + pending badge, server truth via curl = NOT created; offline dashboard renders from cache; offline OFF → auto-sync, badge gone, auto-reload, category NOW on server (curl verified)
+
+---
+Task ID: 3 (github-publish)
+Agent: coordinator (main)
+Task: Push project to GitHub + publish setup.exe artifacts
+
+Work Log:
+- Verified token (user M-1-hashim, repo scope); found 400MB of build artifacts tracked in git incl. 3 files >100MB (GitHub limit) and big files in history
+- .gitignore: added desktop-dist/, .next-electron/, electron/dist, download/*.exe|*.zip, db/backups/, tool-results/; created .env.example, untracked .env
+- Rebuilt git history clean (fresh init, single initial commit, 175 source files ~2.5MB); security-scanned for token leaks (none) and hardcoded secrets (session.ts uses env w/ demo fallback)
+- Created repo M-1-hashim/manufacturing-management-system (public), pushed main (3 commits: initial, README bilingual, download links); local main tracks origin/main
+- Created Release v1.0.0 (id 382847635) with Dari/English notes; uploaded assets via uploads.github.com: ManufacturingERP-Setup.exe (149,622,244 B) + ManufacturingERP-Windows-Portable.zip (246,271,393 B), both state=uploaded
+- README.md: added direct download table linking release assets + install guide links; committed and pushed
+
+Stage Summary:
+- Live repo: https://github.com/M-1-hashim/manufacturing-management-system (HTTP 200)
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.0 (HTTP 200); both asset download URLs verified 302 → release-assets CDN
+- Token used one-time in push/upload URLs only, NOT stored in .git/config or any repo file (verified via git grep)
