@@ -60,7 +60,19 @@ bun run dev        # http://localhost:3000
 
 ## 🖥️ برنامه ویندوز | Windows Desktop App
 
-Build a real NSIS installer + portable zip:
+### 📥 دانلود مستقیم | Direct Download (Releases)
+
+| فایل | حجم | توضیح |
+|---|---|---|
+| [**ManufacturingERP-Setup.exe**](https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.0/ManufacturingERP-Setup.exe) | 143MB | نصب‌کننده واقعی ویندوز (NSIS) — پیشنهادی ✅ |
+| [**ManufacturingERP-Windows-Portable.zip**](https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.0/ManufacturingERP-Windows-Portable.zip) | 235MB | نسخه پرتابل — بدون نصب، اکسترکت و اجرا |
+
+📄 [راهنمای کامل نصب (دری)](download/README-DESKTOP.md) · [Release Notes](https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.0)
+
+> ⚠️ نصب‌کننده امضای دیجیتال ندارد → ویندوز SmartScreen: **More info → Run anyway**
+> حساب پیش‌فرض: `admin` / `admin123` — دیتا: `%APPDATA%\ManufacturingERP\data\custom.db`
+
+### 🔨 ساخت مجدد | Rebuild
 
 ```bash
 cd electron && bash build-desktop.sh
