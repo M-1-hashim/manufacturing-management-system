@@ -17,6 +17,9 @@ import {
   X,
   Pencil,
   Loader2,
+  Factory,
+  MapPin,
+  Phone,
 } from 'lucide-react'
 import {
   PageHeader,
@@ -31,6 +34,7 @@ import {
   formatNumber,
   formatMoney,
   toJalaliStr,
+  toGregorianStr,
   STATUS_COLORS,
   CURRENCY_LABELS,
 } from '@/lib/format'
@@ -452,7 +456,12 @@ export default function SalesModule() {
         onChanged={customers.refetch}
       />
 
-      <InvoiceDialog sale={invoiceSale} settings={settings.data} onClose={() => setInvoiceSale(null)} />
+      <InvoiceDialog
+        sale={invoiceSale}
+        settings={settings.data}
+        customers={customerList}
+        onClose={() => setInvoiceSale(null)}
+      />
 
       {/* دیالوگ دریافت پرداخت */}
       {paySale && (
@@ -918,138 +927,374 @@ function NewSaleDialog({
   )
 }
 
-// ================= دیالوگ فاکتور (چاپ) =================
+// ================= تبدیل مبلغ به حروف (دری/پشتو/انگلیسی) =================
+type NumLang = 'fa' | 'ps' | 'en'
+
+const NUM_WORDS: Record<
+  NumLang,
+  { ones: string[]; teens: string[]; tens: string[]; hundreds: string[]; scales: string[]; zero: string; join: string }
+> = {
+  fa: {
+    ones: ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'],
+    teens: ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'],
+    tens: ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'],
+    hundreds: ['', 'صد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'],
+    scales: ['', 'هزار', 'میلیون', 'میلیارد'],
+    zero: 'صفر',
+    join: ' و ',
+  },
+  ps: {
+    ones: ['', 'یو', 'دوه', 'درې', 'څلور', 'پنځه', 'شپږ', 'اووه', 'اته', 'نهه'],
+    teens: ['لس', 'یوولس', 'دولس', 'دیارلس', 'څوارلس', 'پنځلس', 'شپاړلس', 'اوه لس', 'اتلس', 'نولس'],
+    tens: ['', '', 'شل', 'دېرش', 'څلویښت', 'پنځوس', 'شپېته', 'اویا', 'اتیا', 'نوي'],
+    hundreds: ['', 'سل', 'دوه سوه', 'درې سوه', 'څلور سوه', 'پنځه سوه', 'شپږ سوه', 'اوه سوه', 'اته سوه', 'نهه سوه'],
+    scales: ['', 'زره', 'میلیون', 'میلیارد'],
+    zero: 'صفر',
+    join: ' او ',
+  },
+  en: {
+    ones: ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
+    teens: ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'],
+    tens: ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'],
+    hundreds: [
+      '', 'one hundred', 'two hundred', 'three hundred', 'four hundred',
+      'five hundred', 'six hundred', 'seven hundred', 'eight hundred', 'nine hundred',
+    ],
+    scales: ['', 'thousand', 'million', 'billion'],
+    zero: 'zero',
+    join: ' ',
+  },
+}
+
+const CURRENCY_WORDS: Record<Currency, { fa: string; ps: string; en: string }> = {
+  AFN: { fa: 'افغانی', ps: 'افغانی', en: 'Afghani' },
+  USD: { fa: 'دالر امریکایی', ps: 'امریکایی ډالر', en: 'US Dollar' },
+  PKR: { fa: 'کلدار پاکستانی', ps: 'پاکستاني کلدار', en: 'Pakistani Rupee' },
+}
+
+/** تبدیل عدد ۱ تا ۹۹۹ به حروف */
+function threeDigitWords(lang: NumLang, n: number): string {
+  const w = NUM_WORDS[lang]
+  const parts: string[] = []
+  const h = Math.floor(n / 100)
+  const rest = n % 100
+  if (h) parts.push(w.hundreds[h])
+  if (rest >= 10 && rest < 20) {
+    parts.push(w.teens[rest - 10])
+  } else {
+    const tn = Math.floor(rest / 10)
+    const on = rest % 10
+    if (tn) parts.push(w.tens[tn])
+    if (on) parts.push(w.ones[on])
+  }
+  return parts.join(w.join)
+}
+
+/** تبدیل عدد صحیح به حروف */
+function intWords(lang: NumLang, n: number): string {
+  const w = NUM_WORDS[lang]
+  if (n <= 0) return w.zero
+  const groups: string[] = []
+  let i = 0
+  while (n > 0 && i < w.scales.length) {
+    const g = n % 1000
+    if (g > 0) groups.unshift(threeDigitWords(lang, g) + (w.scales[i] ? ` ${w.scales[i]}` : ''))
+    n = Math.floor(n / 1000)
+    i++
+  }
+  return groups.join(w.join)
+}
+
+/** مبلغ به حروف — «پنج هزار و دویست افغانی فقط» */
+function amountToWords(amount: number, currency: Currency, lang: NumLang): string {
+  const w = NUM_WORDS[lang]
+  const abs = Math.abs(amount)
+  let int = Math.floor(abs)
+  let dec = Math.round((abs - int) * 100)
+  if (dec >= 100) {
+    int += 1
+    dec = 0
+  }
+  let s = `${intWords(lang, int)} ${CURRENCY_WORDS[currency][lang]}`
+  if (dec > 0) {
+    const unit = lang === 'fa' ? 'سنت' : lang === 'ps' ? 'پیسې' : 'cent'
+    s += `${w.join}${intWords(lang, dec)} ${unit}`
+  }
+  s += lang === 'en' ? ' only' : ' فقط'
+  return amount < 0 ? `${lang === 'en' ? 'minus ' : 'منفی '}${s}` : s
+}
+
+// ================= دیالوگ فاکتور (پیش‌نمایش و چاپ حرفه‌ای) =================
 function InvoiceDialog({
   sale,
   settings,
+  customers,
   onClose,
 }: {
   sale: SaleRow | null
   settings: Record<string, string> | null
+  customers: CustomerRow[]
   onClose: () => void
 }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   if (!sale) return null
+
   const companyName = settings?.companyName || t('شرکت تولیدی', 'تولیدي شرکت', 'Manufacturing Co.')
   const companyAddress = settings?.companyAddress || ''
   const companyPhone = settings?.companyPhone || ''
   const customerName = sale.customer?.name ?? sale.customerName ?? t('مشتری متفرقه', 'عام پیرودونکی', 'Walk-in customer')
+  const fullCustomer = sale.customerId ? customers.find((c) => c.id === sale.customerId) : undefined
   const remaining = sale.total - sale.paidAmount
+  const currency = sale.currency as Currency
+  const items = sale.items ?? []
+
+  const methodLabel =
+    sale.paymentMethod === 'cash'
+      ? t('نقدی', 'نغدي', 'Cash')
+      : sale.paymentMethod === 'credit'
+        ? t('قرضی', 'پور', 'Credit')
+        : t('بانکی', 'بانکي', 'Transfer')
+  const methodCls =
+    sale.paymentMethod === 'cash'
+      ? 'bg-emerald-100 text-emerald-800'
+      : sale.paymentMethod === 'credit'
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-teal-100 text-teal-800'
+
+  const statusLabel =
+    sale.status === 'paid'
+      ? t('پرداخت‌شده', 'پرداخت شوی', 'Paid')
+      : sale.status === 'partial'
+        ? t('جزئی', 'نیمه', 'Partial')
+        : t('پرداخت‌نشده', 'ناپرداخت', 'Unpaid')
+  const statusCls =
+    sale.status === 'paid' ? 'bg-emerald-600 text-white' : sale.status === 'partial' ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
+
+  const badgeBase = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap'
+  const customerTypeLabel =
+    (sale.customer?.type ?? fullCustomer?.type) === 'wholesale'
+      ? t('عمده', 'پرچونۍ', 'Wholesale')
+      : t('خرده', 'لږ', 'Retail')
+
+  const signatureLabels = [
+    t('امضای خریدار', 'د اخیستونکي لاسلیک', 'Customer signature'),
+    t('حسابدار', 'محاسب', 'Accountant'),
+    t('مدیر / مهر شرکت', 'مدیر / مهر شرکت', 'Manager / Company seal'),
+  ]
 
   return (
     <Dialog open={!!sale} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto [&_[data-slot=dialog-close]]:no-print">
+      <DialogContent
+        aria-describedby={undefined}
+        className="sm:max-w-3xl flex flex-col gap-0 p-0 max-h-[94vh] overflow-hidden rounded-xl border-0 bg-transparent shadow-none [&_[data-slot=dialog-close]]:no-print print:static print:translate-x-0 print:translate-y-0 print:max-h-none print:overflow-visible print:rounded-none print:border-0 print:bg-transparent print:p-0 print:shadow-none print:max-w-none"
+      >
         {/* عنوان برای دسترسی‌پذیری صفحه‌خوان‌ها (در چاپ دیده نمی‌شود) */}
         <DialogTitle className="sr-only">{t('پیش‌نمایش فاکتور', 'د فاکتور مخکتنه', 'Invoice preview')}</DialogTitle>
-        <div className="print-area space-y-4">
-          {/* سربرگ شرکت */}
-          <div className="text-center space-y-1">
-            <h2 className="text-lg font-bold">{companyName}</h2>
-            {companyAddress && <p className="text-xs text-muted-foreground">{companyAddress}</p>}
-            {companyPhone && (
-              <p className="text-xs text-muted-foreground" dir="ltr">
-                {companyPhone}
-              </p>
-            )}
+
+        {/* ناحیه اسکرول */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 print:overflow-visible print:p-0">
+          {/* برگه فاکتور — همیشه سفید مثل کاغذ واقعی */}
+          <div className="print-area mx-auto w-full overflow-hidden rounded-xl border border-neutral-200 bg-white text-neutral-900 shadow-xl [print-color-adjust:exact] [-webkit-print-color-adjust:exact] print:rounded-none print:border-0 print:shadow-none">
+            {/* نوار رنگی بالای فاکتور */}
+            <div className="h-2 w-full bg-gradient-to-l from-emerald-700 via-emerald-500 to-teal-500" />
+
+            <div className="space-y-5 p-4 sm:p-8">
+              {/* ---------- سربرگ ---------- */}
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-sm">
+                    <Factory className="h-7 w-7" />
+                  </div>
+                  <div className="min-w-0 space-y-1">
+                    <h2 className="text-lg font-extrabold leading-tight tracking-tight sm:text-xl">{companyName}</h2>
+                    {companyAddress && (
+                      <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        <span className="min-w-0 truncate">{companyAddress}</span>
+                      </p>
+                    )}
+                    {companyPhone && (
+                      <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        <span dir="ltr">{companyPhone}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-center">
+                  <p className="text-base font-extrabold text-emerald-700 sm:text-lg">
+                    {t('فاکتور فروش', 'د پلورنې فاکتور', 'Sales Invoice')}
+                  </p>
+                  <p className="text-[9px] font-bold tracking-[0.35em] text-emerald-600/70">SALES INVOICE</p>
+                  <p className="mt-1.5 inline-block rounded-md bg-white px-2.5 py-1 font-mono text-sm font-bold text-neutral-800 shadow-sm" dir="ltr">
+                    {sale.invoiceNumber}
+                  </p>
+                </div>
+              </div>
+
+              {/* ---------- اطلاعات مشتری و فاکتور ---------- */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-neutral-200 p-3.5">
+                  <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
+                    {t('صورتحساب به', 'پیرودونکي ته', 'BILL TO')}
+                  </p>
+                  <p className="font-bold">{customerName}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
+                    <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                      {customerTypeLabel}
+                    </span>
+                    {fullCustomer?.phone && <span dir="ltr">{fullCustomer.phone}</span>}
+                    {fullCustomer?.address && <span className="min-w-0 truncate">{fullCustomer.address}</span>}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-neutral-200 p-3.5 text-sm">
+                  <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
+                    {t('مشخصات فاکتور', 'د فاکتور معلومات', 'INVOICE DETAILS')}
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <span className="text-neutral-500">{t('تاریخ شمسی', 'نېټه (شمسي)', 'Date (Jalali)')}</span>
+                    <span className="text-end font-semibold">{toJalaliStr(sale.date)}</span>
+                    <span className="text-neutral-500">{t('تاریخ میلادی', 'نېټه (میلادي)', 'Date (Gregorian)')}</span>
+                    <span className="text-end font-semibold" dir="ltr">
+                      {toGregorianStr(sale.date)}
+                    </span>
+                    <span className="text-neutral-500">{t('روش پرداخت', 'د تادیې طریقه', 'Payment method')}</span>
+                    <span className="text-end">
+                      <span className={`${badgeBase} ${methodCls}`}>{methodLabel}</span>
+                    </span>
+                    <span className="text-neutral-500">{t('وضعیت', 'حالت', 'Status')}</span>
+                    <span className="text-end">
+                      <span className={`${badgeBase} ${statusCls}`}>{statusLabel}</span>
+                    </span>
+                    <span className="text-neutral-500">{t('ارز', 'اسعارو', 'Currency')}</span>
+                    <span className="text-end font-semibold">{CURRENCY_LABELS[currency] ?? currency}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ---------- جدول اقلام ---------- */}
+              <div className="overflow-x-auto rounded-lg border border-neutral-200">
+                <table className="w-full min-w-[540px] border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-emerald-600 text-white">
+                      <th className="w-8 py-2.5 text-center font-semibold">#</th>
+                      <th className="py-2.5 ps-3 text-start font-semibold">{t('کالا', 'توک', 'Product')}</th>
+                      <th className="py-2.5 text-center font-semibold">{t('مقدار', 'مقدار', 'Qty')}</th>
+                      <th className="py-2.5 text-center font-semibold">{t('فی واحد', 'فی واحد', 'Unit price')}</th>
+                      <th className="py-2.5 text-center font-semibold">{t('تخفیف', 'ټکۍ', 'Disc')}</th>
+                      <th className="py-2.5 pe-3 text-end font-semibold">{t('مبلغ کل', 'ټول مبلغ', 'Line total')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+                          —
+                        </td>
+                      </tr>
+                    ) : (
+                      items.map((it, i) => (
+                        <tr key={it.id} className={i % 2 === 1 ? 'bg-neutral-50' : ''}>
+                          <td className="border-t border-neutral-200 py-2 text-center text-neutral-400">{formatNumber(i + 1)}</td>
+                          <td className="border-t border-neutral-200 py-2 ps-3">
+                            <span className="font-medium">{it.product?.name ?? '—'}</span>
+                            {it.product?.unit && (
+                              <span className="ms-1.5 text-[10px] text-neutral-400">({it.product.unit})</span>
+                            )}
+                          </td>
+                          <td className="border-t border-neutral-200 py-2 text-center">{formatNumber(it.quantity)}</td>
+                          <td className="border-t border-neutral-200 py-2 text-center">{formatNumber(it.unitPrice, 2)}</td>
+                          <td className="border-t border-neutral-200 py-2 text-center text-neutral-500">
+                            {it.discount ? formatNumber(it.discount, 2) : '—'}
+                          </td>
+                          <td className="border-t border-neutral-200 py-2 pe-3 text-end font-semibold">{formatNumber(it.total, 2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ---------- مبلغ به حروف + مجموع‌ها ---------- */}
+              <div className="grid items-start gap-3 sm:grid-cols-2">
+                <div className="min-h-24 space-y-1.5 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3.5">
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-neutral-500">
+                    {t('مبلغ به حروف', 'مبلغ په ليکل', 'AMOUNT IN WORDS')}
+                  </p>
+                  <p className="text-sm font-semibold leading-7">{amountToWords(sale.total, currency, lang)}</p>
+                </div>
+                <div className="overflow-hidden rounded-lg border border-neutral-200 text-sm">
+                  <div className="space-y-1.5 bg-white p-3.5">
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">{t('جمع اقلام', 'د توکو مجموع', 'Subtotal')}</span>
+                      <span className="font-medium">{formatNumber(sale.subtotal, 2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">{t('تخفیف', 'ټکۍ', 'Discount')}</span>
+                      <span className="font-medium">{formatNumber(sale.discount, 2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">
+                        {t('مالیات', 'مالیه', 'Tax')} ({formatNumber(sale.taxRate)}٪)
+                      </span>
+                      <span className="font-medium">{formatNumber(sale.taxAmount, 2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between bg-emerald-600 px-3.5 py-2.5 text-white">
+                    <span className="font-bold">{t('مبلغ نهایی', 'ټول مبلغ', 'GRAND TOTAL')}</span>
+                    <span className="text-base font-extrabold">{formatMoney(sale.total, currency)}</span>
+                  </div>
+                  <div className="space-y-1.5 bg-neutral-50 p-3.5">
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">{t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}</span>
+                      <span className="font-semibold text-emerald-700">{formatMoney(sale.paidAmount, currency)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">{t('باقی‌مانده', 'پاتې', 'Remaining')}</span>
+                      <span className={remaining > 0.001 ? 'font-bold text-red-600' : 'font-semibold text-emerald-700'}>
+                        {formatMoney(remaining, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ---------- یادداشت ---------- */}
+              {sale.notes && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <span className="font-bold">{t('یادداشت', 'یادښت', 'Notes')}: </span>
+                  {sale.notes}
+                </div>
+              )}
+
+              {/* ---------- امضاها ---------- */}
+              <div className="grid grid-cols-3 gap-4 pt-2 sm:gap-6">
+                {signatureLabels.map((label) => (
+                  <div key={label} className="space-y-1.5 text-center">
+                    <div className="h-9 border-b border-dashed border-neutral-400 sm:h-10" />
+                    <p className="text-[10px] font-medium text-neutral-500 sm:text-[11px]">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* ---------- پاورقی ---------- */}
+              <div className="space-y-1 border-t border-neutral-200 pt-3 text-center">
+                <p className="text-sm font-bold text-emerald-700">
+                  {t('با تشکر از اعتماد شما', 'ستاسو له باور مننه', 'Thank you for your trust')}
+                </p>
+                <p className="text-[10px] text-neutral-400">
+                  {t(
+                    'کالای فروش‌شده در صورت نداشتن عیب تولیدی قابل بازگشت نیست',
+                    'پلورل شوی توکي پرته له تولیدي عیب بیرته نه راګرځي',
+                    'Sold goods are non-returnable unless manufacturing defects'
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
-          <Separator />
-
-          {/* مشخصات فاکتور */}
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-muted-foreground">{t('شماره فاکتور', 'د فاکتور شمېره', 'Invoice #')}: </span>
-              <span className="font-mono font-semibold">{sale.invoiceNumber}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">{t('تاریخ', 'نېټه', 'Date')}: </span>
-              <span>{toJalaliStr(sale.date)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">{t('مشتری', 'پیرودونکی', 'Customer')}: </span>
-              <span className="font-medium">{customerName}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">{t('روش پرداخت', 'د تادیې طریقه', 'Method')}: </span>
-              <span>
-                {sale.paymentMethod === 'cash'
-                  ? t('نقدی', 'نغدي', 'Cash')
-                  : sale.paymentMethod === 'credit'
-                    ? t('قرضی', 'پور', 'Credit')
-                    : t('بانکی', 'بانکي', 'Transfer')}
-              </span>
-            </div>
-          </div>
-
-          {/* جدول اقلام */}
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-y">
-                <th className="py-2 text-start font-medium">{t('کالا', 'توک', 'Product')}</th>
-                <th className="py-2 text-center font-medium">{t('مقدار', 'مقدار', 'Qty')}</th>
-                <th className="py-2 text-center font-medium">{t('فی', 'فی', 'Price')}</th>
-                <th className="py-2 text-center font-medium">{t('تخفیف', 'ټکۍ', 'Disc')}</th>
-                <th className="py-2 text-end font-medium">{t('مبلغ', 'مبلغ', 'Total')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(sale.items ?? []).map((it) => (
-                <tr key={it.id} className="border-b">
-                  <td className="py-1.5">{it.product?.name ?? '—'}</td>
-                  <td className="py-1.5 text-center">
-                    {formatNumber(it.quantity)} {it.product?.unit}
-                  </td>
-                  <td className="py-1.5 text-center">{formatNumber(it.unitPrice, 2)}</td>
-                  <td className="py-1.5 text-center">{formatNumber(it.discount, 2)}</td>
-                  <td className="py-1.5 text-end font-medium">{formatNumber(it.total, 2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* مجموع‌ها */}
-          <div className="ms-auto w-full sm:w-72 space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('جمع اقلام', 'د توکو مجموع', 'Subtotal')}</span>
-              <span>{formatNumber(sale.subtotal, 2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('تخفیف', 'ټکۍ', 'Discount')}</span>
-              <span>{formatNumber(sale.discount, 2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {t('مالیات', 'مالیه', 'Tax')} ({formatNumber(sale.taxRate)}٪)
-              </span>
-              <span>{formatNumber(sale.taxAmount, 2)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-base font-bold">
-              <span>{t('مبلغ نهایی', 'ټول مبلغ', 'TOTAL')}</span>
-              <span>{formatMoney(sale.total, sale.currency as Currency)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}</span>
-              <span>{formatMoney(sale.paidAmount, sale.currency as Currency)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('باقی‌مانده', 'پاتې', 'Remaining')}</span>
-              <span className={remaining > 0.001 ? 'text-amber-600 font-semibold' : ''}>
-                {formatMoney(remaining, sale.currency as Currency)}
-              </span>
-            </div>
-          </div>
-
-          {sale.notes && (
-            <p className="text-xs text-muted-foreground">
-              {t('یادداشت', 'یادښت', 'Notes')}: {sale.notes}
-            </p>
-          )}
-
-          <Separator />
-          <p className="text-center text-sm font-medium">{t('با تشکر از خرید شما', 'ستاسو له اخیستنې مننه', 'Thank you for your purchase')}</p>
         </div>
 
-        <DialogFooter className="no-print">
+        <DialogFooter className="no-print gap-2 px-3 pb-3 sm:px-6 sm:pb-6">
           <Button variant="outline" onClick={() => onClose()}>
             {t('بستن', 'بندول', 'Close')}
           </Button>

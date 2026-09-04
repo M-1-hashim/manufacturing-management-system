@@ -302,7 +302,7 @@ function Shell() {
   const nextLang = lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa'
 
   return (
-    <div className="min-h-screen flex flex-col" dir={lang === 'en' ? 'ltr' : 'rtl'}>
+    <div className="app-shell min-h-screen flex flex-col print:hidden" dir={lang === 'en' ? 'ltr' : 'rtl'}>
       <div className="flex flex-1">
         {/* پوشش موبایل */}
         {sidebarOpen && (

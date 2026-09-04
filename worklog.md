@@ -406,3 +406,28 @@ Stage Summary:
 - Header now has 💾 menu (admin): backup now / upload & restore w/ progress / manage; Settings has per-backup restore + upload
 - Restore is safe: always auto safety-backup, schema validation, atomic swap, auto-rollback on invalid file, full audit trail
 - Update path for installed Windows app: run v1.0.1 Setup.exe → closes app, replaces files, keeps %APPDATA%\ManufacturingERP data
+
+---
+Task ID: 6 (invoice-design)
+Agent: coordinator (main)
+Task: Redesign the invoice form (دیزاین فورم فاکتور) — professional print-quality sales invoice document
+
+Work Log:
+- Rewrote InvoiceDialog in src/components/modules/sales/index.tsx as an A4-style white "paper" document (always white bg + neutral-900 text in both themes — real-paper fidelity; dialog shell transparent, sm:max-w-3xl, flex-col with scrollable paper area + fixed footer buttons)
+- Header: emerald gradient ribbon + gradient Factory logo tile + company name/address/phone (from settings) + Sales Invoice badge (fa/ps/en) with LTR mono invoice-number chip
+- Info row: BILL TO card (customer name, retail/wholesale pill, phone/address via new `customers` prop lookup by customerId) + INVOICE DETAILS card (Jalali + Gregorian dates, payment-method pill, status pill with fixed print-safe colors paid=emerald-600/partial=amber-500/unpaid=red-500, currency label)
+- Items table: emerald-600 header row (white text), row numbering, product name + unit subtext, qty/unit price/discount/line-total, zebra striping, horizontal scroll on mobile, empty-state row
+- New amount-in-words engine (NUM_WORDS for fa/ps/en + threeDigitWords/intWords/amountToWords + CURRENCY_WORDS AFN/USD/PKR incl. cents) — e.g. 1,334 AFN → «یک هزار و سیصد و سی و چهار افغانی فقط» / "one thousand three hundred thirty four Afghani only" / «یو زره او درې سوه او څلور دېرش افغانی فقط»
+- Totals: words box (dashed border) side-by-side with totals card — subtotal/discount/tax(rate), GRAND TOTAL emerald band, paid (emerald) / remaining (red if >0, emerald if settled)
+- Notes → amber callout; 3 signature blocks (customer/accountant/manager+seal) with dashed lines; footer thanks + non-returnable terms
+- Print pipeline reworked in globals.css @media print: removed old absolute-positioning hack; new rules — body *:not(.print-area):not(.print-area *) strips bg/shadow, .app-shell display:none, dialog overlay removed, [data-slot=dialog-content] forced static/no-transform/no-clip !important, html/body white, @page A4 10mm; page.tsx root wrapper got .app-shell class; paper uses inherited print-color-adjust:exact so colors print
+- Fixed missing toGregorianStr import (runtime error caught on first open); silenced Radix aria-describedby warning via aria-describedby={undefined}
+- Browser E2E: Dari/LTR-light + English LTR (mirrored layout correct) + Pashto + dark mode (paper stays white); desktop 1280 + mobile 390 (single column, table scrolls); golden path: new sale → submit → invoice preview auto-opens with new design (INV-545417867 in pre-restore DB)
+- Print verification: agent-browser pdf() → A4 page renders exactly the invoice, colors intact, no app chrome — after fixing initial black-page issue (background bleed from hidden elements outside print-area)
+- Investigated data mystery during testing: DELETE 404s + vanished sale → audit log shows user performed backup_restore (mfg-backup-2026-09-04-0950.db desktop backup) at 18:10:19 while session was live; system behaved correctly (safety backup backup-20260904-181019.db captured pre-restore state incl. 11 sales); reload re-synced list to 8 rows — no code bug
+- lint clean, dev.log clean
+
+Stage Summary:
+- Invoice document is now a professional bilingual tri-lang print sheet: ribbon+logo header, bill-to/details cards, styled items table, amount-in-words (fa/ps/en), grand-total band, signatures, terms footer
+- Print output verified pixel-clean on A4 (PDF render); screen verified Dari/Pashto/English × light/dark × desktop/mobile
+- Files: src/components/modules/sales/index.tsx (InvoiceDialog + words engine + customers prop), src/app/globals.css (print block rewrite), src/app/page.tsx (app-shell class only)

@@ -141,22 +141,56 @@
   background: oklch(0.6 0.08 165 / 0.7);
 }
 
-/* استایل چاپ فاکتور */
+/* استایل چاپ فاکتور — فقط برگه فاکتور چاپ می‌شود */
 @media print {
   body * {
     visibility: hidden;
+  }
+  /* هر پس‌زمینه و سایه‌ای بیرون از برگه فاکتور حذف می‌شود */
+  body *:not(.print-area):not(.print-area *) {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
   }
   .print-area,
   .print-area * {
     visibility: visible;
   }
-  .print-area {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    padding: 1rem;
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  /* پوسته اصلی برنامه در چاپ نمایش داده نمی‌شود */
+  .app-shell {
+    display: none !important;
+  }
+  /* پوشش تیره دیالوگ حذف می‌شود */
+  [data-slot='dialog-overlay'] {
+    display: none !important;
+  }
+  /* دیالوگ در چاپ به حالت جریان عادی برمی‌گردد */
+  [data-slot='dialog-content'] {
+    position: static !important;
+    transform: none !important;
+    animation: none !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
   .no-print {
     display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
   }
 }
