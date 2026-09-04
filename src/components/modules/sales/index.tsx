@@ -644,7 +644,7 @@ function NewSaleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('فروش جدید', 'نوی پلورنه', 'New sale')}</DialogTitle>
           <DialogDescription>
@@ -938,7 +938,7 @@ function InvoiceDialog({
 
   return (
     <Dialog open={!!sale} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto [&_[data-slot=dialog-close]]:no-print">
+      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto [&_[data-slot=dialog-close]]:no-print">
         {/* عنوان برای دسترسی‌پذیری صفحه‌خوان‌ها (در چاپ دیده نمی‌شود) */}
         <DialogTitle className="sr-only">{t('پیش‌نمایش فاکتور', 'د فاکتور مخکتنه', 'Invoice preview')}</DialogTitle>
         <div className="print-area space-y-4">
@@ -1103,7 +1103,7 @@ function PayDialog({
 
   return (
     <Dialog open={!!sale} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t('دریافت پرداخت', 'پیسې اخیستل', 'Receive payment')}</DialogTitle>
           <DialogDescription>
@@ -1221,7 +1221,7 @@ function CustomersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('مشتریان', 'پیرودونکي', 'Customers')}</DialogTitle>
           <DialogDescription>

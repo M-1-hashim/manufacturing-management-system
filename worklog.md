@@ -368,3 +368,20 @@ Stage Summary:
 - Live repo: https://github.com/M-1-hashim/manufacturing-management-system (HTTP 200)
 - Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.0 (HTTP 200); both asset download URLs verified 302 → release-assets CDN
 - Token used one-time in push/upload URLs only, NOT stored in .git/config or any repo file (verified via git grep)
+
+---
+Task ID: 4 (fix-sales-dialog)
+Agent: coordinator (main)
+Task: Fix "new sale" window rendering incorrectly
+
+Work Log:
+- Reproduced in browser: NewSaleDialog rendered squeezed — item row grid measured 270px with 15px columns (inputs tiny squares)
+- Root cause: DialogContent used UNPREFIXED max-w-* (e.g. max-w-5xl) which loses to shadcn default sm:max-w-lg at >=640px viewport (responsive variants come later in Tailwind stylesheet); dialog stayed at 512px
+- Fixed 4 dialogs in sales module by adding sm: prefix (tailwind-merge then strips sm:max-w-lg): NewSaleDialog sm:max-w-5xl, InvoiceDialog sm:max-w-2xl (no-print variant), PayDialog sm:max-w-sm, CustomersDialog sm:max-w-2xl
+- Browser-verified after fix: dialog 1024px, row 578px, inputs 90px; desktop 2-column layout correct; full E2E — product select autofills price (30), qty 5 → subtotal/final 150 ✓, submit → invoice INV-542064781 created, invoice preview renders complete company header/items/totals; customers dialog 672px ✓
+- Mobile 390px: dialog 358px fits viewport, single-column stacked fields, inputs 150px, scrollable ✓
+- dev.log clean (APIs 200), lint OK
+
+Stage Summary:
+- Root cause class: unprefixed max-w-* on DialogContent loses to default sm:max-w-lg — same pattern audited across ALL modules; only sales had it
+- 4 dialogs fixed in src/components/modules/sales/index.tsx; no other files touched
