@@ -45,71 +45,71 @@
 
 :root {
   --radius: 0.625rem;
-  /* سبز ملایم به‌عنوان رنگ اصلی + آبی آسمانی ملایم به‌عنوان ثانویه */
-  --background: oklch(0.99 0.004 160);
-  --foreground: oklch(0.2 0.02 160);
+  /* تمیز و شیک: پس‌زمینه خنثی، سبز ملایم فقط به‌عنوان رنگ عملیاتی */
+  --background: oklch(0.987 0.002 160);
+  --foreground: oklch(0.215 0.015 160);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 160);
+  --card-foreground: oklch(0.215 0.015 160);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 160);
-  --primary: oklch(0.55 0.13 165); /* سبز ملایم */
+  --popover-foreground: oklch(0.215 0.015 160);
+  --primary: oklch(0.53 0.125 165); /* سبز عمیق و آرام */
   --primary-foreground: oklch(0.985 0.005 160);
-  --secondary: oklch(0.93 0.03 200); /* آبی ملایم */
-  --secondary-foreground: oklch(0.3 0.05 210);
-  --muted: oklch(0.96 0.005 160);
-  --muted-foreground: oklch(0.5 0.02 160);
-  --accent: oklch(0.94 0.04 165);
-  --accent-foreground: oklch(0.3 0.06 165);
+  --secondary: oklch(0.955 0.008 200); /* خاکستری-آبی بسیار ملایم */
+  --secondary-foreground: oklch(0.32 0.04 210);
+  --muted: oklch(0.962 0.003 160);
+  --muted-foreground: oklch(0.52 0.015 160);
+  --accent: oklch(0.952 0.012 165);
+  --accent-foreground: oklch(0.32 0.05 165);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.01 165);
-  --input: oklch(0.9 0.01 165);
+  --border: oklch(0.923 0.005 160);
+  --input: oklch(0.915 0.006 160);
   --ring: oklch(0.6 0.1 165);
   --chart-1: oklch(0.55 0.13 165);
   --chart-2: oklch(0.62 0.11 220);
   --chart-3: oklch(0.68 0.12 150);
   --chart-4: oklch(0.75 0.12 90);
   --chart-5: oklch(0.65 0.15 30);
-  --sidebar: oklch(0.98 0.008 165);
-  --sidebar-foreground: oklch(0.25 0.02 160);
-  --sidebar-primary: oklch(0.55 0.13 165);
+  --sidebar: oklch(0.982 0.003 160);
+  --sidebar-foreground: oklch(0.3 0.015 160);
+  --sidebar-primary: oklch(0.53 0.125 165);
   --sidebar-primary-foreground: oklch(0.985 0.005 160);
-  --sidebar-accent: oklch(0.93 0.03 175);
-  --sidebar-accent-foreground: oklch(0.3 0.06 165);
-  --sidebar-border: oklch(0.9 0.015 165);
+  --sidebar-accent: oklch(0.94 0.015 165);
+  --sidebar-accent-foreground: oklch(0.32 0.05 165);
+  --sidebar-border: oklch(0.923 0.005 160);
   --sidebar-ring: oklch(0.6 0.1 165);
 }
 
 .dark {
-  --background: oklch(0.17 0.015 170);
+  --background: oklch(0.165 0.008 170);
   --foreground: oklch(0.95 0.005 160);
-  --card: oklch(0.21 0.02 170);
+  --card: oklch(0.208 0.012 170);
   --card-foreground: oklch(0.95 0.005 160);
-  --popover: oklch(0.21 0.02 170);
+  --popover: oklch(0.208 0.012 170);
   --popover-foreground: oklch(0.95 0.005 160);
   --primary: oklch(0.7 0.12 165);
   --primary-foreground: oklch(0.17 0.03 165);
-  --secondary: oklch(0.27 0.03 210);
+  --secondary: oklch(0.255 0.018 210);
   --secondary-foreground: oklch(0.93 0.02 200);
-  --muted: oklch(0.26 0.02 170);
-  --muted-foreground: oklch(0.68 0.015 160);
-  --accent: oklch(0.28 0.04 165);
+  --muted: oklch(0.245 0.01 170);
+  --muted-foreground: oklch(0.68 0.012 160);
+  --accent: oklch(0.26 0.025 165);
   --accent-foreground: oklch(0.93 0.03 165);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.6 0.1 165);
   --chart-1: oklch(0.7 0.12 165);
   --chart-2: oklch(0.68 0.11 220);
   --chart-3: oklch(0.72 0.12 150);
   --chart-4: oklch(0.78 0.12 90);
   --chart-5: oklch(0.68 0.15 30);
-  --sidebar: oklch(0.19 0.02 170);
+  --sidebar: oklch(0.148 0.008 170);
   --sidebar-foreground: oklch(0.93 0.01 160);
   --sidebar-primary: oklch(0.7 0.12 165);
   --sidebar-primary-foreground: oklch(0.17 0.03 165);
-  --sidebar-accent: oklch(0.27 0.04 165);
+  --sidebar-accent: oklch(0.245 0.02 165);
   --sidebar-accent-foreground: oklch(0.93 0.03 165);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.6 0.1 165);
 }
 
@@ -121,24 +121,33 @@
     font-family: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: oklch(0.53 0.125 165 / 0.18);
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
   }
 }
 
-/* اسکرول‌بار سفارشی برای لیست‌های بلند */
+/* اسکرول‌بار سفارشی و ظریف برای لیست‌های بلند */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.72 0.05 165 / 0.5);
-  border-radius: 8px;
+  background: oklch(0.55 0.02 160 / 0.22);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.6 0.08 165 / 0.7);
+  background: oklch(0.5 0.03 160 / 0.38);
 }
 
 /* استایل چاپ فاکتور — فقط برگه فاکتور چاپ می‌شود */

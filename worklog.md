@@ -431,3 +431,19 @@ Stage Summary:
 - Invoice document is now a professional bilingual tri-lang print sheet: ribbon+logo header, bill-to/details cards, styled items table, amount-in-words (fa/ps/en), grand-total band, signatures, terms footer
 - Print output verified pixel-clean on A4 (PDF render); screen verified Dari/Pashto/English × light/dark × desktop/mobile
 - Files: src/components/modules/sales/index.tsx (InvoiceDialog + words engine + customers prop), src/app/globals.css (print block rewrite), src/app/page.tsx (app-shell class only)
+
+---
+Task ID: 7 (ui-polish-simple-clean)
+Agent: coordinator (main)
+Task: Global visual redesign — «دیزاین ساده، شیک و تمیز برای استفاده راحت» (simple, elegant, clean UI for easy use)
+
+Work Log:
+- globals.css tokens (biggest lever): light mode stripped of the green color-cast — neutral near-white background oklch(0.987 0.002 160), pure white cards, lighter neutral borders (0.923), subtler accent hovers; primary deepened to oklch(0.53 0.125 165) for a calmer premium emerald; dark mode more neutral (bg 0.165, card 0.208) with sidebar one step darker than bg for depth; base layer + antialiased/optimizeLegibility, emerald ::selection, h1-h3 tracking-tight; scrollbar slimmed to 6px hairline pill
+- page.tsx shell: login view flattened (bg-muted/40 instead of emerald/sky gradient, shadow-sm card, tighter logo); sidebar — logo row h-14 aligned with header, compact 8px logo tile, nav items text-[13px] py-2 gap-2.5 with soft active state bg-primary/10 text-primary (was heavy solid primary block), user area avatar bg-primary/10; header slimmed h-16→h-14, title font-semibold text-[15px]; footer text-[11px]
+- shared/common.tsx: PageHeader icon tile 9x9 + title text-lg/xl + subtitle 13px; StatCard flattened (no hover shadow, xs title, tighter value typography, 9x9 icon tiles); EmptyState icon inside muted circle; LoadingBlock/TableSkeleton refined
+- ui/table.tsx: TableHead → text-muted-foreground text-xs (lighter headers across all 13 modules)
+- Browser-verified: dashboard light Dari (before/after screenshots), sales dark, products light, English LTR desktop + 390px mobile + mobile drawer, login page; logged back in; console/dev.log clean; lint OK
+
+Stage Summary:
+- System-wide quiet-luxury pass: neutral surfaces + emerald only as action color, soft active pills instead of solid blocks, flat cards, lighter table headers, slimmer chrome — design language now consistent across every module via tokens/shared components (no per-module edits needed)
+- Files: globals.css, page.tsx (shell/login), shared/common.tsx, ui/table.tsx

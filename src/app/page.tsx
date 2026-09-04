@@ -164,19 +164,19 @@ function LoginView() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="mx-auto h-16 w-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg mb-4">
-            <Factory className="h-8 w-8" />
+          <div className="mx-auto h-14 w-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md mb-4">
+            <Factory className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">{t('سامانه مدیریت تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-[22px] font-bold tracking-tight">{t('سامانه مدیریت تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">
             {t('مدیریت چرخه تولید از مواد خام تا فروش', 'له خامو موادو تر پلورنې د تولید چاپېریال', 'Production cycle: raw materials to sales')}
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="rounded-2xl border bg-card p-6 shadow-xl space-y-4">
+        <form onSubmit={handleLogin} className="rounded-2xl border bg-card p-6 shadow-sm space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
             <Input id="username" dir="ltr" value={username} onChange={(e) => setUsername(e.target.value)}
@@ -316,20 +316,20 @@ function Shell() {
             sidebarOpen ? 'translate-x-0' : 'max-lg:rtl:translate-x-full max-lg:ltr:-translate-x-full'
           )}
         >
-          <div className="flex items-center gap-2.5 px-4 h-16 border-b shrink-0">
-            <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-              <Factory className="h-5 w-5" />
+          <div className="flex items-center gap-2.5 px-4 h-14 border-b shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
+              <Factory className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-sm truncate">{t('سامانه تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
-              <p className="text-xs text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
+              <p className="font-semibold text-sm tracking-tight truncate">{t('سامانه تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
             </div>
             <button className="ms-auto lg:hidden p-1" onClick={() => setSidebarOpen(false)} aria-label="بستن منو">
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-2 space-y-0.5" aria-label={t('منوی اصلی', 'اصلي مینو', 'Main menu')}>
+          <nav className="flex-1 overflow-y-auto p-2.5 space-y-1" aria-label={t('منوی اصلی', 'اصلي مینو', 'Main menu')}>
             {nav.map((item) => {
               const active = activeTab === item.id
               return (
@@ -337,27 +337,27 @@ function Shell() {
                   key={item.id}
                   onClick={() => { setActiveTab(item.id as never); setSidebarOpen(false) }}
                   className={cn(
-                    'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
                     active
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/80'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  <item.icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{t(item.fa, item.ps, item.en)}</span>
                 </button>
               )
             })}
           </nav>
 
-          <div className="p-3 border-t shrink-0">
+          <div className="p-2.5 border-t shrink-0">
             <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <div className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-bold shrink-0">
+              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[13px] font-bold shrink-0">
                 {user.fullName.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{user.fullName}</p>
+                <p className="text-[13px] font-medium truncate">{user.fullName}</p>
                 <p className="text-[11px] text-muted-foreground truncate">
                   {roleLabel(user.role, lang)}
                   {user.department && user.department !== 'general' ? ` · ${departmentLabel(user.department, lang)}` : ''}
@@ -365,7 +365,7 @@ function Shell() {
               </div>
               <button
                 onClick={() => setProfileOpen(true)}
-                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground"
+                className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                 aria-label={t('تغییر رمز عبور', 'پټ نوم بدلول', 'Change password')}
                 title={t('تغییر رمز عبور', 'پټ نوم بدلول', 'Change password')}
               >
@@ -373,7 +373,7 @@ function Shell() {
               </button>
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive"
+                className="p-1.5 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                 aria-label={t('خروج', 'وتل', 'Logout')}
                 title={t('خروج', 'وتل', 'Logout')}
               >
@@ -385,11 +385,11 @@ function Shell() {
 
         {/* محتوای اصلی */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-30 h-16 border-b bg-background/80 backdrop-blur flex items-center gap-2 px-4 no-print">
-            <button className="lg:hidden p-2 -ms-2 rounded-md hover:bg-accent" onClick={() => setSidebarOpen(true)} aria-label={t('باز کردن منو', 'مینو پرانول', 'Open menu')}>
+          <header className="sticky top-0 z-30 h-14 border-b bg-background/80 backdrop-blur flex items-center gap-2 px-4 md:px-6 no-print">
+            <button className="lg:hidden p-2 -ms-2 rounded-md hover:bg-accent transition-colors" onClick={() => setSidebarOpen(true)} aria-label={t('باز کردن منو', 'مینو پرانول', 'Open menu')}>
               <Menu className="h-5 w-5" />
             </button>
-            <h2 className="font-bold text-base md:text-lg truncate">
+            <h2 className="font-semibold text-[15px] md:text-base tracking-tight truncate">
               {t(nav.find((n) => n.id === activeTab)?.fa ?? '', nav.find((n) => n.id === activeTab)?.ps ?? '', nav.find((n) => n.id === activeTab)?.en ?? '')}
             </h2>
 
@@ -427,7 +427,7 @@ function Shell() {
           </main>
 
           {/* فوتر ثابت — پایین صفحه */}
-          <footer className="mt-auto border-t py-3 px-4 text-center text-xs text-muted-foreground bg-background no-print">
+          <footer className="mt-auto border-t py-3 px-4 text-center text-[11px] text-muted-foreground bg-background no-print">
             <p>
               {t(
                 'سامانه جامع مدیریت تولید — ساخته‌شده برای صنایع افغانستان',
