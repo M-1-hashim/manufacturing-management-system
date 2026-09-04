@@ -1,0 +1,281 @@
+// ============================================================
+// Manufacturing Management System — Afghan Production ERP
+// Prisma Schema (SQLite) — Dari/Pashto RTL friendly
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  // windows 引擎供 Electron 桌面版（setup.exe）交叉打包使用
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------- Users & Auth -------------------
+model User {
+  id         String   @id @default(cuid())
+  username   String   @unique
+  password   String
+  fullName   String
+  role       String   @default("viewer") // admin | manager | operator | viewer
+  department String   @default("general") // general | production | sales | inventory | finance | hr
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ------------------- Audit Log -------------------
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userName  String?
+  action    String // login | login_failed | logout | create | update | delete | complete | payment | adjust | change_password
+  entity    String // auth | user | sale | production | inventory | product | material | settings
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+// ------------------- Products -------------------
+model ProductCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id             String            @id @default(cuid())
+  code           String            @unique
+  name           String
+  categoryId     String?
+  category       ProductCategory?  @relation(fields: [categoryId], references: [id])
+  unit           String            @default("عدد")
+  barcode        String?
+  description    String?
+  costPrice      Float             @default(0) // قیمت تمام‌شده تولید
+  salePrice      Float             @default(0) // قیمت فروش (خرده)
+  wholesalePrice Float             @default(0) // قیمت عمده
+  minStock       Float             @default(0) // حداقل موجودی (هشدار)
+  stock          Float             @default(0)
+  imageUrl       String?
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  formulas         Formula[]
+  saleItems        SaleItem[]
+  productionOrders ProductionOrder[]
+}
+
+// ------------------- Raw Materials -------------------
+model Supplier {
+  id        String        @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime      @default(now())
+  materials RawMaterial[]
+}
+
+model RawMaterial {
+  id            String                @id @default(cuid())
+  code          String                @unique
+  name          String
+  unit          String                @default("کیلوگرام") // کیلوگرام، لیتر، متر، عدد
+  purchasePrice Float                 @default(0)
+  stock         Float                 @default(0)
+  minStock      Float                 @default(0)
+  maxStock      Float                 @default(0)
+  expiryDate    DateTime?
+  supplierId    String?
+  supplier      Supplier?             @relation(fields: [supplierId], references: [id])
+  notes         String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  formulaItems  FormulaItem[]
+}
+
+// ------------------- Formulas (BOM) -------------------
+model Formula {
+  id             String            @id @default(cuid())
+  productId      String
+  product        Product           @relation(fields: [productId], references: [id])
+  name           String
+  version        Int               @default(1)
+  outputQty      Float             @default(1) // مقدار محصول حاصل از این فرمول
+  laborCost      Float             @default(0) // هزینه کارگری
+  overheadCost   Float             @default(0) // هزینه سربار (برق، کرایه...)
+  notes          String?
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  items          FormulaItem[]
+  productionOrders ProductionOrder[]
+}
+
+model FormulaItem {
+  id            String      @id @default(cuid())
+  formulaId     String
+  formula       Formula     @relation(fields: [formulaId], references: [id], onDelete: Cascade)
+  rawMaterialId String
+  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
+  quantity      Float // مقدار ماده اولیه برای outputQty
+  percentage    Float?      // درصد ترکیب
+}
+
+// ------------------- Production -------------------
+model ProductionOrder {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  formulaId    String
+  formula      Formula  @relation(fields: [formulaId], references: [id])
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Float // مقدار برنامه‌ریزی شده
+  producedQty  Float    @default(0) // مقدار واقعی تولیدشده
+  wasteQty     Float    @default(0) // ضایعات
+  status       String   @default("pending") // pending | in_progress | completed | cancelled
+  qcStatus     String?  // passed | failed | pending
+  qcNotes      String?
+  materialCost Float    @default(0)
+  laborCost    Float    @default(0)
+  overheadCost Float    @default(0)
+  totalCost    Float    @default(0)
+  startDate    DateTime @default(now())
+  endDate      DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ------------------- Sales & Customers -------------------
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  type      String    @default("retail") // retail | wholesale
+  balance   Float     @default(0) // مانده بدهی (بابت)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sales     Sale[]
+}
+
+model Sale {
+  id            String     @id @default(cuid())
+  invoiceNumber String     @unique
+  customerId    String?
+  customer      Customer?  @relation(fields: [customerId], references: [id])
+  customerName  String? // برای فروش سریع بدون ثبت مشتری
+  date          DateTime   @default(now())
+  currency      String     @default("AFN") // AFN | USD | PKR
+  exchangeRate  Float      @default(1) // نرخ تبدیل به افغانی
+  subtotal      Float      @default(0)
+  discount      Float      @default(0)
+  taxRate       Float      @default(0) // 2 یا 10 درصد
+  taxAmount     Float      @default(0)
+  total         Float      @default(0)
+  paidAmount    Float      @default(0)
+  paymentMethod String     @default("cash") // cash | credit | transfer
+  status        String     @default("paid") // paid | partial | unpaid
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  items         SaleItem[]
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Float
+  unitPrice Float
+  discount  Float    @default(0)
+  total     Float
+}
+
+// ------------------- Inventory -------------------
+model Warehouse {
+  id           String                 @id @default(cuid())
+  name         String
+  location     String?
+  createdAt    DateTime               @default(now())
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id            String     @id @default(cuid())
+  date          DateTime   @default(now())
+  type          String // in | out | transfer | adjust
+  itemType      String // product | material
+  itemId        String
+  itemName      String // برای گزارش سریع
+  unit          String
+  quantity      Float
+  warehouseId   String?
+  warehouse     Warehouse? @relation(fields: [warehouseId], references: [id])
+  reference     String? // شماره فاکتور / سفارش تولید
+  notes         String?
+  createdAt     DateTime   @default(now())
+}
+
+// ------------------- Finance -------------------
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  category    String   @default("عمومی") // حقوق، کرایه، برق، حمل‌ونقل...
+  description String
+  amount      Float
+  currency    String   @default("AFN")
+  createdAt   DateTime @default(now())
+}
+
+// ------------------- HR -------------------
+model Employee {
+  id        String           @id @default(cuid())
+  name      String
+  position  String
+  phone     String?
+  salary    Float            @default(0)
+  hireDate  DateTime         @default(now())
+  active    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  attendance Attendance[]
+  salaries  SalaryPayment[]
+}
+
+model Attendance {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime
+  status     String   @default("present") // present | absent | leave
+  shift      String? // صبح | عصر | شب
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+model SalaryPayment {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month      String // مثال: 1403-01 (شمسی)
+  amount     Float
+  date       DateTime @default(now())
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+// ------------------- Settings -------------------
+model Setting {
+  key   String @id
+  value String
+}

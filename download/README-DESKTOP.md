@@ -1,0 +1,109 @@
+# ManufacturingERP — Windows Desktop Application
+
+نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
+
+---
+
+## 1) What was delivered (English)
+
+| File | Size | What it is |
+|---|---|---|
+| `ManufacturingERP-Setup.exe` | ~143 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA-solid). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
+| `ManufacturingERP-Windows-Portable.zip` | ~235 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `README-DESKTOP.md` | — | This file. |
+
+Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and a SQLite database engine (Prisma). **No internet connection, no Node.js, and no external database server are required** — everything runs locally on the machine.
+
+Supported OS: **Windows 10 / 11, 64-bit** (x64).
+
+## 2) Installation & first run
+
+### Option A — Installer (recommended)
+1. Double-click `ManufacturingERP-Setup.exe`.
+2. If Windows SmartScreen shows "Windows protected your PC" (the app is not code-signed), click **More info → Run anyway**.
+3. Choose the install folder (default `C:\Program Files\ManufacturingERP`) and finish the wizard.
+4. Launch **ManufacturingERP** from the Start menu or Desktop shortcut.
+
+### Option B — Portable (no install)
+1. Right-click `ManufacturingERP-Windows-Portable.zip` → **Extract All…** (do not run from inside the zip).
+2. Open the extracted `win-unpacked` folder and double-click **`ManufacturingERP.exe`**.
+3. Optional: create a Desktop shortcut to `ManufacturingERP.exe` manually.
+
+### First-run login
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `admin123` | Full admin access |
+
+(Demo also includes department accounts, e.g. `manager`, `prodstaff`, `salesstaff`, `storestaff`, `finstaff`, `hrstaff`, `viewer` — see in-app Users module; change all passwords after first login.)
+
+**Please change the default passwords immediately** (Profile dialog → change password).
+
+## 3) Where your data lives (important)
+
+- The app stores its SQLite database at:
+
+  ```
+  %APPDATA%\ManufacturingERP\data\custom.db
+  ```
+
+  (i.e. `C:\Users\<YourUser>\AppData\Roaming\ManufacturingERP\data\custom.db`)
+
+- On **first run** the app copies a bundled demo database there, so the system starts pre-loaded with sample data (products, formulas, staff, invoices…).
+- **Backups**: the admin Settings module contains a one-click **database backup download**. Keep backup copies anywhere you like; a manual backup is simply a copy of `custom.db` (make one while the app is closed).
+- **Reset to factory demo data**: close the app, delete the `data` folder shown above, start the app again — the bundled demo database is re-copied.
+- Application diagnostics log: `%APPDATA%\ManufacturingERP\electron.log`.
+- The app listens only on `127.0.0.1` (localhost) on an internal port starting at 37815 — it is not reachable from other machines by design.
+
+## 4) How it works (for IT staff)
+
+On startup the Electron main process:
+1. Ensures `%APPDATA%\ManufacturingERP\data\custom.db` exists (copies the bundled demo DB on first run).
+2. Starts the embedded Next.js standalone server as a child process (`Electron.exe` run in plain-Node mode) with `NODE_ENV=production`, `HOSTNAME=127.0.0.1`, and `DATABASE_URL=file:...` pointing at the data folder.
+3. Waits until the server answers, then opens it in a native window (menu: View → Reload / DevTools / Zoom).
+
+Closing the window stops the embedded server cleanly. Only one instance can run at a time.
+
+## 5) Rebuilding the artifacts (developers)
+
+On this Linux build machine:
+
+```bash
+bun run desktop:build                       # builds .next-electron + desktop-dist/win-unpacked
+# NSIS installer (native, no wine):
+NSISDIR=/tmp/nsis-root/usr/share/nsis /tmp/nsis-root/usr/bin/makensis -V2 ../electron/installer.nsi
+#   ^ run from the desktop-dist/ directory; makensis comes from Debian's nsis debs extracted to /tmp/nsis-root
+cd desktop-dist && zip -qr ../download/ManufacturingERP-Windows-Portable.zip win-unpacked
+```
+
+On any Windows machine with Node.js, an equivalent signed/icon-edited installer can also be produced with:
+
+```bash
+npx electron-builder --win nsis
+```
+
+---
+
+## نسخهٔ دری — خلاصهٔ راهنما
+
+### فایل‌های تحویل‌شده
+- **`ManufacturingERP-Setup.exe`** (~۱۴۳ مېگابایت): نصاب اصلی ویندوز. یک بار اجرا کنید، پوشه را انتخاب کنید و تمام. شورتکات در منوی استارت و دسکتاپ ساخته می‌شود و از بخش Add/Remove Programs هم قابل حذف است.
+- **`ManufacturingERP-Windows-Portable.zip`** (~۲۳۵ مېگابایت): نسخهٔ قابل‌حمل بدون نصب. زیپ را استخراج کرده و فایل `ManufacturingERP.exe` را داخل پوشهٔ `win-unpacked` اجرا کنید.
+
+### نصب و اجرا
+۱. اگر ویندوز پیام SmartScreen نشان داد (برنامه امضای دیجیتال ندارد)، روی **More info → Run anyway** کلیک کنید.
+۲. برنامه تمام سرور (Next.js) و بانک داده (SQLite) را در خود دارد؛ به انترنت، Node.js یا سرور جداگانه نیاز نیست و کاملاً آفلاین کار می‌کند.
+۳. در اجرای نخست، یک بانک اطلاعاتی نمونه به‌صورت خودکار ساخته می‌شود.
+
+### ورود به سیستم
+- نام کاربری: **admin** — رمز عبور: **admin123**
+- لطفاً پس از نخستین ورود، رمزها را تغییر دهید (از طریق پروفایل).
+
+### محل ذخیرهٔ معلومات
+- بانک اطلاعاتی شما در این مسیر ذخیره می‌شود:
+  `%APPDATA%\ManufacturingERP\data\custom.db`
+- نسخهٔ پشتیبان: از ماژول **تنظیمات (Settings)** بخش ادمین می‌توانید فایل پشتیبان را دانلود کنید. برای کپی دستی، برنامه را ببندید و از همین مسیر کپی بگیرید.
+- بازگشت به معلومات نمونه: برنامه را ببندید، پوشهٔ `data` را حذف کنید و برنامه را دوباره باز کنید.
+- لاگ برنامه: `%APPDATA%\ManufacturingERP\electron.log`
+
+### نیازمندی‌ها
+- ویندوز ۱۰ یا ۱۱ — ۶۴ بیت (x64)

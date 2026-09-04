@@ -1,0 +1,24 @@
+appId: af.mfg.erp
+productName: ManufacturingERP
+directories:
+  output: desktop-dist
+  buildResources: electron/build
+asar: false
+# Only ship the electron main/preload sources + package.json (positive-only
+# patterns REPLACE the default **/* — keeps project root out of the app dir).
+# NOTE: no `!` ignore patterns here — electron-builder applies files-ignores
+# GLOBALLY, which would also strip node_modules from extraResources.
+# The Next.js standalone server is copied AFTER electron-builder with
+# `cp -a` (see electron/build-desktop.sh) to avoid hidden-dir/node_modules
+# filtering. npmRebuild is disabled because nothing needs rebuilding.
+npmRebuild: false
+files:
+  - electron/**
+  - package.json
+extraResources:
+  - from: desktop-assets/demo-db
+    to: demo-db
+win:
+  target:
+    - dir
+  signAndEditExecutable: false
