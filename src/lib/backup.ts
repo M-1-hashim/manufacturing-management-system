@@ -1,10 +1,12 @@
-// پشتیبان‌گیری خودکار و دستی دیتابیس SQLite — فقط سمت سرور
-// فایل‌های پشتیبان کنار دیتابیس در پوشه backups/ ذخیره می‌شوند
+// پشتیبان‌گیری خودکار و دستی دیتابیس — فقط سمت سرور
+// SQLite: کپی فایل (VACUUM) — MySQL هاست اشتراکی: اسنپ‌شات JSON
+// فایل‌های پشتیبان در پوشه backups/ کنار دیتابیس ذخیره می‌شوند
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { db } from '@/lib/db'
 import { logAudit, type AuditActor } from '@/lib/audit'
+import { currentDbType, exportAllJson, restoreFromJson, validateJsonBackup } from '@/lib/json-backup'
 
 export interface BackupFile {
   name: string
@@ -12,8 +14,8 @@ export interface BackupFile {
   createdAt: string // ISO
 }
 
-// الگوی نام فایل پشتیبان: backup-YYYYMMDD-HHMMSS.db
-const NAME_RE = /^backup-\d{8}-\d{6}\.db$/
+// الگوی نام فایل پشتیبان: backup-YYYYMMDD-HHMMSS.db یا backup-YYYYMMDD-HHMMSS.json
+const NAME_RE = /^backup-\d{8}-\d{6}\.(db|json)$/
 const DEFAULT_KEEP = 10
 
 // ---------------- مسیرها ----------------
@@ -101,24 +103,36 @@ async function pruneBackups(): Promise<void> {
   }
 }
 
-/** ایجاد یک نسخه پشتیبان سازگار (VACUUM INTO — در برابر نوشتن همزمان امن است) */
+/**
+ * ایجاد یک نسخه پشتیبان
+ * SQLite: VACUUM INTO (در برابر نوشتن همزمان امن است)
+ * MySQL: اسنپ‌شات JSON از همه جداول
+ * format: تحمیل نوع فایل — «json» حتی روی SQLite هم برای مهاجرت دیتا به هاست کاربرد دارد
+ */
 export async function createBackup(
   reason: 'auto' | 'manual',
-  actor?: AuditActor | null
+  actor?: AuditActor | null,
+  format?: 'json' | 'db'
 ): Promise<BackupFile> {
+  const isJson = format === 'json' || (format !== 'db' && currentDbType() === 'mysql')
   const dir = backupsDir()
   await fsp.mkdir(dir, { recursive: true })
   const now = new Date()
   const p = (n: number) => String(n).padStart(2, '0')
-  const name = `backup-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}.db`
+  const name = `backup-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}.${isJson ? 'json' : 'db'}`
   const target = path.join(dir, name)
 
-  try {
-    await db.$executeRawUnsafe(`VACUUM INTO '${target.replace(/'/g, "''")}'`)
-  } catch {
-    // روش جایگزین: چک‌پوینت WAL و سپس کپی مستقیم فایل
-    await db.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE)').catch(() => {})
-    await fsp.copyFile(dbFilePath(), target)
+  if (isJson) {
+    const snapshot = await exportAllJson()
+    await fsp.writeFile(target, JSON.stringify(snapshot), 'utf8')
+  } else {
+    try {
+      await db.$executeRawUnsafe(`VACUUM INTO '${target.replace(/'/g, "''")}'`)
+    } catch {
+      // روش جایگزین: چک‌پوینت WAL و سپس کپی مستقیم فایل
+      await db.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE)').catch(() => {})
+      await fsp.copyFile(dbFilePath(), target)
+    }
   }
 
   const st = await fsp.stat(target)
@@ -153,18 +167,56 @@ export function validateSqliteDbBuffer(buf: Buffer): boolean {
 
 export interface RestoreResult {
   safetyBackup: string
+  rowsRestored?: number
 }
 
 /**
- * تعویض کامل دیتابیس با فایل پشتیبان.
- * ترتیب ایمن: بکاپ امنیتی از وضعیت فعلی → قطع اتصال Prisma → پاک‌سازی WAL/SHM
- * → تعویض اتمیک فایل → اتصال مجدد → تست → در صورت خطا بازگرداندن بکاپ امنیتی
+ * بازیابی از بایت‌های فایل پشتیبان — نوع فایل خودکار تشخیص داده می‌شود:
+ *  — JSON (بکاپ جدید): روی SQLite و MySQL هر دو کار می‌کند (تراکنش اتمیک)
+ *  — باینری SQLite (.db): فقط در حالت SQLite — تعویض فایل با بکاپ امنیتی و رول‌بک خودکار
  */
 export async function restoreFromBuffer(
   dbBytes: Buffer,
   actor?: AuditActor | null,
   sourceLabel = 'upload'
 ): Promise<RestoreResult> {
+  // ---------- مسیر ۱: فایل JSON ----------
+  const head = dbBytes.subarray(0, 64).toString('utf8').trimStart()
+  if (head.startsWith('{')) {
+    // اعتبارسنجی ساختار فایل قبل از هر تغییری
+    let data: unknown
+    try {
+      data = JSON.parse(dbBytes.toString('utf8'))
+    } catch {
+      throw new Error('فایل JSON قابل خواندن نیست')
+    }
+    const validated = validateJsonBackup(data)
+
+    // بکاپ امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+    const safety = await createBackup('manual', actor)
+    try {
+      const res = await restoreFromJson(validated)
+      await logAudit(
+        actor ?? null,
+        'backup_restore',
+        'system',
+        undefined,
+        `${sourceLabel} (json) — safety: ${safety.name} — ${res.restoredRows} rows`
+      )
+      return { safetyBackup: safety.name, rowsRestored: res.restoredRows }
+    } catch (e) {
+      // تراکنش اتمیک — دیتابیس تغییری نکرده است
+      console.error('[backup] json restore failed', e)
+      const detail = e instanceof Error ? ` — ${e.message}` : ''
+      throw new Error(`بازیابی در تراکنش ناموفق بود و همه‌چیز به حالت قبل برگشت${detail}`)
+    }
+  }
+
+  // ---------- مسیر ۲: فایل باینری SQLite ----------
+  if (currentDbType() === 'mysql') {
+    throw new Error('فایل .db مخصوص دیتابیس SQLite است — در حالت MySQL از بکاپ JSON استفاده کنید')
+  }
+
   if (!validateSqliteDbBuffer(dbBytes)) {
     throw new Error('فایل ارسالی یک دیتابیس معتبر سامانه نیست')
   }

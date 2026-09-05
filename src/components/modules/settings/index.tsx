@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -73,7 +73,7 @@ export default function SettingsModule() {
 
   // ---------- پشتیبان‌گیری خودکار (فقط ادمین) ----------
   const isAdmin = user?.role === 'admin'
-  const backup = useFetch<{ files: BackupFileT[]; intervalHours: number; keep: number }>(isAdmin ? '/api/admin/backup' : null)
+  const backup = useFetch<{ files: BackupFileT[]; intervalHours: number; keep: number; dbType?: 'sqlite' | 'mysql' }>(isAdmin ? '/api/admin/backup' : null)
   const [bInterval, setBInterval] = useState('24')
   const [bKeep, setBKeep] = useState('10')
   const [bSaving, setBSaving] = useState(false)
@@ -128,6 +128,27 @@ export default function SettingsModule() {
       URL.revokeObjectURL(a.href)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('خطا در دانلود', 'د ښکته کولو ستونزه', 'Download failed'))
+    }
+  }
+
+  async function exportJsonSnapshot() {
+    try {
+      const res = await fetch('/api/admin/backup?export=json')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || t('خطا در تهیه خروجی', 'د صادرولو ستونزه', 'Export failed'))
+      }
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(a.href)
+      toast.success(
+        t('خروجی JSON آماده شد — برای انتقال دیتا به هاست استفاده کنید', 'د JSON خپلوونکی چمتو شو', 'JSON export ready')
+      )
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در تهیه خروجی', 'د صادرولو ستونزه', 'Export failed'))
     }
   }
 
@@ -493,6 +514,15 @@ export default function SettingsModule() {
               <DatabaseBackup className="h-4 w-4 text-primary" />
               {t('پشتیبان‌گیری خودکار و دستی', 'اتوماتیک او لاسي بیک اپ', 'Automatic & manual backup')}
               <Badge variant="outline" className="ms-2">{t('مخصوص ادمین', 'ځانګړی ادمین', 'Admin only')}</Badge>
+              {backup.data?.dbType === 'mysql' ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
+                  {t('ذخیره‌سازی: هاست MySQL', 'ساتنه: MySQL هوسټ', 'Storage: MySQL host')}
+                </Badge>
+              ) : (
+                <Badge variant="secondary">
+                  {t('ذخیره‌سازی: SQLite محلی', 'ساتنه: ځایی SQLite', 'Storage: local SQLite')}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -549,6 +579,10 @@ export default function SettingsModule() {
                 <Button onClick={() => uploadInputRef.current?.click()} variant="outline" size="sm" className="gap-2">
                   <Upload className="h-4 w-4" />
                   {t('آپلود و بازیابی', 'پورته کول او بیا رغونه', 'Upload & restore')}
+                </Button>
+                <Button onClick={exportJsonSnapshot} variant="outline" size="sm" className="gap-2">
+                  <FileJson className="h-4 w-4" />
+                  {t('خروجی JSON (انتقال به هاست)', 'د JSON صادرول (هوسټ ته لېږد)', 'JSON export (host migration)')}
                 </Button>
                 <Button onClick={createBackupNow} disabled={bCreating} size="sm" className="gap-2">
                   <HardDriveDownload className="h-4 w-4" />

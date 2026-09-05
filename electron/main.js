@@ -55,7 +55,46 @@ process.on('unhandledRejection', (reason) => {
 
 /* ------------------------------------------------------------- data layer */
 
+/**
+ * اتصال سفارشی دیتابیس — فایل db-connection.txt در پوشه data کاربر
+ * اگر اولین خط غیر کامنت با mysql:// شروع شود، دیتا در هاست اشتراکی ذخیره می‌شود
+ * وگرنه حالت پیش‌فرض (SQLite محلی) استفاده می‌گردد
+ */
+function databaseUrlOverride() {
+  const cfgPath = path.join(app.getPath('userData'), 'db-connection.txt');
+  try {
+    if (!fs.existsSync(cfgPath)) {
+      // ساخت فایل راهنما در اولین اجرا — کاربر فقط یک خط را ویرایش می‌کند
+      const template = [
+        '# فایل تنظیم اتصال دیتابیس — ManufacturingERP',
+        '#',
+        '# حالت پیش‌فرض: دیتابیس محلی (SQLite) — همین فایل را دست‌نخورده رها کنید',
+        '#',
+        '# برای ذخیره دیتا در هاست اشتراکی (MySQL):',
+        '#   ۱) در cPanel هاست: MySQL Databases → ساخت دیتابیس و کاربر',
+        '#   ۲) در cPanel: Remote MySQL → افزودن IP دستگاه یا علامت %',
+        '#   ۳) خط زیر را ویرایش کنید، # ابتدای آن را حذف کنید و فایل را ذخیره کنید:',
+        '#   ۴) برنامه را ببندید و دوباره باز کنید',
+        '#',
+        '# mysql://DBUSER:PASSWORD@HOST_ADDRESS:3306/DBNAME',
+        '',
+      ].join('\r\n');
+      fs.writeFileSync(cfgPath, template, 'utf8');
+      return null;
+    }
+    const lines = fs.readFileSync(cfgPath, 'utf8').split(/\r?\n/);
+    const value = lines.map((l) => l.trim()).find((l) => l && !l.startsWith('#'));
+    if (value && value.startsWith('mysql://')) return value;
+  } catch (_e) {
+    /* خواندن ناموفق — حالت محلی */
+  }
+  return null;
+}
+
 function ensureDatabase() {
+  // حالت هاست MySQL: فایل محلی لازم نیست
+  if (databaseUrlOverride()) return null;
+
   // Writable data dir next to user profile: userData/data/custom.db
   const dataDir = path.join(app.getPath('userData'), 'data');
   fs.mkdirSync(dataDir, { recursive: true });
@@ -95,15 +134,15 @@ function isServerReady(port) {
   });
 }
 
-function startServerOnPort(port, dbPath) {
+function startServerOnPort(port, dbPath, dbUrlOverride) {
   return new Promise((resolve, reject) => {
-    const dbPathPosix = dbPath.replace(/\\/g, '/'); // Prisma needs forward slashes on Windows
+    const dbPathPosix = dbPath ? dbPath.replace(/\\/g, '/') : ''; // Prisma needs forward slashes on Windows
     const env = {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       NODE_ENV: 'production',
       PORT: String(port),
-      DATABASE_URL: 'file:' + dbPathPosix,
+      DATABASE_URL: dbUrlOverride || 'file:' + dbPathPosix,
       HOSTNAME: '127.0.0.1',
     };
 
@@ -166,12 +205,12 @@ function startServerOnPort(port, dbPath) {
   });
 }
 
-async function startEmbeddedServer(dbPath) {
+async function startEmbeddedServer(dbPath, dbUrlOverride) {
   let lastErr = null;
   for (let i = 0; i < MAX_PORT_ATTEMPTS; i++) {
     const port = BASE_PORT + i;
     try {
-      const child = await startServerOnPort(port, dbPath);
+      const child = await startServerOnPort(port, dbPath, dbUrlOverride);
       return { child, port };
     } catch (e) {
       lastErr = e;
@@ -246,9 +285,14 @@ async function main() {
   setupMenu();
 
   const dbPath = ensureDatabase();
-  logLine(`starting ManufacturingERP (packaged=${isPackaged}) db=${dbPath}`);
+  const dbOverride = databaseUrlOverride();
+  logLine(
+    `starting ManufacturingERP (packaged=${isPackaged}) db=${
+      dbOverride ? 'host-mysql' : dbPath
+    }`
+  );
 
-  const started = await startEmbeddedServer(dbPath);
+  const started = await startEmbeddedServer(dbPath, dbOverride);
   serverChild = started.child;
   serverPort = started.port;
   logLine(`embedded server ready on port ${serverPort}`);

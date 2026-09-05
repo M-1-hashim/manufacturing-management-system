@@ -14,6 +14,7 @@ import {
   restoreFromBuffer,
   restoreFromBackupFile,
 } from '@/lib/backup'
+import { exportAllJson, currentDbType } from '@/lib/json-backup'
 
 // همه مسیرهای /api/admin فقط برای ادمین (middleware) — اینجا هم دوباره بررسی می‌شود
 
@@ -28,14 +29,30 @@ async function requireAdmin(req: Request) {
   return { session }
 }
 
-// GET /api/admin/backup                 → فهرست + تنظیمات
+// GET /api/admin/backup                 → فهرست + تنظیمات + نوع دیتابیس
 // GET /api/admin/backup?download=x.db   → دانلود فایل پشتیبان
+// GET /api/admin/backup?export=json     → خروجی JSON فوری (برای مهاجرت دیتا به هاست)
 export async function GET(req: Request) {
   try {
     const guard = await requireAdmin(req)
     if (guard.error) return guard.error
 
     const url = new URL(req.url)
+
+    // خروجی JSON فوری — بدون ذخیره روی دیسک
+    if (url.searchParams.get('export') === 'json') {
+      const snapshot = await exportAllJson()
+      const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+      const body = JSON.stringify(snapshot)
+      return new NextResponse(body, {
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Disposition': `attachment; filename="backup-${stamp}.json"`,
+          'Content-Length': String(Buffer.byteLength(body, 'utf8')),
+        },
+      })
+    }
+
     const download = url.searchParams.get('download')
     if (download) {
       if (!isValidBackupName(download)) {
@@ -43,9 +60,10 @@ export async function GET(req: Request) {
       }
       try {
         const buf = await readFile(backupAbsPath(download))
+        const isJson = download.endsWith('.json')
         return new NextResponse(new Uint8Array(buf), {
           headers: {
-            'Content-Type': 'application/octet-stream',
+            'Content-Type': isJson ? 'application/json; charset=utf-8' : 'application/octet-stream',
             'Content-Disposition': `attachment; filename="${download}"`,
             'Content-Length': String(buf.length),
           },
@@ -60,7 +78,7 @@ export async function GET(req: Request) {
       getBackupIntervalHours(),
       getBackupKeep(),
     ])
-    return NextResponse.json({ files, intervalHours, keep })
+    return NextResponse.json({ files, intervalHours, keep, dbType: currentDbType() })
   } catch (e) {
     console.error('backup GET', e)
     return NextResponse.json({ error: 'خطا در دریافت فهرست پشتیبان' }, { status: 500 })
@@ -68,9 +86,10 @@ export async function GET(req: Request) {
 }
 
 // POST /api/admin/backup
-//  — JSON {}                        → ایجاد نسخه پشتیبان جدید (دستی)
+//  — JSON {}                        → ایجاد نسخه پشتیبان جدید (نوع خودکار بر اساس دیتابیس فعلی)
+//  — JSON {format: "json"}          → اسنپ‌شات JSON (حتی روی SQLite — برای مهاجرت دیتا به هاست)
 //  — JSON {restore: "backup-….db"}  → بازیابی از یکی از پشتیبان‌های موجود
-//  — multipart/form-data (file)     → آپلود فایل پشتیبان و بازیابی آن
+//  — multipart/form-data (file)     → آپلود فایل پشتیبان (.db یا .json) و بازیابی آن
 export async function POST(req: Request) {
   try {
     const guard = await requireAdmin(req)
@@ -120,7 +139,7 @@ export async function POST(req: Request) {
     }
 
     // ایجاد نسخه پشتیبان جدید
-    const created = await createBackup('manual', actor)
+    const created = await createBackup('manual', actor, body.format === 'json' ? 'json' : undefined)
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error('backup POST', e)

@@ -32,6 +32,22 @@ export async function POST(req: Request) {
       )
     }
 
+    // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول کاربران خالی است
+    // (اولین اتصال به دیتابیس تازه هاست — برای امکان ورود و بازیابی بکاپ JSON)
+    const userCount = await db.user.count()
+    if (userCount === 0) {
+      await db.user.create({
+        data: {
+          username: 'admin',
+          password: hashPassword('admin123'),
+          fullName: 'مدیر سیستم',
+          role: 'admin',
+          department: 'general',
+        },
+      })
+      await logAudit(null, 'bootstrap', 'auth', undefined, 'حساب ادمین پیش‌فرض در دیتابیس خالی ساخته شد — admin/admin123')
+    }
+
     const user = await db.user.findUnique({ where: { username: uname } })
     if (!user || !verifyPassword(String(password), user.password)) {
       const entry = failMap.get(uname) || { count: 0, lockedUntil: 0 }

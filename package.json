@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
+    "db:push:mysql": "prisma db push --schema prisma/schema.mysql.prisma --accept-data-loss",
+    "db:generate:mysql": "prisma generate --schema prisma/schema.mysql.prisma",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "desktop:build": "bash electron/build-desktop.sh"
