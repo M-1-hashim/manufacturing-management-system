@@ -529,3 +529,24 @@ Stage Summary:
 - تبدیل افغانی/دالر/کلدار حالا با نرخ واقعی و لحظه‌ای از اینترنت انجام می‌شود؛ سیستم offline-proof است (کش ۱ ساعته + ذخیره دائمی در دیتابیس)
 - Files: src/lib/exchange-rate.ts (جدید)، src/app/api/exchange-rate/route.ts (جدید)، src/components/modules/settings/index.tsx، src/components/modules/sales/index.tsx
 - Commit bcef939 pushed to origin/main
+
+---
+Task ID: 12 (android-apk)
+Agent: coordinator (main)
+Task: «فایل apk این سیستم را هم برام درست کن» — ساخت فایل APK اندروید
+
+Work Log:
+- ابزار بیلد در سندباکس: JDK 21 (Adoptium tarball)، build-tools 34 + 35-rc1 و platform-34-ext7 از dl.google.com — بدون Gradle، خط لوله مستقیم aapt2 → javac --release 8 → d8 → zip → zipalign → apksigner
+- باگ d8 8.2.2-dev (NPE روی کلاس‌های anonymous جاواکامپایل ۲۱) → با d8 نسخه build-tools 35-rc1 حل شد
+- اپ: WebView خالص (بدون androidx، ~۲۵KB) — بسته af.mfg.erp، minSdk 24، targetSdk 34، usesCleartextTraffic (HTTP شبکه محلی)
+- MainActivity: دیالوگ «آدرس سرور» در اولین اجرا (ذخیره در SharedPreferences)، صفحه خطای بومی با «تلاش مجدد / تغییر آدرس سرور»، منوی اکشن‌بار (بارگذاری مجدد / تغییر آدرس / خروج)، back navigation، نوتیس دانلود blob، نشانگر پیشرفت
+- آیکون لانچر با PIL: مربع سبز زمردی گرادیانی + حرف «م» سفید در ۵ تراکم (mdpi تا xxxhdpi)
+- تحویل: public/mfg-erp.apk (دانلود از /mfg-erp.apk با MIME صحیح)، کارت «نسخه اندروید» در تنظیمات با دکمه دانلود و راهنمای نصب کارکنان روی همان شبکه، سورس در android/project/
+- Release جدید v1.0.0-android در GitHub با asset «MfgERP-1.0.0.apk» + توضیحات سه‌زبانه نصب/اتصال
+- راستی‌آزمایی: aapt2 dump badging (label/permissions/sdk صحیح)، apksigner verify (امضای معتبر SHA-256)، curl /mfg-erp.apk = 200 + application/vnd.android.package-archive، کارت تنظیمات در مرورگر دیده شد، کنسول صفر خطا، lint تمیز
+- محدودیت ذکرشده برای کاربر: سرور (کامپیوتر) باید روشن باشد؛ دانلود فایل پشتیبان در WebView کار نمی‌کند؛ نصب روی امولاتور در سندباکس ممکن نیست — تست روی گوشی واقعی لازم است
+
+Stage Summary:
+- کاربر حالا APK امضاشده دارد: دانلود از تنظیمات سیستم (/mfg-erp.apk) و از GitHub Release v1.0.0-android؛ اپ اندروید به سرور لپ‌تاپ/PC روی همان وای‌فای وصل می‌شود و آدرس آن قابل تغییر است
+- Files: android/project/* (سورس)، public/mfg-erp.apk، src/components/modules/settings/index.tsx
+- Commit cae539c pushed to origin/main
