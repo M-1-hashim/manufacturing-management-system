@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مدیریت تولید</string>
+    <string name="menu_reload">بارگذاری مجدد</string>
+    <string name="menu_server">تغییر آدرس سرور</string>
+    <string name="menu_exit">خروج</string>
+    <string name="err_title">سرور در دسترس نیست</string>
+    <string name="err_help">۱. کامپیوتر (سرور) روشن باشد و برنامه مدیریت تولید روی آن باز باشد\n۲. گوشی و کامپیوتر به یک شبکه وای‌فای وصل باشند\n۳. آدرس سرور را بررسی کنید (مثال: http://192.168.1.10:3000)</string>
+    <string name="err_retry">تلاش مجدد</string>
+    <string name="err_change">تغییر آدرس سرور</string>
+    <string name="server_dlg_title">آدرس سرور</string>
+    <string name="server_dlg_help">آدرسی که برنامه روی کامپیوتر باز می‌شود را وارد کنید — مثال: http://192.168.1.10:3000</string>
+    <string name="server_dlg_ok">ذخیره و اتصال</string>
+    <string name="server_dlg_cancel">لغو</string>
+    <string name="blob_download_note">دانلود فایل در نسخه موبایل پشتیبانی نمی‌شود — از نسخه کامپیوتر استفاده کنید</string>
+    <string name="exit_confirm">برای خروج دوباره لمس کنید</string>
+</resources>

@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -452,6 +452,36 @@ export default function SettingsModule() {
             <Calendar className="h-4 w-4" />
             {t('تقویم سیستم شمسی (هجری شمسی) است و در همه گزارش‌ها و فاکتورها استفاده می‌شود؛ تاریخ میلادی نیز در دسترس است.', 'د سیسټم تقویم هجري شمسي دی او په ټولو راپورونو کې کارول کیږي؛ میلادي نېټه هم شتون لري.', 'System uses the Shamsi (Jalali) calendar everywhere; Gregorian is also available.')}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* نسخه اندروید */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Smartphone className="h-4 w-4 text-primary" />
+            {t('نسخه اندروید (APK)', 'د اندروید نسخه (APK)', 'Android app (APK)')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <p className="text-sm text-muted-foreground flex-1">
+              {t(
+                'برای نصب روی گوشی، فایل APK را دانلود کنید. کارکنان می‌توانند با باز کردن همین آدرس در مرورگر گوشی (همان شبکه وای‌فای) فایل را دانلود و نصب کنند.',
+                'د په ټیلیفون نصبولو لپاره APK فایل ښکته کړئ. کارکوونکي کولی شي په ورته پته د ټیلیفون په براوزر کې فایل ښکته او نصب کړي.',
+                'Download the APK to install on phones. Staff can open the same address in their phone browser (same Wi-Fi) to download and install.'
+              )}
+            </p>
+            <a href="/mfg-erp.apk" download className="shrink-0">
+              <Button className="gap-2 w-full sm:w-auto">
+                <Download className="h-4 w-4" />
+                {t('دانلود فایل APK', 'APK فایل ښکته کړئ', 'Download APK')}
+              </Button>
+            </a>
+          </div>
+          <p className="text-xs text-muted-foreground" dir="ltr" >
+            http://&lt;server-ip&gt;:3000/mfg-erp.apk
+          </p>
         </CardContent>
       </Card>
 
