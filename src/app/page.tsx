@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore, type SessionUser } from '@/lib/store'
 import { I18nProvider, useI18n } from '@/lib/i18n'
+import { DirectionProvider } from '@radix-ui/react-direction'
 import { apiGet, apiPost } from '@/lib/api'
 import { installAuthInterceptor } from '@/lib/auth-client'
 import { installOfflineInterceptor, trySync, refreshPendingCount, clearOfflineCache } from '@/lib/offline-client'
@@ -215,7 +216,7 @@ function LoginView() {
 
 // ---------------- Shell ----------------
 function Shell() {
-  const { t, lang } = useI18n()
+  const { t, lang, dir } = useI18n()
   const user = useAppStore((s) => s.user)
   const setUser = useAppStore((s) => s.setUser)
   const activeTab = useAppStore((s) => s.activeTab)
@@ -297,7 +298,12 @@ function Shell() {
     void clearOfflineCache().then(() => refreshPendingCount())
   }
 
-  if (!user) return <LoginView />
+  if (!user)
+    return (
+      <DirectionProvider dir={dir}>
+        <LoginView />
+      </DirectionProvider>
+    )
 
   const nav = NAV.filter((n) => canAccess(user, n.id))
 
@@ -324,6 +330,7 @@ function Shell() {
   const nextLang = lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa'
 
   return (
+    <DirectionProvider dir={dir}>
     <div className="app-shell min-h-screen flex flex-col print:hidden" dir={lang === 'en' ? 'ltr' : 'rtl'}>
       <div className="flex flex-1">
         {/* پوشش موبایل */}
@@ -488,6 +495,7 @@ function Shell() {
 
       <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
+    </DirectionProvider>
   )
 }
 
