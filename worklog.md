@@ -490,3 +490,21 @@ Stage Summary:
 - در دری و پشتو تمام جدول‌های ۱۳ ماژول کاملاً راست‌چین‌اند (هدر، سلول، عدد، دکمه‌های عملیات)؛ در انگلیسی آینه‌ای چپ‌چین — یک قاعده واحد منطقی (start)
 - Files: ui/table.tsx, ui/dialog.tsx, ui/alert-dialog.tsx, ui/accordion.tsx, ui/sidebar.tsx, ui/drawer.tsx + modules: production, materials, users, hr, sales, products, dashboard, reports, audit, settings, inventory
 - Commit 9891e82 pushed to origin/main
+
+---
+Task ID: 10 (hr-inventory-rtl-directionprovider)
+Agent: coordinator (main)
+Task: «جدول و ردیف‌های بخش انبار و کارکنان راست‌چین نشده و نامنظم است» — ریشه‌یابی و رفع کامل
+
+Work Log:
+- ریشه‌یابی با getBoundingClientRect + پیمایش DOM: جدول کارکنان direction=ltr داشت؛ عامل: DIV.tabs با dir="ltr"
+- علت اصلی: کامپوننت‌های Radix UI (Tabs, Dialog, Select, DropdownMenu...) بدون DirectionProvider پیش‌فرض dir=ltr می‌گیرند — کل Tabs انبار/کارکنان (و همه پورتال‌های Radix در کل برنامه) LTR رندر می‌شد؛ ماژول reports چون dir="rtl" دستی داشت سالم بود
+- رفع سیستمی در page.tsx: پوشاندن Shell و LoginView با <DirectionProvider dir={dir}> از @radix-ui/react-direction (v1.1.1 موجود)؛ dir از useI18n — با تغییر زبان خودکار عوض می‌شود
+- خطای parse موقت حین hot-reload بین دو ویرایش بود — بعد از تکمیل، reload بدون خطا
+- راستی‌آزمایی مرورگر: کارکنان (۳ تب) و انبار (۳ تب) حالا RTL واقعی — نام راست‌ترین، عملیات چپ‌ترین، ترتیب تب‌ها RTL، پروگرس‌بارها از راست؛ انگلیسی: tabs dir=ltr و چیدمان آینه‌ای صحیح؛ موبایل ۳۹۰px؛ کنسول صفر خطا؛ lint تمیز
+- بازگشت به پیش‌فرض: دری
+
+Stage Summary:
+- یک رفع ۱۰ خطی ریشه کل مشکل ترازبندی انبار/کارکنان را حل کرد و ضمناً همه Select/Dropdown/Dialogهای برنامه در RTL صحیح شدند (راست‌چین شدن متن دیالوگ‌ها، فلیپ پاپ‌آپ‌ها، ناوبری کیبورد RTL)
+- Files: src/app/page.tsx (import DirectionProvider + dir از useI18n + دو wrapper)
+- Commit 769d779 pushed to origin/main
