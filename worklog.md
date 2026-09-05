@@ -577,3 +577,24 @@ Stage Summary:
 - راهنمای کامل دری: docs/DEPLOY-SHARED-HOSTING.fa.md + docs/mysql-schema.sql برای phpMyAdmin
 - بکاپ خودکار/دستی در حالت MySQL به‌صورت اسنپ‌شات JSON در همان پوشه backups
 - محدودیت تست: سرور MySQL در سندباکس موجود نیست — مسیر MySQL با prisma validate و مسیر JSON (dialect-agnostic) با تست واقعی پوشش داده شد
+
+---
+Task ID: 13
+Agent: main (Z.ai Code)
+Task: «خوب چه کار کنیم الان» — آماده‌سازی گام‌های عملی برای کاربر: دانلود مستقیم فایل‌های هاست از برنامه + انتشار نسخه دسکتاپ 1.0.2 با قابلیت MySQL
+
+Work Log:
+- بررسی ریلیزهای موجود: v1.0.0/v1.0.1 (Setup.exe + Portable.zip)، v1.0.0-android (APK) — همه با همان الگوی API + token
+- public/mysql-schema.sql و public/hosting-guide.md اضافه شدند (دانلود مستقیم بدون auth)
+- Settings backup card: باکس amber با دکمه‌های «فایل SQL هاست» و «راهنمای گام‌به‌گام» (Button asChild + t() سه‌زبانه)
+- نسخه‌ها: package.json → 1.0.2، installer.nsi → 1.0.2.0
+- بیلد کامل دسکتاپ: bash electron/build-desktop.sh → win-unpacked 544M (همه verifyهای OK شامل windows prisma engine)
+- Smoke test سرور بسته‌بندی‌شده روی :37899: GET / → 200، login admin/admin123 → JSON، پسورد غلط → 401 فارسی، chunk باکس هاست در static موجود
+- Portable zip (235MB / 2477 فایل) + NSIS بومی با debهای Debian 3.08 (NSISDIR trick) → Setup.exe 143MB — تأیید PE32 Nullsoft + نسخه UTF16LE «1.0.2.0»
+- Release v1.0.2 (id 383201084) با توضیحات دری/انگلیسی؛ هر دو asset با state=uploaded آپلود شد
+- commit 69514b8 push شد به main
+
+Stage Summary:
+- کاربر حالا نسخه دسکتاپی دارد که اتصال به هاست MySQL را پشتیبانی می‌کند (db-connection.txt)
+- فایل‌های لازم (SQL schema + راهنمای دری) از داخل برنامه قابل دانلود است: تنظیمات → پشتیبان‌گیری
+- Release v1.0.2: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.2
