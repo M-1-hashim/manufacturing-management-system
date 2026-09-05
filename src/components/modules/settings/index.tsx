@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,31 @@ import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
 import { clearOfflineCache } from '@/lib/offline-client'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
+
+// ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخه ۱.۰.۳ به بعد) ----------
+interface DbConnInfoT {
+  ok: boolean
+  path: string
+  active: boolean
+  host: string | null
+  port: string
+  database: string | null
+  user: string | null
+}
+
+interface DbConnApiT {
+  info: () => Promise<DbConnInfoT>
+  save: (payload: { host: string; port: string; database: string; user: string; password: string }) => Promise<{ ok: boolean; path?: string; maskedUrl?: string; error?: string }>
+  reset: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  openFolder: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  relaunch: () => Promise<{ ok: boolean }>
+}
+
+declare global {
+  interface Window {
+    dbConnection?: DbConnApiT
+  }
+}
 
 interface BackupFileT {
   name: string
@@ -79,6 +104,85 @@ export default function SettingsModule() {
   const [bSaving, setBSaving] = useState(false)
   const [bCreating, setBCreating] = useState(false)
   const [bDeleting, setBDeleting] = useState<string | null>(null)
+
+  // ---------- اتصال به هاست از داخل برنامه (فقط نسخه ویندوز جدید) ----------
+  const [connApi] = useState<DbConnApiT | null>(() => (typeof window !== 'undefined' ? window.dbConnection ?? null : null))
+  const [connInfo, setConnInfo] = useState<DbConnInfoT | null>(null)
+  const [connForm, setConnForm] = useState({ host: '', port: '3306', database: '', user: '', password: '' })
+  const [connSaving, setConnSaving] = useState(false)
+  const [connResetting, setConnResetting] = useState(false)
+
+  useEffect(() => {
+    if (!connApi) return
+    let cancelled = false
+    connApi
+      .info()
+      .then((info) => {
+        if (cancelled) return
+        setConnInfo(info)
+        if (info.active) {
+          setConnForm((c) => ({
+            ...c,
+            host: info.host || '',
+            port: info.port || '3306',
+            database: info.database || '',
+            user: info.user || '',
+          }))
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [connApi])
+
+  async function saveHostConnection() {
+    if (!connApi) return
+    if (!connForm.host.trim() || !connForm.database.trim() || !connForm.user.trim()) {
+      toast.error(t('آدرس هاست، نام دیتابیس و نام کاربری الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
+      return
+    }
+    setConnSaving(true)
+    try {
+      const res = await connApi.save({
+        host: connForm.host.trim(),
+        port: connForm.port.trim() || '3306',
+        database: connForm.database.trim(),
+        user: connForm.user.trim(),
+        password: connForm.password,
+      })
+      if (!res.ok) {
+        throw new Error(res.error === 'MISSING_FIELDS'
+          ? t('فیلدهای الزامی را کامل کنید', 'فیلدهای الزامی را کامل کنید', 'Missing required fields')
+          : res.error || t('خطای نامشخص', 'ناڅرګنده ستونزه', 'Unknown error'))
+      }
+      toast.success(t('اتصال به هاست ذخیره شد — برنامه دوباره باز می‌شود…', 'اتصال ذخیره شو — پروګرام بیا پرانیستل کېږي…', 'Host connection saved — the app will restart…'))
+      setTimeout(() => {
+        void connApi.relaunch()
+      }, 1500)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در ذخیره اتصال', 'د اتصال د خوندي کولو ستونزه', 'Save connection failed'))
+    } finally {
+      setConnSaving(false)
+    }
+  }
+
+  async function resetToLocalDb() {
+    if (!connApi) return
+    setConnResetting(true)
+    try {
+      const res = await connApi.reset()
+      if (!res.ok) throw new Error(res.error || 'failed')
+      toast.success(t('به حالت دیتابیس محلی برگشتید — برنامه دوباره باز می‌شود…', 'ځایی حالت ته ورګرځېدل — پروګرام بیا پرانیستل کېږي…', 'Switched to local database — the app will restart…'))
+      setTimeout(() => {
+        void connApi.relaunch()
+      }, 1500)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در تغییر حالت', 'د بدلون ستونزه', 'Switch failed'))
+    } finally {
+      setConnResetting(false)
+    }
+  }
 
   useEffect(() => {
     if (backup.data) {
@@ -713,6 +817,117 @@ export default function SettingsModule() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* اتصال برنامه به هاست اشتراکی — بدون جستجوی دستی فایل db-connection.txt */}
+      {isAdmin && (
+        <Card className="border-amber-200 dark:border-amber-900">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Server className="h-4 w-4 text-primary" />
+              {t('اتصال برنامه به هاست (ذخیره دیتا در MySQL)', 'پروګرام له هوسټ سره نښلول (د ډاټا ساتل په MySQL کې)', 'Connect app to host (store data in MySQL)')}
+              {connInfo?.active ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">{t('متصل به هاست', 'له هوسټ سره نښلول شوی', 'Connected to host')}</Badge>
+              ) : (
+                <Badge variant="secondary">{t('دیتابیس محلی', 'ځایی ډاټابیس', 'Local database')}</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {connApi ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    'نیازی به جستجوی فایل تنظیمات نیست — اطلاعات هاست خود را همین‌جا وارد کنید؛ برنامه فایل db-connection.txt را خودکار می‌نویسد و دوباره باز می‌شود.',
+                    'له فایل پلټنې ته اړتیا نشته — د هوسټ معلومات دلته داخل کړئ؛ پروګرام فایل اتوماتیک لیکي او بیا پرانیستل کېږي.',
+                    'No need to hunt for the config file — enter your host details here; the app writes db-connection.txt automatically and restarts.'
+                  )}
+                </p>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  {t(
+                    'مهم: دیتای محلی به‌صورت خودکار به هاست منتقل نمی‌شود. اول دکمه «خروجی JSON (انتقال به هاست)» را بزنید، بعد اینجا وصل شوید و در بخش پشتیبان‌گیری همان فایل را بازیابی کنید.',
+                    'مهم: ځایی ډاټا اتوماتیک هوسټ ته نه لېږدول کېږي. لومړی «د JSON صادرول» کلیک کړئ، بیا دلته وصل شئ او هماغه فایل بیا رغوئ.',
+                    'Important: local data is not moved automatically. First export the JSON backup, connect here, then restore that file from the backup section.'
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="hHost">{t('آدرس هاست', 'د هوسټ پته', 'Host address')}</Label>
+                    <Input id="hHost" dir="ltr" placeholder="yourdomain.com" autoComplete="off" value={connForm.host} onChange={(e) => setConnForm({ ...connForm, host: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="hPort">{t('پورت (معمولاً 3306)', 'بورډ (معمولاً 3306)', 'Port (usually 3306)')}</Label>
+                    <Input id="hPort" dir="ltr" inputMode="numeric" placeholder="3306" value={connForm.port} onChange={(e) => setConnForm({ ...connForm, port: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="hDb">{t('نام دیتابیس', 'د ډاټابیس نوم', 'Database name')}</Label>
+                    <Input id="hDb" dir="ltr" placeholder="cpuser_erp" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                    <Input id="hUser" dir="ltr" placeholder="cpuser_erp" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                    <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={saveHostConnection} disabled={connSaving} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {connSaving ? t('در حال ذخیره…', 'خوندي کول…', 'Saving…') : t('ذخیره و اتصال به هاست', 'خوندي او نښلول', 'Save & connect to host')}
+                  </Button>
+                  <Button variant="outline" className="gap-2" onClick={() => { void connApi.openFolder() }}>
+                    <FolderOpen className="h-4 w-4" />
+                    {t('باز کردن پوشه تنظیمات', 'د امستنې فولډر پرانیستل', 'Open settings folder')}
+                  </Button>
+                  {connInfo?.active && (
+                    <Button variant="ghost" className="gap-2 text-destructive hover:text-destructive" onClick={resetToLocalDb} disabled={connResetting}>
+                      <RotateCcw className="h-4 w-4" />
+                      {connResetting ? t('در حال تغییر…', 'په بدلون…', 'Switching…') : t('بازگشت به دیتابیس محلی', 'ځایی ډاټابیس ته بیرته‌ګرځېدل', 'Back to local database')}
+                    </Button>
+                  )}
+                </div>
+                {connInfo?.path && (
+                  <p className="text-xs text-muted-foreground break-all" dir="ltr">
+                    {t('فایل تنظیمات:', 'د امستنې فایل:', 'Config file:')} <span className="font-mono">{connInfo.path}</span>
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'توجه: در cPanel هاست باید Remote MySQL فعال باشد (IP دستگاه یا علامت % اضافه شده باشد). اگر بعد از ذخیره برنامه وصل نشد، پورت 3306 ممکن است در هاست شما بسته باشد — از پشتیبانی هاست بپرسید.',
+                    'پاملرنه: په cPanel کې باید Remote MySQL فعال وي. که وصل نشو، بورډ 3306 به تړلی وي — له هوسټ ملاتړ پوښتنه وکړئ.',
+                    'Note: Remote MySQL must be enabled in cPanel (add your IP or %). If the app cannot connect afterwards, port 3306 may be blocked — ask your hosting support.'
+                  )}
+                </p>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    'این بخش فقط در نسخه ویندوز (اپلیکیشن دسکتاپ) فعال است. روش دستی پیدا کردن فایل db-connection.txt:',
+                    'دا برخه یوازې په د وینډوز نسخه کې فعال دی. لاسي لار:',
+                    'This section only works in the Windows desktop app. Manual way to find db-connection.txt:'
+                  )}
+                </p>
+                <ol className="list-decimal ms-5 space-y-1.5 text-sm">
+                  <li>
+                    {t('کلیدهای', 'تڼۍ', 'Press')} <b dir="ltr">Win + R</b> {t('را فشار دهید و تایپ کنید:', 'وګړئ او ولیکئ:', 'and type:')}&nbsp;
+                    <span dir="ltr" className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">%APPDATA%\ManufacturingERP</span>
+                  </li>
+                  <li>{t('فایل db-connection.txt را با Notepad باز کنید و طبق راهنمای داخل آن، خط mysql:// را ویرایش کنید.', 'د db-connection.txt فایل په Notepad کې پرانیزئ او د mysql:// کرښه سم کړئ.', 'Open db-connection.txt in Notepad and edit the mysql:// line as guided inside.')}</li>
+                  <li>{t('اگر فایل وجود ندارد یعنی نسخه برنامه شما قدیمی است — نسخه جدید را دانلود و نصب کنید.', 'که فایل نشته، نو ستاسو نسخه زړه ده — نوی نسخه ښکته او نصب کړئ.', 'If the file does not exist, your app version is old — download and install the latest release.')}</li>
+                </ol>
+                <a href="https://github.com/M-1-hashim/manufacturing-management-system/releases/latest" target="_blank" rel="noreferrer" className="inline-block">
+                  <Button variant="outline" className="gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    {t('دانلود آخرین نسخه ویندوز (تنظیمات آسان)', 'تر ټولو نوی وینډوز نسخه (اسانه امستنې)', 'Download latest Windows version (easy setup)')}
+                  </Button>
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

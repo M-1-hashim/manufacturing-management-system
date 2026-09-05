@@ -16,13 +16,15 @@ Unicode true
 
 !define APPNAME "ManufacturingERP"
 !define COMPANY "Afghan Manufacturing ERP"
-!define VERSION "1.0.2.0"
+!define VERSION "1.0.4.0"
 
 Name "${APPNAME}"
 OutFile "..\download\ManufacturingERP-Setup.exe"
 InstallDir "$PROGRAMFILES64\${APPNAME}"
 RequestExecutionLevel admin
-SetCompressor /SOLID lzma
+; non-solid LZMA: per-file compression — much faster to build than /SOLID,
+; slightly larger installer, still decompresses identically for the end user.
+SetCompressor lzma
 ShowInstDetails show
 ShowUnInstDetails show
 

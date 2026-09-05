@@ -598,3 +598,26 @@ Stage Summary:
 - کاربر حالا نسخه دسکتاپی دارد که اتصال به هاست MySQL را پشتیبانی می‌کند (db-connection.txt)
 - فایل‌های لازم (SQL schema + راهنمای دری) از داخل برنامه قابل دانلود است: تنظیمات → پشتیبان‌گیری
 - Release v1.0.2: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.2
+
+---
+Task ID: 14
+Agent: main (Z.ai Code)
+Task: «فایل db-connection.txt پیدا نشد» — ریشه‌یابی و رفع کامل (v1.0.4)
+
+Work Log:
+- کشف ریشه اصلی: package.json بسته‌بندی‌شده productName نداشت → Electron پوشه کاربر را از name (nextjs_tailwind_shadcn_ts) می‌گرفت نه %APPDATA%\ManufacturingERP — کاربر طبق راهنما مسیر اشتباه را می‌گشت!
+- اثبات عملی با تست Electron روی لینوکس (xvfb): با productName → userData = ~/.config/ManufacturingERP
+- کشف دوم: ریلیز v1.0.3 در جلسه قبل منتشر شده بود ولی سورس commit نشده و worklog ثبت نشده بود؛ همان نسخه هم این باگ مسیر را داشت
+- رفع‌ها: productName در package.json ریشه + گام patch/verify در build-desktop.sh (بیلد fail می‌شود اگر productName نباشد) + migrateLegacyUserData() در main.js (انتقال یک‌باره data/backups/db-connection.txt/log از پوشه قدیمی به جدید، فقط وقتی هدف خالی است) + نسخه‌ها به 1.0.4
+- تست کامل end-to-end با ساختار واقعی packaged (ELECTRON_FORCE_IS_PACKAGED + Xvfb + CDP):
+  - مهاجرت خودکار دیتای شبیه‌سازی‌شده قدیمی → ~/.config/ManufacturingERP (md5 دیتابیس + لاگ «legacy user data migrated»)
+  - IPC از رندرر: info() مسیر درست → save() با رمز دارای @ : # → URL-encode صحیح در فایل → info() بعدی active:true → reset() به قالب اول
+- بیلد کامل: win-unpacked 544M با productName تأییدشده؛ smoke test سرور (GET 200 + login admin)؛ Portable zip 246MB + Setup.exe 158MB (PE32 + نسخه 1.0.4.0 UTF16)
+- Release v1.0.4 (id 383313318) با توضیحات دری/انگلیسی؛ هر ۳ asset با state=uploaded
+- README-DESKTOP.md برای 1.0.4 به‌روزرسانی شد (توضیح باگ مسیر + مهاجرت خودکار)
+- UI مرورگر: کارت «اتصال برنامه به هاست» با راهنمای دستی (Win+R و مسیر صحیح) رندر می‌شود؛ lint تمیز
+
+Stage Summary:
+- دیگر هیچ کاربری لازم نیست فایل db-connection.txt را جستجو کند: یا از داخل برنامه وصل می‌شود (تنظیمات → اتصال به هاست) و یا پوشه واقعاً در %APPDATA%\ManufacturingERP است که همه راهنماها می‌گویند
+- کاربران نسخه‌های ≤1.0.3 با نصب 1.0.4 دیتایشان خودکار منتقل می‌شود (بدون از دست رفتن داده)
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.4

@@ -2,6 +2,8 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
+**Version 1.0.4** — 🔧 **CRITICAL PATH FIX**: in versions ≤ 1.0.3 the per-user data folder was actually `%APPDATA%\nextjs_tailwind_shadcn_ts` (a misleading technical name) while all guides pointed to `%APPDATA%\ManufacturingERP` — which is why many users could not find `db-connection.txt`. **v1.0.4 fixes the folder to `%APPDATA%\ManufacturingERP` for good and automatically migrates ALL existing data (database, backups, config) from the old folder on first start — nothing is lost.** Plus v1.0.3's host connection from inside the app: Settings → "اتصال برنامه به هاست" — enter your cPanel MySQL host/database/user/password in a simple form; the app writes its own config file, so your data is stored on your shared hosting (MySQL) instead of the local file.
+
 ---
 
 ## 1) What was delivered (English)
@@ -53,6 +55,17 @@ Supported OS: **Windows 10 / 11, 64-bit** (x64).
 - **Reset to factory demo data**: close the app, delete the `data` folder shown above, start the app again — the bundled demo database is re-copied.
 - Application diagnostics log: `%APPDATA%\ManufacturingERP\electron.log`.
 - The app listens only on `127.0.0.1` (localhost) on an internal port starting at 37815 — it is not reachable from other machines by design.
+
+### Optional: store data on your shared hosting (MySQL) instead
+
+Since v1.0.3 you do NOT need to find any config file by hand (and since v1.0.4 the config folder is guaranteed to be `%APPDATA%\ManufacturingERP`):
+
+1. In cPanel create a MySQL database + user and allow remote access (Remote MySQL → add `%` or your IP).
+2. In the app: **Settings** → **"اتصال برنامه به هاست (ذخیره دیتا در MySQL)"** → fill host / port (3306) / database / user / password → **Save & connect**. The app restarts connected to the host.
+3. Move existing data: first click **"خروجی JSON (انتقال به هاست)"** (backup section), connect to the host, then restore that JSON file.
+4. Import the empty table structure on the host once, using `mysql-schema.sql` (Settings → backup card → "فایل SQL هاست") in phpMyAdmin.
+
+Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hosting-guide.md`.
 
 ## 4) How it works (for IT staff)
 
@@ -107,3 +120,13 @@ npx electron-builder --win nsis
 
 ### نیازمندی‌ها
 - ویندوز ۱۰ یا ۱۱ — ۶۴ بیت (x64)
+
+### ✨ تازه در نسخه ۱.۰.۳ — اتصال به هاست از داخل برنامه
+دیگر لازم نیست فایل `db-connection.txt` را دستی پیدا کنید:
+1. در cPanel هاست، دیتابیس MySQL و کاربر بسازید و در **Remote MySQL** علامت `%` (یا IP خود) را اضافه کنید.
+2. در برنامه: **تنظیمات** → کارت **«اتصال برنامه به هاست (ذخیره دیتا در MySQL)»** → آدرس هاست، پورت (۳۳۰۶)، نام دیتابیس، نام کاربری و رمز را وارد کنید → **«ذخیره و اتصال به هاست»**. برنامه خودش فایل تنظیمات را می‌نویسد و دوباره باز می‌شود.
+3. انتقال دیتای فعلی: اول **«خروجی JSON (انتقال به هاست)»** را بگیرید، بعد وصل شوید و همان فایل را در بخش پشتیبان‌گیری بازیابی کنید.
+4. ساختار جداول را یک بار در phpMyAdmin هاست با فایل **`mysql-schema.sql`** ایمپورت کنید.
+
+راهنمای کامل گام‌به‌گام (دری): فایل `hosting-guide.md` — از داخل برنامه قابل دانلود است.
+

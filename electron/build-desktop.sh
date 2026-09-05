@@ -53,6 +53,27 @@ cp -a .next-electron/standalone desktop-dist/win-unpacked/resources/server
 # Defensive: main.js uses only node builtins — no deps may ship in resources/app
 rm -rf desktop-dist/win-unpacked/resources/app/node_modules
 
+# CRITICAL (v1.0.4 fix): the packaged package.json MUST carry productName.
+# Without it Electron derives the per-user data dir from `name`
+# (nextjs_tailwind_shadcn_ts) instead of %APPDATA%\ManufacturingERP — which is
+# exactly why users could not find db-connection.txt. Patch it here so the
+# shipped app ALWAYS resolves userData to %APPDATA%\ManufacturingERP.
+node -e '
+const fs = require("fs");
+const p = "desktop-dist/win-unpacked/resources/app/package.json";
+const j = JSON.parse(fs.readFileSync(p, "utf8"));
+if (j.productName !== "ManufacturingERP") {
+  j.productName = "ManufacturingERP";
+  fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n", "utf8");
+  console.log("  patched productName into packaged package.json");
+}
+'
+node -e '
+const j = JSON.parse(require("fs").readFileSync("desktop-dist/win-unpacked/resources/app/package.json", "utf8"));
+if (j.productName !== "ManufacturingERP") { console.error("FAIL: packaged productName missing"); process.exit(1); }
+console.log("  OK: packaged productName = " + j.productName + " (userData = %APPDATA%\\ManufacturingERP)");
+'
+
 echo "[6/6] Verifying output..."
 ls -la desktop-dist/win-unpacked | head -25
 test -f desktop-dist/win-unpacked/resources/server/server.js && echo "OK: server.js in place" || echo "FAIL: server.js missing"

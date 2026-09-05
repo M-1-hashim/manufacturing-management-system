@@ -6,7 +6,7 @@
  * BrowserWindow. All server data (SQLite via Prisma) lives in a writable
  * per-user data directory: %APPDATA%/ManufacturingERP/data/custom.db
  */
-const { app, BrowserWindow, Menu, dialog } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const { spawn } = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -55,40 +55,115 @@ process.on('unhandledRejection', (reason) => {
 
 /* ------------------------------------------------------------- data layer */
 
-/**
+/*
  * اتصال سفارشی دیتابیس — فایل db-connection.txt در پوشه data کاربر
  * اگر اولین خط غیر کامنت با mysql:// شروع شود، دیتا در هاست اشتراکی ذخیره می‌شود
  * وگرنه حالت پیش‌فرض (SQLite محلی) استفاده می‌گردد
+ * از نسخه ۱.۰.۳ به بعد، تنظیمات ماژول می‌تواند همین فایل را از داخل برنامه بنویسد (IPC)
  */
-function databaseUrlOverride() {
-  const cfgPath = path.join(app.getPath('userData'), 'db-connection.txt');
+function connectionConfigPath() {
+  return path.join(app.getPath('userData'), 'db-connection.txt');
+}
+
+function templateLines(activeUrl) {
+  const lines = [
+    '# فایل تنظیم اتصال دیتابیس — ManufacturingERP',
+    '#',
+    '# حالت پیش‌فرض: دیتابیس محلی (SQLite) — همین فایل را دست‌نخورده رها کنید',
+    '#',
+    '# برای ذخیره دیتا در هاست اشتراکی (MySQL):',
+    '#   ۱) در cPanel هاست: MySQL Databases → ساخت دیتابیس و کاربر',
+    '#   ۲) در cPanel: Remote MySQL → افزودن IP دستگاه یا علامت %',
+    '#   ۳) خط mysql:// زیر را ویرایش کنید (اگر # ابتدای آن هست حذف کنید)',
+    '#   ۴) برنامه را ببندید و دوباره باز کنید',
+    '#',
+  ];
+  lines.push(activeUrl ? activeUrl : '# mysql://DBUSER:PASSWORD@HOST_ADDRESS:3306/DBNAME');
+  lines.push('');
+  return lines.join('\r\n');
+}
+
+function writeConnectionFile(activeUrl) {
+  const cfgPath = connectionConfigPath();
+  fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
+  fs.writeFileSync(cfgPath, templateLines(activeUrl), 'utf8');
+  return cfgPath;
+}
+
+function maskUrl(url) {
+  return String(url).replace(/:(?:[^:@/]*)@/, ':***@');
+}
+
+function parseActiveOverride() {
+  const out = { active: false, url: null, host: null, port: '3306', database: null, user: null };
   try {
-    if (!fs.existsSync(cfgPath)) {
+    const lines = fs.readFileSync(connectionConfigPath(), 'utf8').split(/\r?\n/);
+    const value = lines.map((l) => l.trim()).find((l) => l && !l.startsWith('#'));
+    if (value && value.startsWith('mysql://')) {
+      out.active = true;
+      out.url = value;
+      try {
+        const u = new URL(value);
+        out.host = u.hostname;
+        out.port = u.port || '3306';
+        out.database = u.pathname.replace(/^\//, '');
+        out.user = decodeURIComponent(u.username || '');
+      } catch (_e) {
+        /* URL ناقص — فقط حالت فعال گزارش می‌شود */
+      }
+    }
+  } catch (_e) {
+    /* فایل خوانده نشد — حالت محلی */
+  }
+  return out;
+}
+
+function databaseUrlOverride() {
+  try {
+    if (!fs.existsSync(connectionConfigPath())) {
       // ساخت فایل راهنما در اولین اجرا — کاربر فقط یک خط را ویرایش می‌کند
-      const template = [
-        '# فایل تنظیم اتصال دیتابیس — ManufacturingERP',
-        '#',
-        '# حالت پیش‌فرض: دیتابیس محلی (SQLite) — همین فایل را دست‌نخورده رها کنید',
-        '#',
-        '# برای ذخیره دیتا در هاست اشتراکی (MySQL):',
-        '#   ۱) در cPanel هاست: MySQL Databases → ساخت دیتابیس و کاربر',
-        '#   ۲) در cPanel: Remote MySQL → افزودن IP دستگاه یا علامت %',
-        '#   ۳) خط زیر را ویرایش کنید، # ابتدای آن را حذف کنید و فایل را ذخیره کنید:',
-        '#   ۴) برنامه را ببندید و دوباره باز کنید',
-        '#',
-        '# mysql://DBUSER:PASSWORD@HOST_ADDRESS:3306/DBNAME',
-        '',
-      ].join('\r\n');
-      fs.writeFileSync(cfgPath, template, 'utf8');
+      writeConnectionFile(null);
       return null;
     }
-    const lines = fs.readFileSync(cfgPath, 'utf8').split(/\r?\n/);
-    const value = lines.map((l) => l.trim()).find((l) => l && !l.startsWith('#'));
-    if (value && value.startsWith('mysql://')) return value;
   } catch (_e) {
-    /* خواندن ناموفق — حالت محلی */
+    /* نوشتن ناموفق — حالت محلی */
   }
-  return null;
+  const parsed = parseActiveOverride();
+  return parsed.active ? parsed.url : null;
+}
+
+/*
+ * یک‌بار برای همیشه: نسخه‌های ≤۱.۰.۳ به‌دلیل نبود productName در package.json،
+ * داده‌ها را در %APPDATA%\nextjs_tailwind_shadcn_ts ذخیره می‌کردند در حالی که
+ * راهنماها %APPDATA%\ManufacturingERP را نشان می‌دادند — همین باعث می‌شد کاربر
+ * فایل db-connection.txt را پیدا نکند. اگر پوشه قدیمی دیتا دارد و پوشه جدید
+ * خالی است، همه‌چیز یک‌جا منتقل می‌شود (بدون از دست رفتن هیچ داده‌ای).
+ */
+function migrateLegacyUserData() {
+  try {
+    const legacy = path.join(app.getPath('appData'), 'nextjs_tailwind_shadcn_ts');
+    const target = app.getPath('userData');
+    if (legacy === target) return; // حالت dev یا مسیر یکسان
+    const legacyData = path.join(legacy, 'data');
+    const legacyCfg = path.join(legacy, 'db-connection.txt');
+    if (!fs.existsSync(legacyData) && !fs.existsSync(legacyCfg)) return; // چیزی برای انتقال نیست
+    if (fs.existsSync(path.join(target, 'data', 'custom.db'))) return; // قبلاً منتقل شده یا دیتای جدید موجود است
+    fs.mkdirSync(target, { recursive: true });
+    for (const entry of fs.readdirSync(legacy, { withFileTypes: true })) {
+      const src = path.join(legacy, entry.name);
+      const dst = path.join(target, entry.name);
+      try {
+        if (entry.isDirectory()) {
+          fs.cpSync(src, dst, { recursive: true, force: false, errorOnExist: false });
+        } else if (!fs.existsSync(dst)) {
+          fs.copyFileSync(src, dst);
+        }
+      } catch (_e) { /* فایل تکی مهم نیست — ادامه بده */ }
+    }
+    logLine(`legacy user data migrated: ${legacy} -> ${target}`);
+  } catch (e) {
+    logLine(`legacy user data migration failed: ${e && e.message ? e.message : e}`);
+  }
 }
 
 function ensureDatabase() {
@@ -220,6 +295,73 @@ async function startEmbeddedServer(dbPath, dbUrlOverride) {
   throw lastErr || new Error('could not start embedded server');
 }
 
+/* ------------------------------------------------- IPC: db-connection.txt */
+
+// مدیریت اتصال به هاست از داخل برنامه — کاربر نیازی به جستجوی فایل ندارد
+ipcMain.handle('db-connection:info', () => {
+  try {
+    if (!fs.existsSync(connectionConfigPath())) writeConnectionFile(null);
+  } catch (_e) {
+    /* ignore */
+  }
+  const parsed = parseActiveOverride();
+  return {
+    ok: true,
+    path: connectionConfigPath(),
+    active: parsed.active,
+    host: parsed.host,
+    port: parsed.port,
+    database: parsed.database,
+    user: parsed.user,
+  };
+});
+
+ipcMain.handle('db-connection:save', (_event, payload) => {
+  const host = String(payload && payload.host ? payload.host : '').trim();
+  const port = String(payload && payload.port ? payload.port : '').trim() || '3306';
+  const database = String(payload && payload.database ? payload.database : '').trim();
+  const user = String(payload && payload.user ? payload.user : '').trim();
+  const password = String(payload && payload.password != null ? payload.password : '');
+  if (!host || !database || !user) {
+    return { ok: false, error: 'MISSING_FIELDS' };
+  }
+  const url = `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+  try {
+    const cfgPath = writeConnectionFile(url);
+    logLine(`db-connection.txt updated -> host mode (${host}:${port}/${database})`);
+    return { ok: true, path: cfgPath, maskedUrl: maskUrl(url) };
+  } catch (err) {
+    logLine(`db-connection.txt write failed: ${err && err.message ? err.message : err}`);
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+ipcMain.handle('db-connection:reset', () => {
+  try {
+    const cfgPath = writeConnectionFile(null);
+    logLine('db-connection.txt reset -> local SQLite mode');
+    return { ok: true, path: cfgPath };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+ipcMain.handle('db-connection:openFolder', async () => {
+  try {
+    const result = await shell.openPath(app.getPath('userData'));
+    return result ? { ok: false, error: result } : { ok: true, path: app.getPath('userData') };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+ipcMain.handle('app:relaunch', () => {
+  logLine('relaunch requested from settings');
+  app.relaunch();
+  app.exit(0);
+  return { ok: true };
+});
+
 /* ----------------------------------------------------------------- window */
 
 function createWindow(port) {
@@ -283,6 +425,8 @@ async function main() {
 
   app.setAppUserModelId('af.mfg.erp');
   setupMenu();
+
+  migrateLegacyUserData();
 
   const dbPath = ensureDatabase();
   const dbOverride = databaseUrlOverride();
