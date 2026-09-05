@@ -470,3 +470,23 @@ Stage Summary:
 - جدول‌های همه ۱۳ ماژول یکدست شدند: هدر سایه‌دار هم‌تراز با RTL، zebra، اعداد tabular، padding منظم — بدون تغییر تک‌تک ماژول‌ها (فقط ui/table.tsx)
 - منطق انبار اصلاح شد: ضایعات فقط ثبت می‌شود و هرگز وارد گدام نمی‌شود؛ قیمت تمام‌شده روی اقلام سالم توزیع می‌شود
 - Files: src/app/globals.css، src/app/page.tsx، src/components/ui/table.tsx، src/app/api/production/[id]/complete/route.ts، src/components/modules/production/index.tsx
+
+---
+Task ID: 9 (rtl-table-right-align)
+Agent: coordinator (main)
+Task: «جدول‌ها و ردیف‌ها باید راست‌چین باشند» — اصلاح ترازبندی جدول‌ها در RTL
+
+Work Log:
+- ریشه مشکل: کلاس‌های text-end / justify-end در RTL سمت چپ می‌روند؛ ستون عملیات (هدر text-end + آیکون‌های justify-end) و ستون‌های عددی چند ماژول در دری چپ‌چین بودند
+- ui/table.tsx: TableCell حالا text-start پیش‌فرض دارد (در RTL = راست)؛ TableHead از قبل text-start بود
+- حذف text-end از همه TableHead/TableCellها: production، materials، users، hr (۳ جدول)، sales (۲ جدول)، products، dashboard، reports (۵ جدول/۱۴ نقطه)
+- سلول‌های عملیات: justify-end → justify-start (آیکون‌ها حالا به لبه راست می‌چسبند)
+- سلول‌های dir="ltr" (شماره فاکتور، کد متریال، تیلفون، نام کاربری، reference انبار): rtl:text-right تا در صفحه RTL راست‌چین و در LTR شروع باشند
+- shadcn ui پیش‌فرض‌ها: text-left → text-start در dialog، alert-dialog، accordion، sidebar، drawer
+- عمداً دست‌نخورده ماند: فاکتور چاپی (طراحی رسمی، اعداد مرکزی/انتها)، گرید مشخصات فاکتور، اینپوت‌های عددی text-end با dir=ltr، کارت‌های موبایل انبار، فوتر دیالوگ‌ها
+- راستی‌آزمایی: getComputedStyle در مرورگر — sales/reports/hr/inventory/production همه start (راست در RTL)؛ تیلفون HR = right؛ انگلیسی LTR همه start (چپ)؛ موبایل ۳۹۰px؛ کنسول صفر خطا؛ lint تمیز
+
+Stage Summary:
+- در دری و پشتو تمام جدول‌های ۱۳ ماژول کاملاً راست‌چین‌اند (هدر، سلول، عدد، دکمه‌های عملیات)؛ در انگلیسی آینه‌ای چپ‌چین — یک قاعده واحد منطقی (start)
+- Files: ui/table.tsx, ui/dialog.tsx, ui/alert-dialog.tsx, ui/accordion.tsx, ui/sidebar.tsx, ui/drawer.tsx + modules: production, materials, users, hr, sales, products, dashboard, reports, audit, settings, inventory
+- Commit 9891e82 pushed to origin/main
