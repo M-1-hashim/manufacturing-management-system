@@ -461,7 +461,7 @@ export default function DashboardModule() {
                   <TableRow>
                     <TableHead>{t('فاکتور', 'فالأټونه', 'Invoice')}</TableHead>
                     <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
-                    <TableHead className="text-end">{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
+                    <TableHead>{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
                     <TableHead>{t('اقلام', 'توکي', 'Items')}</TableHead>
                     <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
@@ -472,11 +472,11 @@ export default function DashboardModule() {
                     const l = SALE_STATUS[s.status]
                     return (
                       <TableRow key={s.invoiceNumber}>
-                        <TableCell className="font-mono text-xs" dir="ltr">
+                        <TableCell className="font-mono text-xs rtl:text-right" dir="ltr">
                           {s.invoiceNumber}
                         </TableCell>
                         <TableCell className="max-w-40 truncate">{s.customerName}</TableCell>
-                        <TableCell className="text-end font-semibold">{formatMoney(s.total)}</TableCell>
+                        <TableCell className="font-semibold">{formatMoney(s.total)}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={STATUS_COLORS[s.status] ?? ''}>
                             {l ? t(l[0], l[1], l[2]) : s.status}

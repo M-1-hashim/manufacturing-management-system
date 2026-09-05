@@ -364,7 +364,7 @@ export default function UsersModule() {
                     <TableHead>{t('بخش', 'برخه', 'Department')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
                     <TableHead>{t('تاریخ ایجاد', 'د جوړولو نېټه', 'Created At')}</TableHead>
-                    <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                    <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -376,7 +376,7 @@ export default function UsersModule() {
                           <p className="font-medium">{u.fullName}</p>
                           <p
                             dir="ltr"
-                            className="font-mono text-xs text-muted-foreground text-start"
+                            className="font-mono text-xs text-muted-foreground rtl:text-right"
                           >
                             {u.username}
                           </p>
@@ -413,7 +413,7 @@ export default function UsersModule() {
                           {toJalaliStr(u.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end gap-0.5">
+                          <div className="flex items-center justify-start gap-0.5">
                             <Button
                               variant="ghost"
                               size="icon"

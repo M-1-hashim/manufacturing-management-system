@@ -429,7 +429,7 @@ export default function HrModule() {
                         <TableHead>{t('حقوق', 'معاش', 'Salary')}</TableHead>
                         <TableHead>{t('تاریخ استخدام', 'د استخدام نېټه', 'Hire Date')}</TableHead>
                         <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                        <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                        <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -437,7 +437,7 @@ export default function HrModule() {
                         <TableRow key={e.id} className={cn(!e.active && 'opacity-60')}>
                           <TableCell className="font-medium">{e.name}</TableCell>
                           <TableCell className="text-sm">{e.position}</TableCell>
-                          <TableCell dir="ltr" className="text-sm font-mono">
+                          <TableCell dir="ltr" className="text-sm font-mono rtl:text-right">
                             {e.phone || '—'}
                           </TableCell>
                           <TableCell className="font-semibold whitespace-nowrap">
@@ -454,7 +454,7 @@ export default function HrModule() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center justify-end gap-0.5">
+                            <div className="flex items-center justify-start gap-0.5">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -628,7 +628,7 @@ export default function HrModule() {
                         <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
                         <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
                         <TableHead>{t('شیفت', 'شفت', 'Shift')}</TableHead>
-                        <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                        <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -650,7 +650,7 @@ export default function HrModule() {
                           </TableCell>
                           <TableCell className="text-sm">{a.shift ?? '—'}</TableCell>
                           <TableCell>
-                            <div className="flex justify-end">
+                            <div className="flex justify-start">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -695,14 +695,14 @@ export default function HrModule() {
                           <TableHead>{t('ماه', 'میاشت', 'Month')}</TableHead>
                           <TableHead>{t('مبلغ', 'مبلغ', 'Amount')}</TableHead>
                           <TableHead>{t('تاریخ پرداخت', 'د پرداخت نېټه', 'Paid At')}</TableHead>
-                          <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                          <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {salaries.map((s) => (
                           <TableRow key={s.id}>
                             <TableCell className="font-medium">{s.employee?.name ?? '—'}</TableCell>
-                            <TableCell dir="ltr" className="font-mono text-xs text-start">
+                            <TableCell dir="ltr" className="font-mono text-xs rtl:text-right">
                               {s.month}
                             </TableCell>
                             <TableCell className="font-semibold whitespace-nowrap">
@@ -712,7 +712,7 @@ export default function HrModule() {
                               {toJalaliStr(s.date)}
                             </TableCell>
                             <TableCell>
-                              <div className="flex justify-end">
+                              <div className="flex justify-start">
                                 <Button
                                   variant="ghost"
                                   size="icon"

@@ -295,7 +295,7 @@ export default function AuditModule() {
                       <TableCell className="text-xs whitespace-nowrap">
                         {toJalaliStr(e.createdAt, true)}
                       </TableCell>
-                      <TableCell dir="ltr" className="font-mono text-xs text-start">
+                      <TableCell dir="ltr" className="font-mono text-xs rtl:text-right">
                         {e.userName ?? '—'}
                       </TableCell>
                       <TableCell>

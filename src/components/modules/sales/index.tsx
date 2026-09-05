@@ -365,7 +365,7 @@ export default function SalesModule() {
                   <TableHead>{t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}</TableHead>
                   <TableHead>{t('روش', 'طریقه', 'Method')}</TableHead>
                   <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                  <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                  <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -400,7 +400,7 @@ export default function SalesModule() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-start gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1525,7 +1525,7 @@ function CustomersDialog({
                   <TableHead>{t('تلفن', 'تیلیفون', 'Phone')}</TableHead>
                   <TableHead>{t('مانده بدهی', 'پور', 'Balance')}</TableHead>
                   <TableHead>{t('فاکتورها', 'فاکتورونه', 'Sales')}</TableHead>
-                  <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                  <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1543,13 +1543,13 @@ function CustomersDialog({
                         {c.type === 'wholesale' ? t('عمده', 'پرچونۍ', 'Wholesale') : t('خرده', 'لږ', 'Retail')}
                       </Badge>
                     </TableCell>
-                    <TableCell dir="ltr" className="text-xs">{c.phone || '—'}</TableCell>
+                    <TableCell dir="ltr" className="text-xs rtl:text-right">{c.phone || '—'}</TableCell>
                     <TableCell className={cn('whitespace-nowrap', c.balance > 0.001 && 'text-amber-600 font-medium')}>
                       {formatMoney(c.balance)}
                     </TableCell>
                     <TableCell>{formatNumber(c._count?.sales ?? 0)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-start gap-1">
                         <Button variant="ghost" size="icon" title={t('ویرایش', 'سمول', 'Edit')} onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>

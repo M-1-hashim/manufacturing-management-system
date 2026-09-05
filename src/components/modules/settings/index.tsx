@@ -427,11 +427,11 @@ export default function SettingsModule() {
                   <tbody>
                     {(backup.data?.files ?? []).map((f) => (
                       <tr key={f.name} className="border-t">
-                        <td className="px-3 py-2 font-mono text-xs" dir="ltr">{f.name}</td>
+                        <td className="px-3 py-2 font-mono text-xs rtl:text-right" dir="ltr">{f.name}</td>
                         <td className="px-3 py-2 text-muted-foreground">{fmtSize(f.size)}</td>
                         <td className="px-3 py-2 text-muted-foreground">{fmtDate(f.createdAt)}</td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-1 justify-end">
+                          <div className="flex items-center gap-1 justify-start">
                             <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-amber-600 hover:text-amber-600" onClick={() => setRestoreTarget(f.name)} disabled={restoring}>
                               <RotateCcw className="h-3.5 w-3.5" />
                               {t('بازیابی', 'بیا رغونه', 'Restore')}

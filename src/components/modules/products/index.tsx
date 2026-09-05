@@ -565,11 +565,11 @@ export default function ProductsModule() {
                     <TableHead>{t('کود', 'کوډ', 'Code')}</TableHead>
                     <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
                     <TableHead>{t('دسته', 'کټګوري', 'Category')}</TableHead>
-                    <TableHead className="text-end">{t('موجودی', 'موجودي', 'Stock')}</TableHead>
-                    <TableHead className="text-end">{t('فروش / عمده', 'پلور / پرچون', 'Sale / Wholesale')}</TableHead>
+                    <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
+                    <TableHead>{t('فروش / عمده', 'پلور / پرچون', 'Sale / Wholesale')}</TableHead>
                     <TableHead>{t('بارکد', 'بارکوډ', 'Barcode')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                    <TableHead className="text-end">{t('عملیات', 'عمليې', 'Actions')}</TableHead>
+                    <TableHead>{t('عملیات', 'عمليې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -593,7 +593,7 @@ export default function ProductsModule() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-end">
+                        <TableCell>
                           <span
                             className={`inline-flex items-center gap-1 font-semibold ${
                               isLow ? 'text-red-600 dark:text-red-400' : ''
@@ -603,7 +603,7 @@ export default function ProductsModule() {
                             {formatNumber(p.stock)} {p.unit}
                           </span>
                         </TableCell>
-                        <TableCell className="text-end">
+                        <TableCell>
                           <div className="font-medium">{formatMoney(p.salePrice)}</div>
                           <div className="text-xs text-muted-foreground">
                             {t('عمده', 'پرچون', 'Wholesale')}: {formatMoney(p.wholesalePrice)}
@@ -627,8 +627,8 @@ export default function ProductsModule() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-end">
-                          <div className="flex items-center justify-end gap-1">
+                        <TableCell>
+                          <div className="flex items-center justify-start gap-1">
                             <Button
                               variant="ghost"
                               size="icon"

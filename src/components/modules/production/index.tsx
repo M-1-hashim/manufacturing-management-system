@@ -325,7 +325,7 @@ export default function ProductionModule() {
                     <TableHead>{t('وضعیت', 'وضعیت', 'Status')}</TableHead>
                     <TableHead>{t('کنترل کیفیت', 'کیفیت کنټرول', 'QC')}</TableHead>
                     <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
-                    <TableHead className="text-end">{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                    <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -363,7 +363,7 @@ export default function ProductionModule() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{toJalaliStr(o.startDate)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                        <div className="flex items-center gap-1.5 justify-start flex-wrap">
                           {o.status === 'pending' && (
                             <>
                               <Button size="sm" variant="outline" className="gap-1 h-8 text-primary hover:text-primary/90 hover:bg-primary/10" onClick={() => startOrder(o)}>

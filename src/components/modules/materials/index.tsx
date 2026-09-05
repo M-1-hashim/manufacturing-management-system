@@ -506,11 +506,11 @@ export default function MaterialsModule() {
                     <TableHead>{t('کود', 'کوډ', 'Code')}</TableHead>
                     <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
                     <TableHead>{t('واحد', 'واحد', 'Unit')}</TableHead>
-                    <TableHead className="text-end">{t('موجودی', 'موجودي', 'Stock')}</TableHead>
-                    <TableHead className="text-end">{t('قیمت خرید', 'د اخیستو قیمت', 'Purchase price')}</TableHead>
+                    <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
+                    <TableHead>{t('قیمت خرید', 'د اخیستو قیمت', 'Purchase price')}</TableHead>
                     <TableHead>{t('تأمین‌کننده', 'تأمین‌کونکی', 'Supplier')}</TableHead>
                     <TableHead>{t('انقضا', 'پای نېټه', 'Expiry')}</TableHead>
-                    <TableHead className="text-end">{t('عملیات', 'عمليې', 'Actions')}</TableHead>
+                    <TableHead>{t('عملیات', 'عمليې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -519,7 +519,7 @@ export default function MaterialsModule() {
                     const d = daysUntil(m.expiryDate)
                     return (
                       <TableRow key={m.id}>
-                        <TableCell className="font-mono text-xs" dir="ltr">{m.code}</TableCell>
+                        <TableCell className="font-mono text-xs rtl:text-right" dir="ltr">{m.code}</TableCell>
                         <TableCell>
                           <div className="font-medium">{m.name}</div>
                           {m.notes && (
@@ -529,7 +529,7 @@ export default function MaterialsModule() {
                           )}
                         </TableCell>
                         <TableCell>{m.unit}</TableCell>
-                        <TableCell className="text-end">
+                        <TableCell>
                           <span
                             className={`inline-flex items-center gap-1 font-semibold ${
                               isLow ? 'text-red-600 dark:text-red-400' : ''
@@ -539,7 +539,7 @@ export default function MaterialsModule() {
                             {formatNumber(m.stock)} {m.unit}
                           </span>
                         </TableCell>
-                        <TableCell className="text-end font-medium">
+                        <TableCell className="font-medium">
                           {formatMoney(m.purchasePrice)}
                         </TableCell>
                         <TableCell>
@@ -564,8 +564,8 @@ export default function MaterialsModule() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-end">
-                          <div className="flex items-center justify-end gap-1">
+                        <TableCell>
+                          <div className="flex items-center justify-start gap-1">
                             <Button
                               variant="ghost"
                               size="icon"

@@ -460,7 +460,7 @@ export default function InventoryModule() {
                           <TableCell className="text-xs text-muted-foreground">
                             {x.warehouse?.name ?? '—'}
                           </TableCell>
-                          <TableCell className="font-mono text-xs" dir="ltr">
+                          <TableCell className="font-mono text-xs rtl:text-right" dir="ltr">
                             {x.reference ?? '—'}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-40 truncate">

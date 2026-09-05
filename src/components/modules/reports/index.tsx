@@ -309,8 +309,8 @@ export default function ReportsModule() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('محصول', 'محصول', 'Product')}</TableHead>
-                        <TableHead className="text-end">{t('مقدار', 'مقدار', 'Qty')}</TableHead>
-                        <TableHead className="text-end">{t('عواید', 'عواید', 'Revenue')}</TableHead>
+                        <TableHead>{t('مقدار', 'مقدار', 'Qty')}</TableHead>
+                        <TableHead>{t('عواید', 'عواید', 'Revenue')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -324,8 +324,8 @@ export default function ReportsModule() {
                         data.topProducts.map((p) => (
                           <TableRow key={p.name}>
                             <TableCell className="max-w-44 truncate">{p.name}</TableCell>
-                            <TableCell className="text-end">{formatNumber(p.qty)}</TableCell>
-                            <TableCell className="text-end font-semibold">{formatMoney(p.revenue)}</TableCell>
+                            <TableCell>{formatNumber(p.qty)}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(p.revenue)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -371,8 +371,8 @@ export default function ReportsModule() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
-                      <TableHead className="text-end">{t('تعداد خرید', 'د اخیستنو شمېر', 'Orders')}</TableHead>
-                      <TableHead className="text-end">{t('مجموع خرید', 'ټوله پیرود', 'Total')}</TableHead>
+                      <TableHead>{t('تعداد خرید', 'د اخیستنو شمېر', 'Orders')}</TableHead>
+                      <TableHead>{t('مجموع خرید', 'ټوله پیرود', 'Total')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -386,8 +386,8 @@ export default function ReportsModule() {
                       data.salesByCustomer.map((c) => (
                         <TableRow key={c.name}>
                           <TableCell className="max-w-52 truncate">{c.name}</TableCell>
-                          <TableCell className="text-end">{formatNumber(c.orders)}</TableCell>
-                          <TableCell className="text-end font-semibold">{formatMoney(c.total)}</TableCell>
+                          <TableCell>{formatNumber(c.orders)}</TableCell>
+                          <TableCell className="font-semibold">{formatMoney(c.total)}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -465,9 +465,9 @@ export default function ReportsModule() {
                   <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                     <TableRow>
                       <TableHead>{t('محصول', 'محصول', 'Product')}</TableHead>
-                      <TableHead className="text-end">{t('تولیدشده', 'تولید شوی', 'Produced')}</TableHead>
-                      <TableHead className="text-end">{t('ضایعات', 'ضایعات', 'Waste')}</TableHead>
-                      <TableHead className="text-end">{t('نسبت ضایعات', 'د ضایعاتو تناسب', 'Waste %')}</TableHead>
+                      <TableHead>{t('تولیدشده', 'تولید شوی', 'Produced')}</TableHead>
+                      <TableHead>{t('ضایعات', 'ضایعات', 'Waste')}</TableHead>
+                      <TableHead>{t('نسبت ضایعات', 'د ضایعاتو تناسب', 'Waste %')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -484,11 +484,11 @@ export default function ReportsModule() {
                         return (
                           <TableRow key={p.productName}>
                             <TableCell className="max-w-52 truncate">{p.productName}</TableCell>
-                            <TableCell className="text-end">{formatNumber(p.produced)}</TableCell>
-                            <TableCell className={`text-end ${pct > 5 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}`}>
+                            <TableCell>{formatNumber(p.produced)}</TableCell>
+                            <TableCell className={`${pct > 5 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}`}>
                               {formatNumber(p.waste)}
                             </TableCell>
-                            <TableCell className="text-end text-muted-foreground">
+                            <TableCell className="text-muted-foreground">
                               {formatNumber(pct, 1)}٪
                             </TableCell>
                           </TableRow>
@@ -687,8 +687,8 @@ export default function ReportsModule() {
                     <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                       <TableRow>
                         <TableHead>{t('محصول', 'محصول', 'Product')}</TableHead>
-                        <TableHead className="text-end">{t('موجودی', 'موجودي', 'Stock')}</TableHead>
-                        <TableHead className="text-end">{t('ارزش', 'ارزښت', 'Value')}</TableHead>
+                        <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
+                        <TableHead>{t('ارزش', 'ارزښت', 'Value')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -702,10 +702,10 @@ export default function ReportsModule() {
                         inventoryValuation.topProducts.map((p) => (
                           <TableRow key={p.name}>
                             <TableCell className="max-w-44 truncate">{p.name}</TableCell>
-                            <TableCell className="text-end text-muted-foreground" dir="ltr">
+                            <TableCell className="text-muted-foreground rtl:text-right" dir="ltr">
                               {formatNumber(p.stock)} {p.unit}
                             </TableCell>
-                            <TableCell className="text-end font-semibold">{formatMoney(p.value)}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(p.value)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -728,8 +728,8 @@ export default function ReportsModule() {
                     <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                       <TableRow>
                         <TableHead>{t('ماده', 'ماده', 'Material')}</TableHead>
-                        <TableHead className="text-end">{t('موجودی', 'موجودي', 'Stock')}</TableHead>
-                        <TableHead className="text-end">{t('ارزش', 'ارزښت', 'Value')}</TableHead>
+                        <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
+                        <TableHead>{t('ارزش', 'ارزښت', 'Value')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -743,10 +743,10 @@ export default function ReportsModule() {
                         inventoryValuation.topMaterials.map((m) => (
                           <TableRow key={m.name}>
                             <TableCell className="max-w-44 truncate">{m.name}</TableCell>
-                            <TableCell className="text-end text-muted-foreground" dir="ltr">
+                            <TableCell className="text-muted-foreground rtl:text-right" dir="ltr">
                               {formatNumber(m.stock)} {m.unit}
                             </TableCell>
-                            <TableCell className="text-end font-semibold">{formatMoney(m.value)}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(m.value)}</TableCell>
                           </TableRow>
                         ))
                       )}
