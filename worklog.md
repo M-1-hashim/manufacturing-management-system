@@ -508,3 +508,24 @@ Stage Summary:
 - یک رفع ۱۰ خطی ریشه کل مشکل ترازبندی انبار/کارکنان را حل کرد و ضمناً همه Select/Dropdown/Dialogهای برنامه در RTL صحیح شدند (راست‌چین شدن متن دیالوگ‌ها، فلیپ پاپ‌آپ‌ها، ناوبری کیبورد RTL)
 - Files: src/app/page.tsx (import DirectionProvider + dir از useI18n + دو wrapper)
 - Commit 769d779 pushed to origin/main
+
+---
+Task ID: 11 (live-exchange-rate-api)
+Agent: coordinator (main)
+Task: «میخوام برای تبدیل ارز افغانی و دالر از یک api واقعی و قیمت لحظه ای استفاده شود» — نرخ ارز لحظه‌ای از API واقعی
+
+Work Log:
+- API نرخ لحظه‌ای ساخته شد: GET /api/exchange-rate (و ?refresh=1 برای بروزرسانی اجباری)
+- منبع اصلی: open.er-api.com (exchangerate-api.com، رایگان بدون کلید)؛ منبع پشتیبان: currency-api روی CDN jsDelivr — زنجیره fallback خودکار
+- کش حافظه سرور ۱ ساعته + dedup درخواست‌های همزمان؛ timeout ۸ ثانیه برای هر منبع
+- نرخ‌ها بعد از دریافت موفق خودکار در جدول Setting ذخیره می‌شوند (usdRate/pkrRate/ratesUpdatedAt/ratesSource) → حتی با قطعی اینترنت آخرین نرخ در دسترس است (stale=true نشان داده می‌شود)
+- باگ مهم در حین تست: APIها نرخ را نسبت به USD می‌دهند (1 USD = 277 PKR) — اصلاح شد: نرخ کلدار = AFN_per_USD ÷ PKR_per_USD (۱ کلدار = ۰.۲۳ افغانی، هم‌خوان با پیش‌فرض قدیمی ۰.۲۵)
+- تنظیمات: کارت نرخ ارز حالا دارد وضعیت زنده (منبع + آخرین بروزرسانی شمسی)، دکمه «بروزرسانی لحظه‌ای»، تبدیل سریع 1 USD ↔ 1 AFN، سوییچ «بروزرسانی خودکار نرخ‌ها» (ratesAutoSync، ذخیره فوری)
+- دیالوگ فروش جدید: با انتخاب دالر/کلدار نرخ از API لحظه‌ای پر می‌شود؛ بج سبز «نرخ لحظه‌ای: ۱ دالر = ۶۴.۸۴ افغانی» یا بج کهربایی «آفلاین — آخرین نرخ ذخیره‌شده»؛ دکمه بروزرسانی کوچک کنار بج؛ همگام‌سازی بدون useEffect (الگوی تنظیم state هنگام رندر — رفع خطای react-hooks/set-state-in-effect)
+- راستی‌آزمایی مرورگر: USD→64.84 و PKR→0.23 خودکار پر شد؛ توست موفقیت؛ سوییچ خاموش/روشن در DB ذخیره شد؛ دری RTL + انگلیسی LTR + موبایل ۳۹۰px؛ کنسول صفر خطا؛ lint تمیز
+- نرخ‌های فاکتورهای قبلی دست‌نخورده ماندند (نرخ تاریخی ثبت لحظه فروش) — فقط پیش‌فرض فاکتور جدید و تنظیمات زنده می‌شوند
+
+Stage Summary:
+- تبدیل افغانی/دالر/کلدار حالا با نرخ واقعی و لحظه‌ای از اینترنت انجام می‌شود؛ سیستم offline-proof است (کش ۱ ساعته + ذخیره دائمی در دیتابیس)
+- Files: src/lib/exchange-rate.ts (جدید)، src/app/api/exchange-rate/route.ts (جدید)، src/components/modules/settings/index.tsx، src/components/modules/sales/index.tsx
+- Commit bcef939 pushed to origin/main
