@@ -18,10 +18,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   LayoutDashboard, Package, FlaskConical, Boxes, Factory, ShoppingCart,
   Warehouse, Wallet, Users, BarChart3, Settings, LogOut, Menu, X,
-  Wifi, WifiOff, Languages, Sun, Moon, Lock, UserCog, History, KeyRound, RefreshCw,
+  Wifi, WifiOff, Languages, Sun, Moon, Lock, UserCog, History, KeyRound, RefreshCw, Palette, Check,
 } from 'lucide-react'
 
 import DashboardModule from '@/components/modules/dashboard'
@@ -53,6 +54,17 @@ const NAV = [
   { id: 'users', fa: 'کاربران', ps: 'کاروونکي', en: 'Users', icon: UserCog },
   { id: 'audit', fa: 'فعالیت‌ها', ps: 'فعالیتونه', en: 'Activity Log', icon: History },
   { id: 'settings', fa: 'تنظیمات', ps: 'امستنې', en: 'Settings', icon: Settings },
+] as const
+
+// تم‌های رنگی برنامه — swatch برای نمایش در منو
+const COLOR_THEMES = [
+  { id: 'emerald', fa: 'زمردی', ps: 'زمرد', en: 'Emerald', dot: '#0a7d63' },
+  { id: 'teal', fa: 'فیروزه‌ای', ps: 'فیروزه‌ای', en: 'Teal', dot: '#0b8ea0' },
+  { id: 'azure', fa: 'آبی', ps: 'آبي', en: 'Azure', dot: '#3f6ae0' },
+  { id: 'violet', fa: 'بنفش', ps: 'بنفش', en: 'Violet', dot: '#8f52d6' },
+  { id: 'rose', fa: 'یاقوتی', ps: 'یاقوتی', en: 'Rose', dot: '#d15062' },
+  { id: 'gold', fa: 'طلایی', ps: 'طلایی', en: 'Gold', dot: '#a9841c' },
+  { id: 'graphite', fa: 'گرافیتی', ps: 'ګرافیتي', en: 'Graphite', dot: '#5c6470' },
 ] as const
 
 // ---------------- تغییر رمز عبور (پروفایل) ----------------
@@ -212,14 +224,24 @@ function Shell() {
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
   const pendingOps = useAppStore((s) => s.pendingOps)
   const [dark, setDark] = useState(false)
+  const [colorTheme, setColorTheme] = useState('emerald')
   const [online, setOnline] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
 
-  // تم تیره/روشن
+  // تم تیره/روشن + تم رنگی
+  function applyColorTheme(id: string) {
+    if (id === 'emerald') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', id)
+    localStorage.setItem('mfg-color-theme', id)
+    setColorTheme(id)
+  }
   useEffect(() => {
     const isDark = localStorage.getItem('mfg-theme') === 'dark'
     document.documentElement.classList.toggle('dark', isDark)
-    const raf = requestAnimationFrame(() => setDark(isDark))
+    const savedTheme = localStorage.getItem('mfg-color-theme') ?? 'emerald'
+    if (savedTheme === 'emerald') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', savedTheme)
+    const raf = requestAnimationFrame(() => { setDark(isDark); setColorTheme(savedTheme) })
     return () => cancelAnimationFrame(raf)
   }, [])
   function toggleTheme() {
@@ -417,6 +439,29 @@ function Shell() {
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={toggleTheme} aria-label={t('تغییر تم', 'ټینګ بدلول', 'Toggle theme')}>
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+
+              {/* انتخاب‌گر تم رنگی */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')} title={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')}>
+                    <Palette className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuLabel>{t('تم رنگی', 'د رنګ ټینګ', 'Color theme')}</DropdownMenuLabel>
+                  {COLOR_THEMES.map((ct) => (
+                    <DropdownMenuItem
+                      key={ct.id}
+                      onClick={() => applyColorTheme(ct.id)}
+                      className={cn('gap-2.5', colorTheme === ct.id && 'bg-accent')}
+                    >
+                      <span aria-hidden className="h-4 w-4 rounded-full border border-black/10 shadow-sm shrink-0" style={{ backgroundColor: ct.dot }} />
+                      <span className="flex-1 text-[13px]">{t(ct.fa, ct.ps, ct.en)}</span>
+                      {colorTheme === ct.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <BackupMenu onGoSettings={() => setActiveTab('settings')} />
             </div>

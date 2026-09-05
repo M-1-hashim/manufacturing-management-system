@@ -4,6 +4,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * جدول منظم و یکدست برای همه ماژول‌ها:
+ * - هدر با پس‌زمینه ملایم و ترازبندی منطقی (text-start — سازگار با RTL)
+ * - ردیف‌های یک‌درمیان (zebra) + hover واضح + جدکردهای سبک
+ * - اعداد با tabular-nums هم‌تراز می‌شوند
+ */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
@@ -12,7 +18,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom text-sm [font-variant-numeric:tabular-nums]", className)}
         {...props}
       />
     </div>
@@ -33,7 +39,10 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
       data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
+      className={cn(
+        "[&_tr:last-child]:border-0 [&_tr:nth-child(even)]:bg-muted/25",
+        className
+      )}
       {...props}
     />
   )
@@ -70,7 +79,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-muted-foreground h-10 px-2 text-left align-middle text-xs font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "text-muted-foreground h-11 bg-muted/40 px-3 text-start align-middle text-xs font-semibold whitespace-nowrap first:rounded-ss-lg last:rounded-se-lg [&:has([role=checkbox])]:ps-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -83,7 +92,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "px-3 py-2.5 align-middle whitespace-nowrap [&:has([role=checkbox])]:ps-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}

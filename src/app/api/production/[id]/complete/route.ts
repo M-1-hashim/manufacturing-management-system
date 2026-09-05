@@ -16,9 +16,10 @@ class ApiError extends Error {
  * POST /api/production/[id]/complete
  * تکمیل سفارش تولید به‌صورت اتمیک:
  *  ۱) کسر مواد اولیه از انبار + ثبت تراکنش خروجی برای هر ماده
- *  ۲) افزودن محصول تولیدشده به انبار + ثبت تراکنش ورودی
+ *  ۲) افزودن «مقدار خالص» محصول (تولید منهای ضایعات) به انبار + ثبت تراکنش ورودی
+ *     — ضایعات هرگز به گدام اضافه نمی‌شود، فقط ثبت می‌گردد
  *  ۳) ثبت ضایعات، هزینه‌های نهایی، وضعیت QC و تاریخ پایان
- *  ۴) به‌روزرسانی قیمت تمام‌شده محصول (costPrice)
+ *  ۴) به‌روزرسانی قیمت تمام‌شده محصول (costPrice) بر اساس مقدار خالص
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -31,6 +32,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!Number.isFinite(producedQty) || producedQty <= 0) {
       return NextResponse.json({ error: 'مقدار تولیدشده باید بزرگ‌تر از صفر باشد' }, { status: 400 })
     }
+    if (!Number.isFinite(wasteQty) || wasteQty > producedQty) {
+      return NextResponse.json({ error: 'مقدار ضایعات نمی‌تواند بیشتر از مقدار تولید باشد' }, { status: 400 })
+    }
+    // مقدار خالص قابل ورود به گدام = تولید کل منهای ضایعات
+    const goodQty = Math.round((producedQty - wasteQty) * 10000) / 10000
 
     const updated = await db.$transaction(async (tx) => {
       const order = await tx.productionOrder.findUnique({
@@ -69,23 +75,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         })
       }
 
-      // ۲) افزودن محصول به انبار + تراکنش ورودی
-      await tx.product.update({
-        where: { id: order.productId },
-        data: { stock: { increment: producedQty } },
-      })
-      await tx.inventoryTransaction.create({
-        data: {
-          type: 'in',
-          itemType: 'product',
-          itemId: order.productId,
-          itemName: order.product.name,
-          unit: order.product.unit,
-          quantity: producedQty,
-          reference: order.orderNumber,
-          notes: 'تولید',
-        },
-      })
+      // ۲) فقط مقدار خالص (بدون ضایعات) به گدام اضافه می‌شود
+      if (goodQty > 0) {
+        await tx.product.update({
+          where: { id: order.productId },
+          data: { stock: { increment: goodQty } },
+        })
+        await tx.inventoryTransaction.create({
+          data: {
+            type: 'in',
+            itemType: 'product',
+            itemId: order.productId,
+            itemName: order.product.name,
+            unit: order.product.unit,
+            quantity: goodQty,
+            reference: order.orderNumber,
+            notes: wasteQty > 0 ? `تولید — خالص (${wasteQty} ضایعات ثبت شد، به انبار اضافه نشد)` : 'تولید',
+          },
+        })
+      }
 
       // ۳) هزینه‌های نهایی بر اساس مقدار واقعی تولیدشده
       const materialCost = order.formula.items.reduce(
@@ -121,11 +129,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       })
 
-      // ۴) قیمت تمام‌شده واحد = هزینه کل ÷ مقدار تولیدشده
-      if (producedQty > 0) {
+      // ۴) قیمت تمام‌شده واحد = هزینه کل ÷ مقدار خالص (ضایعات به قیمت اقلام سالم توزیع می‌شود)
+      if (goodQty > 0) {
         await tx.product.update({
           where: { id: order.productId },
-          data: { costPrice: Math.round((totalCost / producedQty) * 100) / 100 },
+          data: { costPrice: Math.round((totalCost / goodQty) * 100) / 100 },
         })
       }
 
@@ -133,7 +141,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'complete', 'production', id, `تکمیل سفارش ${updated.orderNumber} — تولید ${updated.producedQty} ${updated.product.unit}، ضایعات ${updated.wasteQty}`)
+    const goodNote = goodQty > 0 ? `${goodQty} ${updated.product.unit} خالص به گدام اضافه شد` : 'هیچ مقدار خالصی به گدام اضافه نشد'
+    await logAudit(session, 'complete', 'production', id, `تکمیل سفارش ${updated.orderNumber} — تولید ${updated.producedQty} ${updated.product.unit}، ضایعات ${updated.wasteQty} (به گدام اضافه نشد)، ${goodNote}`)
 
     return NextResponse.json(updated)
   } catch (e) {

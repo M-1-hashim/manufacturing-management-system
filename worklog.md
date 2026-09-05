@@ -447,3 +447,26 @@ Work Log:
 Stage Summary:
 - System-wide quiet-luxury pass: neutral surfaces + emerald only as action color, soft active pills instead of solid blocks, flat cards, lighter table headers, slimmer chrome — design language now consistent across every module via tokens/shared components (no per-module edits needed)
 - Files: globals.css, page.tsx (shell/login), shared/common.tsx, ui/table.tsx
+
+---
+Task ID: 8 (color-themes-tables-waste-fix)
+Agent: coordinator (main)
+Task: سه درخواست کاربر: ۱) افزودن تم‌های رنگی ۲) منظم‌سازی دیزاین جدول‌ها و ردیف‌ها ۳) محصول زایعاتی (ضایعات) نباید به گدام اضافه شود
+
+Work Log:
+- globals.css بازطراحی توکن‌ها به معماری hue-driven: همه رنگ‌های عملیاتی (primary/accent/ring/sidebar/charts/selection) از var(--theme-h,165) و var(--theme-c,1) مشتق می‌شوند؛ شش تم جدید با data-theme روی <html>: teal 195 | azure 250 | violet 300 | rose 20 | gold 80(c .9) | graphite 255(c .07) — پشتیبانی کامل light+dark با همان مکانیزم
+- page.tsx: COLOR_THEMES با swatch سه‌زبانه؛ دکمه Palette + DropdownMenu در هدر کنار toggle شب/روز؛ applyColorTheme → attribute + localStorage('mfg-color-theme')؛ restore در mount (بدون setState sync در effect — رفع دو خطای lint جدید react-hooks)
+- رنگ‌های برندی hard-code شده emerald در production → توکن primary (دکمه شروع sky→primary، دکمه‌های تکمیل، استپر جادوگر ۳ مرحله)؛ رنگ‌های معنایی (موفقیت/خطر/هشدار، فاکتور چاپی، finance±) عمداً سبز/سرخ ماندند
+- ui/table.tsx بازطراحی: TableHead → text-start (رفع ناهم‌ترازی هدرها در RTL! قبلاً text-left) + h-11 px-3 + bg-muted/40 + rounded گوشه اول/آخر؛ TableCell → px-3 py-2.5؛ TableBody zebra [&_tr:nth-child(even)]:bg-muted/25؛ Table → tabular-nums برای هم‌ترازی اعداد؛ hover حفظ شد
+- باگ ضایعات (API complete): اعتبارسنجی wasteQty≤producedQty (400 وگرنه)؛ goodQty=produced−waste؛ فقط goodQty به stock اضافه می‌شود (skip if 0)؛ تراکنش انبار qty=goodQty با یادداشت شفاف «تولید — خالص (X ضایعات ثبت شد، به انبار اضافه نشد)»؛ costPrice=totalCost÷goodQty؛ مواد همچنان به‌اندازه تولید کل کسر می‌شود؛ audit log جزئیات خالص/ضایعات
+- دیالوگ تکمیل تولید: برچسب «مقدار تولید کل»، پیش‌نمایش زنده primary «به گدام اضافه می‌شود: X»، خطای inline + toast وقتی ضایعات>تولید، helper متن سه‌زبانه، toast موفقیت با مقدار خالص
+- جدول تولید: زیر تولیدشده/ضایعات خط «خالص به گدام: N» فقط وقتی waste>0
+- aria-describedby={undefined} به دو DialogContent تولید (رفع هشدار Radix)
+- E2E: ۷ تم × light/dark (بنفش/طلایی-تیره/آبی-روشن/گرافیتی-EN تصویربرداری شد) + persistence بعد reload؛ جدول‌ها RTL/LTR دسکتاپ+موبایل 390؛ golden path تولید: سفارش PR-84838140 صابون 100 عدد → ضایعات 150 بلوکه شد (inline+toast) → ضایعات 20 → پیش‌نمایش 80 → تأیید → stock 480→560 (+80 فقط) → تراکنش انبار qty=80 با notes؛ console صفر warning/error بعد از فیکس؛ lint تمیز؛ dev.log بدون خطا
+- برگرداندن حالت پیش‌فرض: دری + زمردی + روشن
+
+Stage Summary:
+- کاربر حالا ۷ پوسته رنگی دارد که با یک کلیک از هدر عوض می‌شوند و در light/dark و هر سه زبان کار می‌کنند؛ رنگ‌های معنایی گزارش‌ها ثابت ماندند
+- جدول‌های همه ۱۳ ماژول یکدست شدند: هدر سایه‌دار هم‌تراز با RTL، zebra، اعداد tabular، padding منظم — بدون تغییر تک‌تک ماژول‌ها (فقط ui/table.tsx)
+- منطق انبار اصلاح شد: ضایعات فقط ثبت می‌شود و هرگز وارد گدام نمی‌شود؛ قیمت تمام‌شده روی اقلام سالم توزیع می‌شود
+- Files: src/app/globals.css، src/app/page.tsx، src/components/ui/table.tsx، src/app/api/production/[id]/complete/route.ts، src/components/modules/production/index.tsx

@@ -223,6 +223,11 @@ export default function ProductionModule() {
       toast.error(t('مقدار تولیدشده باید بزرگ‌تر از صفر باشد', 'د تولید مقدار باید له صفر څخه زیات وي', 'Produced quantity must be greater than zero'))
       return
     }
+    if (waste > produced) {
+      toast.error(t('ضایعات نمی‌تواند بیشتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity'))
+      return
+    }
+    const goodQty = produced - waste
     setCompleting(true)
     try {
       const res = await fetch(`/api/production/${completeTarget.id}/complete`, {
@@ -236,9 +241,9 @@ export default function ProductionModule() {
       }
       toast.success(
         t(
-          `تکمیل شد — مواد از انبار کسر و ${fmtQty(produced)} ${completeTarget.product.unit} به انبار اضافه گردید`,
-          `بشپړ شو — مواد کم شول او ${fmtQty(produced)} ته انبار زیات شو`,
-          `Completed — materials deducted and ${fmtQty(produced)} ${completeTarget.product.unit} added to stock`,
+          `تکمیل شد — مواد از انبار کسر و ${fmtQty(goodQty)} ${completeTarget.product.unit} خالص به انبار اضافه شد${waste > 0 ? ` (${fmtQty(waste)} ضایعات به انبار اضافه نشد)` : ''}`,
+          `بشپړ شو — مواد کم شول او ${fmtQty(goodQty)} ${completeTarget.product.unit} خالص انبار ته زیات شو${waste > 0 ? ` (${fmtQty(waste)} ضایعات انبار ته نه زیاتېدل)` : ''}`,
+          `Completed — materials deducted and net ${fmtQty(goodQty)} ${completeTarget.product.unit} added to stock${waste > 0 ? ` (${fmtQty(waste)} waste not added)` : ''}`,
         ),
       )
       setCompleteTarget(null)
@@ -331,11 +336,18 @@ export default function ProductionModule() {
                       <TableCell className="whitespace-nowrap">{fmtQty(o.quantity)} {o.product?.unit}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {o.status === 'completed' ? (
-                          <span>
-                            <span className="font-medium text-emerald-600 dark:text-emerald-400">{fmtQty(o.producedQty)}</span>
-                            <span className="text-muted-foreground"> / </span>
-                            <span className="text-red-600 dark:text-red-400">{fmtQty(o.wasteQty)}</span>
-                          </span>
+                          <div className="leading-tight">
+                            <div>
+                              <span className="font-medium text-emerald-600 dark:text-emerald-400">{fmtQty(o.producedQty)}</span>
+                              <span className="text-muted-foreground"> / </span>
+                              <span className="text-red-600 dark:text-red-400">{fmtQty(o.wasteQty)}</span>
+                            </div>
+                            {o.wasteQty > 0 && (
+                              <div className="text-[11px] text-muted-foreground">
+                                {t('خالص به گدام:', 'خالص ګدام ته:', 'Net to warehouse:')} <b className="text-foreground">{fmtQty(o.producedQty - o.wasteQty)}</b>
+                              </div>
+                            )}
+                          </div>
                         ) : '—'}
                       </TableCell>
                       <TableCell className="font-medium whitespace-nowrap">{formatMoney(o.totalCost)}</TableCell>
@@ -354,7 +366,7 @@ export default function ProductionModule() {
                         <div className="flex items-center gap-1.5 justify-end flex-wrap">
                           {o.status === 'pending' && (
                             <>
-                              <Button size="sm" variant="outline" className="gap-1 h-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-900/20" onClick={() => startOrder(o)}>
+                              <Button size="sm" variant="outline" className="gap-1 h-8 text-primary hover:text-primary/90 hover:bg-primary/10" onClick={() => startOrder(o)}>
                                 <Play className="h-3.5 w-3.5" />
                                 {t('شروع', 'پیل', 'Start')}
                               </Button>
@@ -366,7 +378,7 @@ export default function ProductionModule() {
                           )}
                           {o.status === 'in_progress' && (
                             <>
-                              <Button size="sm" className="gap-1 h-8 bg-emerald-600 hover:bg-emerald-700" onClick={() => openComplete(o)}>
+                              <Button size="sm" className="gap-1 h-8" onClick={() => openComplete(o)}>
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                                 {t('تکمیل تولید', 'تولید بشپړول', 'Complete')}
                               </Button>
@@ -392,7 +404,7 @@ export default function ProductionModule() {
 
       {/* ================= جادوگر سفارش تولید ================= */}
       <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('سفارش تولید جدید', 'نوی تولید سفارش', 'New production order')}</DialogTitle>
           </DialogHeader>
@@ -408,15 +420,15 @@ export default function ProductionModule() {
                   <div className="flex flex-col items-center gap-1">
                     <div className={cn(
                       'h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors',
-                      done ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : active ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                      done ? 'bg-primary border-primary text-primary-foreground'
+                        : active ? 'border-primary text-primary bg-primary/10'
                         : 'border-muted-foreground/30 text-muted-foreground',
                     )}>
                       {done ? <CheckCircle2 className="h-4 w-4" /> : n}
                     </div>
                     <span className={cn('text-[11px] whitespace-nowrap', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{label}</span>
                   </div>
-                  {n < 3 && <div className={cn('h-0.5 w-8 sm:w-14 mx-1 -mt-5', done ? 'bg-emerald-500' : 'bg-muted-foreground/20')} />}
+                  {n < 3 && <div className={cn('h-0.5 w-8 sm:w-14 mx-1 -mt-5', done ? 'bg-primary' : 'bg-muted-foreground/20')} />}
                 </div>
               )
             })}
@@ -639,7 +651,7 @@ export default function ProductionModule() {
 
       {/* ================= دیالوگ تکمیل تولید ================= */}
       <Dialog open={!!completeTarget} onOpenChange={(v) => !v && setCompleteTarget(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {t('تکمیل تولید', 'تولید بشپړول', 'Complete production')}{' '}
@@ -656,7 +668,7 @@ export default function ProductionModule() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>{t('مقدار تولیدشده', 'د تولید شوی مقدار', 'Produced qty')} *</Label>
+                  <Label>{t('مقدار تولید کل', 'ټول تولید شوی مقدار', 'Total produced qty')} *</Label>
                   <Input type="number" min={0} step="any" value={cProduced} onChange={(e) => setCProduced(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
@@ -664,11 +676,25 @@ export default function ProductionModule() {
                   <Input type="number" min={0} step="any" value={cWaste} onChange={(e) => setCWaste(e.target.value)} />
                 </div>
               </div>
+              {/* پیش‌نمایش زنده مقدار خالص ورودی به گدام */}
+              {Number(cProduced) > 0 && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">{t('به گدام اضافه می‌شود:', 'ګدام ته زیاتېږي:', 'To be added to warehouse:')}</span>
+                  <span className="font-bold text-primary" dir="ltr">
+                    {fmtQty(Math.max(0, Number(cProduced) - (Number(cWaste) || 0)))} {completeTarget.product.unit}
+                  </span>
+                </div>
+              )}
+              {(Number(cWaste) || 0) > Number(cProduced) && (
+                <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                  {t('ضایعات نمی‌تواند بیشتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity')}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground">
                 {t(
-                  'مواد معادل مقدار تولیدشده به‌صورت خودکار از انبار کسر و محصول به انبار اضافه می‌شود.',
-                  'د تولید شوي مقدار سره سم مواد له انبار کمېږي او محصول انبار ته زیاتېږي.',
-                  'Materials for the produced quantity will be deducted and the product added to stock automatically.',
+                  'مواد معادل مقدار تولید کل کسر و فقط مقدار خالص (منهای ضایعات) به گدام اضافه می‌شود. ضایعات فقط ثبت می‌گردد.',
+                  'د ټول تولید سره سم مواد کمېږي او یوازې خالص مقدار (له ضایعاتو پرته) ګدام ته زیاتېږي. ضایعات یوازې ثبت کېږي.',
+                  'Materials are deducted for the total produced; only the net quantity (excluding waste) is added to stock. Waste is recorded only.',
                 )}
               </p>
               <div className="space-y-1.5">
@@ -687,7 +713,7 @@ export default function ProductionModule() {
                 <Textarea rows={2} value={cQcNotes} onChange={(e) => setCIcNotes(e.target.value)} placeholder={t('نتیجه کنترل کیفیت...', 'د کیفیت کنټرول نتیجه...', 'QC result...')} />
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <Button onClick={submitComplete} disabled={completing} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+                <Button onClick={submitComplete} disabled={completing} className="gap-1.5">
                   {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {completing ? t('در حال تکمیل...', 'په بشپړولو کې...', 'Completing...') : t('تأیید تکمیل', 'بشپړول تصدیق', 'Confirm completion')}
                 </Button>

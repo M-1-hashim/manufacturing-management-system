@@ -65,3 +65,7 @@ server.log
 
 # runtime caches
 .agent-ctxtool-results/
+
+# runtime/temp
+tool-results/
+.zscripts/
