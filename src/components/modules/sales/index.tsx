@@ -20,6 +20,9 @@ import {
   Factory,
   MapPin,
   Phone,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react'
 import {
   PageHeader,
@@ -132,6 +135,18 @@ type SaleRow = {
 const NONE = '__none__'
 const ALL = '__all__'
 const CURRENCIES: Currency[] = ['AFN', 'USD', 'PKR']
+
+// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (سرور)
+interface LiveRatesT {
+  usd: number
+  pkr: number
+  source: string
+  updatedAt: string
+  fetchedAt: string
+  cached: boolean
+  stale: boolean
+  nextUpdate?: string
+}
 
 // کلاینت ساده API با استخراج پیام خطای دری
 async function callApi<T>(
@@ -562,6 +577,9 @@ function NewSaleDialog({
 
   const selectedCustomer = customers.find((c) => c.id === customerId) || null
 
+  // نرخ لحظه‌ای تبدیل ارز از API واقعی — هر بار باز شدن دیالوگ گرفته می‌شود
+  const live = useFetch<LiveRatesT>(open ? '/api/exchange-rate' : null)
+
   function autoPrice(productId: string): string {
     const p = products.find((x) => x.id === productId)
     if (!p) return ''
@@ -596,13 +614,28 @@ function NewSaleDialog({
     )
   }
 
-  // تغییر ارز → نرخ پیش‌فرض از تنظیمات
+  // تغییر ارز → نرخ پیش‌فرض: اول نرخ لحظه‌ای از API، بعد تنظیمات
   function handleCurrencyChange(v: string) {
     const cur = v as Currency
     setCurrency(cur)
     if (cur === 'AFN') setExchangeRate('1')
-    else if (cur === 'USD') setExchangeRate(String(Number(settings?.usdRate) || 70))
-    else setExchangeRate(String(Number(settings?.pkrRate) || 0.25))
+    else if (cur === 'USD') setExchangeRate(String(live.data?.usd || Number(settings?.usdRate) || 70))
+    else setExchangeRate(String(live.data?.pkr || Number(settings?.pkrRate) || 0.25))
+  }
+
+  // وقتی نرخ لحظه‌ای رسید → اگر کاربر هنوز نرخ دستی وارد نکرده، فیلد با نرخ زنده همگام می‌شود
+  // (الگوی رسمی React: تنظیم state هنگام رندر هنگام تغییر داده بیرونی — بدون useEffect)
+  const [syncedLive, setSyncedLive] = useState<LiveRatesT | null>(null)
+  if (live.data !== syncedLive) {
+    setSyncedLive(live.data)
+    if (live.data && currency !== 'AFN') {
+      const fallback = currency === 'USD' ? Number(settings?.usdRate) || 70 : Number(settings?.pkrRate) || 0.25
+      const current = Number(exchangeRate)
+      if (!current || Math.abs(current - fallback) < 0.001) {
+        const target = currency === 'USD' ? live.data.usd : live.data.pkr
+        if (target > 0) setExchangeRate(String(target))
+      }
+    }
   }
 
   // محاسبات
@@ -824,6 +857,37 @@ function NewSaleDialog({
                   onChange={(e) => setExchangeRate(e.target.value)}
                   disabled={currency === 'AFN'}
                 />
+                {currency !== 'AFN' && live.data && (
+                  <div className="flex items-center gap-1.5 text-[11px] leading-tight">
+                    {live.data.stale ? (
+                      <>
+                        <WifiOff className="h-3 w-3 shrink-0 text-amber-600" />
+                        <span className="text-amber-700 dark:text-amber-500">
+                          {t('آفلاین — آخرین نرخ ذخیره‌شده', 'انټرنټ نشته — وروستنی ذخیره شوې نرخ', 'Offline — last stored rate')}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Wifi className="h-3 w-3 shrink-0 text-emerald-600" />
+                        <span className="text-emerald-700 dark:text-emerald-500">
+                          {t(
+                            `نرخ لحظه‌ای: ۱ ${currency === 'USD' ? 'دالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} افغانی`,
+                            `لحظه يي نرخ: ۱ ${currency === 'USD' ? 'ډالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} افغانۍ`,
+                            `Live rate: 1 ${currency} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} AFN`
+                          )}
+                        </span>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => live.refetch()}
+                      className="ms-auto shrink-0 rounded p-0.5 hover:bg-accent"
+                      aria-label={t('بروزرسانی نرخ', 'نرخ بروز کړئ', 'Refresh rate')}
+                    >
+                      <RefreshCw className={`h-3 w-3 ${live.loading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

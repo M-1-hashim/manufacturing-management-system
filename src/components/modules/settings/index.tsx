@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,16 +21,30 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useI18n } from '@/lib/i18n'
+import { formatNumber } from '@/lib/format'
 import { useAppStore } from '@/lib/store'
 import { useFetch } from '@/lib/hooks'
-import { apiPut, apiDelete, apiPost } from '@/lib/api'
+import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
 import { clearOfflineCache } from '@/lib/offline-client'
+import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 
 interface BackupFileT {
   name: string
   size: number
   createdAt: string
+}
+
+// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (سرور)
+interface LiveRatesT {
+  usd: number
+  pkr: number
+  source: string
+  updatedAt: string
+  fetchedAt: string
+  cached: boolean
+  stale: boolean
+  nextUpdate?: string
 }
 
 function fmtSize(n: number): string {
@@ -186,6 +200,61 @@ export default function SettingsModule() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
+  // ---------- نرخ ارز لحظه‌ای از API واقعی ----------
+  const [rateFetching, setRateFetching] = useState(false)
+  const [liveInfo, setLiveInfo] = useState<LiveRatesT | null>(null)
+
+  async function fetchLiveRates() {
+    setRateFetching(true)
+    try {
+      const r = await apiGet<LiveRatesT>('/api/exchange-rate?refresh=1')
+      setLiveInfo(r)
+      setForm((f) => ({
+        ...f,
+        usdRate: String(r.usd),
+        pkrRate: String(r.pkr),
+        ratesUpdatedAt: r.updatedAt,
+        ratesSource: r.source,
+      }))
+      if (r.stale) {
+        toast.warning(
+          t(
+            'اینترنت در دسترس نیست — آخرین نرخ ذخیره‌شده نمایش داده می‌شود',
+            'انټرنټ نه لري — وروستنی ذخیره شوې نرخ ښودل کیږي',
+            'No internet — showing last stored rates'
+          )
+        )
+      } else {
+        toast.success(
+          t(
+            `نرخ لحظه‌ای دریافت شد: ۱ دالر = ${r.usd} افغانی`,
+            `لحظه يي نرخ ترلاسه شو: ۱ ډالر = ${r.usd} افغانۍ`,
+            `Live rates fetched: 1 USD = ${r.usd} AFN`
+          )
+        )
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در دریافت نرخ', 'د نرخ اخیستنې ستونزه', 'Failed to fetch rates'))
+    } finally {
+      setRateFetching(false)
+    }
+  }
+
+  async function toggleAutoSync(enabled: boolean) {
+    set('ratesAutoSync', enabled ? '1' : '0')
+    try {
+      await apiPut('/api/settings', { ratesAutoSync: enabled ? '1' : '0' })
+      toast.success(
+        enabled
+          ? t('بروزرسانی خودکار نرخ فعال شد', 'اتوماتیک بروز رسانی فعال شو', 'Auto rate sync enabled')
+          : t('بروزرسانی خودکار نرخ غیرفعال شد — نرخ‌ها دستی مدیریت می‌شوند', 'اتوماتیک بروز رسانی بند شو — نرخونه لاسي اداره کیږي', 'Auto rate sync disabled — rates are managed manually')
+      )
+    } catch {
+      set('ratesAutoSync', enabled ? '0' : '1')
+      toast.error(t('خطا در ذخیره', 'د خوندي کولو ستونزه', 'Save failed'))
+    }
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -196,6 +265,7 @@ export default function SettingsModule() {
         usdRate: form.usdRate ?? '1',
         pkrRate: form.pkrRate ?? '1',
         defaultTax: form.defaultTax ?? '2',
+        ratesAutoSync: form.ratesAutoSync ?? '1',
       })
       toast.success(t('تنظیمات ذخیره شد', 'امستنې خوندي شوې', 'Settings saved'))
       refetch()
@@ -266,6 +336,33 @@ export default function SettingsModule() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* دریافت نرخ لحظه‌ای از API واقعی */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    {liveInfo?.stale ? (
+                      <WifiOff className="h-4 w-4 shrink-0 text-amber-600" />
+                    ) : (
+                      <Wifi className="h-4 w-4 shrink-0 text-emerald-600" />
+                    )}
+                    {t('نرخ لحظه‌ای از اینترنت', 'لحظه يي نرخ له انټرنټ', 'Live rates from the internet')}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {form.ratesUpdatedAt
+                      ? t(
+                          `آخرین بروزرسانی: ${fmtDate(form.ratesUpdatedAt)} — منبع: ${form.ratesSource || liveInfo?.source || '—'}`,
+                          `وروستنی بروز رسانی: ${fmtDate(form.ratesUpdatedAt)} — سرچینه: ${form.ratesSource || liveInfo?.source || '—'}`,
+                          `Last update: ${fmtDate(form.ratesUpdatedAt)} — source: ${form.ratesSource || liveInfo?.source || '—'}`
+                        )
+                      : t('هنوز نرخ از اینترنت دریافت نشده — دکمه را بزنید', 'تر اوسه نرخ له انټرنټ نه دی اخیستل شوی', 'No rate fetched yet — click refresh')}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchLiveRates} disabled={rateFetching} className="gap-1.5 shrink-0">
+                  <RefreshCw className={`h-3.5 w-3.5 ${rateFetching ? 'animate-spin' : ''}`} />
+                  {rateFetching ? t('در حال دریافت...', 'اخیستل...', 'Fetching...') : t('بروزرسانی لحظه‌ای', 'لحظه يي بروز رسانی', 'Refresh live rates')}
+                </Button>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="usdRate">1 USD = ? AFN</Label>
@@ -276,6 +373,29 @@ export default function SettingsModule() {
                   <Input id="pkrRate" dir="ltr" type="number" min="0" step="0.01" className="text-end" value={form.pkrRate ?? ''} onChange={(e) => set('pkrRate', e.target.value)} />
                 </div>
               </div>
+
+              {/* تبدیل سریع دالر و افغانی */}
+              {Number(form.usdRate) > 0 && (
+                <div className="flex items-start gap-2 text-xs text-muted-foreground rounded-lg border border-dashed p-2.5">
+                  <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p dir="ltr" className="text-start">1 USD = {formatNumber(Number(form.usdRate), 2)} AFN</p>
+                    <p dir="ltr" className="text-start">1 AFN = {formatNumber(1 / Number(form.usdRate), 4)} USD</p>
+                  </div>
+                </div>
+              )}
+
+              {/* بروزرسانی خودکار */}
+              <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                <div className="min-w-0">
+                  <Label htmlFor="ratesAutoSync" className="cursor-pointer">{t('بروزرسانی خودکار نرخ‌ها', 'اتوماتیک بروز رسانی نرخونه', 'Auto-update rates')}</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t('نرخ‌ها هر ساعت از اینترنت گرفته و ذخیره می‌شوند؛ در قطعی اینترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له انټرنټ اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly and stored; last known rates are used when offline.')}
+                  </p>
+                </div>
+                <Switch id="ratesAutoSync" checked={form.ratesAutoSync !== '0'} onCheckedChange={(v) => void toggleAutoSync(v)} />
+              </div>
+
               <p className="text-xs text-muted-foreground">
                 {t('در فروش‌های دالری و کلداری، این نرخ‌ها به‌صورت خودکار پیشنهاد می‌شود.', 'په ډالري او کلداري پلورنې کې دا نرخونه په اتوماتيک ډول وړاندیز کیږي.', 'Suggested automatically for USD/PKR sales.')}
               </p>
