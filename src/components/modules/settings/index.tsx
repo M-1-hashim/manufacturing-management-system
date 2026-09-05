@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -526,6 +526,30 @@ export default function SettingsModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+            {/* فایل‌های هاست اشتراکی — ذخیره دیتا در MySQL هاست */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+              <Server className="h-4 w-4 shrink-0 text-amber-600" />
+              <p className="flex-1 text-xs leading-5 text-amber-900 dark:text-amber-200">
+                {t(
+                  'برای ذخیره دیتا در هاست اشتراکی: فایل SQL را در phpMyAdmin هاست ایمپورت کنید، سپس طبق راهنما برنامه را به دیتابیس هاست وصل کرده و بکاپ JSON را بازیابی کنید.',
+                  'د ډاټا د هوسټ کې ساتلو لپاره: د SQL فایل په phpMyAdmin کې داخل کړئ، بیا د لارښود له مخې پروګرام وصل او بیک اپ بیا رغوئ.',
+                  'To store data on your shared host: import the SQL file in phpMyAdmin, then connect the app to the host database and restore the JSON backup.'
+                )}
+              </p>
+              <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                <a href="/mysql-schema.sql" download>
+                  <FileDown className="h-3.5 w-3.5" />
+                  {t('فایل SQL هاست', 'د SQL فایل', 'Host SQL file')}
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                <a href="/hosting-guide.md" download>
+                  <BookOpen className="h-3.5 w-3.5" />
+                  {t('راهنمای گام‌به‌گام', 'ګام په ګام لارښود', 'Step-by-step guide')}
+                </a>
+              </Button>
+            </div>
+
             {/* تنظیمات خودکار */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="space-y-1.5">
