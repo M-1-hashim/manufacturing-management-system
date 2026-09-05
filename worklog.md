@@ -550,3 +550,30 @@ Stage Summary:
 - کاربر حالا APK امضاشده دارد: دانلود از تنظیمات سیستم (/mfg-erp.apk) و از GitHub Release v1.0.0-android؛ اپ اندروید به سرور لپ‌تاپ/PC روی همان وای‌فای وصل می‌شود و آدرس آن قابل تغییر است
 - Files: android/project/* (سورس)، public/mfg-erp.apk، src/components/modules/settings/index.tsx
 - Commit cae539c pushed to origin/main
+
+---
+Task ID: 12
+Agent: main (Z.ai Code)
+Task: ذخیره دیتای سیستم در هاست اشتراکی (MySQL) — «میخوام دیتای این سیستم در هاست که خریدم ذخیره شود هاست اشتراکی خریدم»
+
+Work Log:
+- بررسی وضعیت: سیستم روی SQLite محلی (db/custom.db)؛ بکاپ/Restore فقط فایل SQLite (VACUUM INTO) در src/lib/backup.ts + API /api/admin/backup
+- ساخت prisma/schema.mysql.prisma (provider mysql + @db.Text/LongText برای فیلدهای متنی بلند + ایندکس‌ها) — validate با موفقیت
+- package.json: اسکریپت‌های db:push:mysql و db:generate:mysql + فایل .env.example (gitignore شده — محتوا در راهنما هست)
+- src/lib/json-backup.ts جدید: خروجی/بازیابی JSON مستقل از نوع DB — ۱۹ جدول به ترتیب FK، تراکنش اتمیک، chunked createMany (500)، راستی‌آزمایی تعداد سطر داخل تراکنش، تبدیل فیلدهای تاریخ
+- src/lib/backup.ts: تشخیص نوع فایل در restoreFromBuffer (JSON → مسیر تراکنشی؛ باینری → مسیر فایل فقط SQLite)؛ createBackup بر اساس نوع DB: SQLite→VACUUM / MySQL→اسنپ‌شات JSON؛ NAME_RE پذیرش .json؛ اعتبارسنجی فایل JSON قبل از بکاپ امنیتی
+- API /api/admin/backup: GET اضافه کردن dbType + ?export=json (دانلود مستقیم برای مهاجرت)؛ POST پذیرش {format:"json"}؛ Content-Type درست برای دانلود .json
+- Settings UI: Badge نوع ذخیره‌سازی (SQLite محلی / هاست MySQL) + دکمه «خروجی JSON (انتقال به هاست)» (FileJson icon)
+- electron/main.js: databaseUrlOverride() — فایل db-connection.txt در userData با قالب راهنمای فارسی؛ اگر خط mysql:// داشته باشد DATABASE_URL به هاست هدایت می‌شود؛ ensureDatabase در حالت هاست فایل محلی نمی‌سازد
+- login route: bootstrap خودکار حساب admin/admin123 فقط وقتی جدول User خالی باشد (مسیر مهاجرت به دیتابیس خالی هاست)
+- docs/mysql-schema.sql با prisma migrate diff --from-empty (۱۹ جدول، ۱۳ FK، utf8mb4) + هدر راهنمای phpMyAdmin
+- تست end-to-end روی SQLite: JSON snapshot (57KB) → export → upload-restore (اکسیدنتال: skipDuplicates در SQLite پشتیبانی نمی‌شود → حذف شد؛ تراکنش درست رول‌بک کرد) → restore موفق 233 سطر + login سالم + دیتای بیزینسی دست‌نخورده؛ restore از فایل ذخیره‌شده هم OK؛ audit log ثبت شد
+- agent-browser: کارت پشتیبان‌گیری با Badge «ذخیره‌سازی: SQLite محلی» + دکمه JSON نمایش داده شد؛ console fresh reload بدون خطا
+- lint بدون خطا؛ commit 44548fd push شد به GitHub main
+
+Stage Summary:
+- دو مسیر مستند شد: (A) برنامه محلی + دیتا در MySQL هاست با Remote MySQL (رایج برای هاست اشتراکی)، (B) نصب کامل روی هاست با Node.js App
+- مهاجرت دیتا: خروجی JSON از نسخه فعلی → اتصال به هاست → آپلود/بازیابی → اکانت‌های اصلی برمی‌گردند
+- راهنمای کامل دری: docs/DEPLOY-SHARED-HOSTING.fa.md + docs/mysql-schema.sql برای phpMyAdmin
+- بکاپ خودکار/دستی در حالت MySQL به‌صورت اسنپ‌شات JSON در همان پوشه backups
+- محدودیت تست: سرور MySQL در سندباکس موجود نیست — مسیر MySQL با prisma validate و مسیر JSON (dialect-agnostic) با تست واقعی پوشش داده شد
