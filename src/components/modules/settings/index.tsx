@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -137,6 +137,21 @@ interface LiveRatesT {
   nextUpdate?: string
 }
 
+// تم‌های رنگی — همان فهرست page.tsx (برای کارت «ظاهر برنامه»)
+const COLOR_THEMES = [
+  { id: 'emerald', fa: 'زمردی', ps: 'زمرد', en: 'Emerald', dot: '#0a7d63' },
+  { id: 'teal', fa: 'فیروزه‌ای', ps: 'فیروزه‌ای', en: 'Teal', dot: '#0b8ea0' },
+  { id: 'green', fa: 'سبز', ps: 'زرغون', en: 'Green', dot: '#2f9e44' },
+  { id: 'azure', fa: 'آبی', ps: 'آبي', en: 'Azure', dot: '#3f6ae0' },
+  { id: 'ocean', fa: 'اقیانوسی', ps: 'سمندري', en: 'Ocean', dot: '#2f7ec2' },
+  { id: 'violet', fa: 'بنفش', ps: 'بنفش', en: 'Violet', dot: '#8f52d6' },
+  { id: 'magenta', fa: 'سرخابی', ps: 'سرخابي', en: 'Magenta', dot: '#c04a97' },
+  { id: 'rose', fa: 'یاقوتی', ps: 'یاقوتی', en: 'Rose', dot: '#d15062' },
+  { id: 'gold', fa: 'طلایی', ps: 'طلایی', en: 'Gold', dot: '#a9841c' },
+  { id: 'brown', fa: 'قهوه‌ای', ps: 'نسواری', en: 'Brown', dot: '#8f6b45' },
+  { id: 'graphite', fa: 'گرافیتی', ps: 'ګرافیتي', en: 'Graphite', dot: '#5c6470' },
+] as const
+
 function fmtSize(n: number): string {
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
   if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`
@@ -156,6 +171,22 @@ export default function SettingsModule() {
   const lang = useAppStore((s) => s.lang)
   const setLang = useAppStore((s) => s.setLang)
   const user = useAppStore((s) => s.user)
+
+  // ---------- ظاهر: تم رنگی + حالت تیره/روشن ----------
+  const [isDark, setIsDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'))
+  const [activeTheme, setActiveTheme] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('mfg-color-theme') ?? 'emerald' : 'emerald'))
+  function applyColorTheme(id: string) {
+    if (id === 'emerald') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', id)
+    localStorage.setItem('mfg-color-theme', id)
+    setActiveTheme(id)
+  }
+  function toggleDarkMode() {
+    const next = !isDark
+    document.documentElement.classList.toggle('dark', next)
+    localStorage.setItem('mfg-theme', next ? 'dark' : 'light')
+    setIsDark(next)
+  }
   const { data, loading, refetch } = useFetch<Record<string, string>>('/api/settings')
 
   const [form, setForm] = useState<Record<string, string>>({})
@@ -185,6 +216,62 @@ export default function SettingsModule() {
   // ---------- وضعیت واقعی دیتابیس (کدام حالت؟ وصل است؟ جدول‌ها کامل؟) ----------
   const [dbInfo, setDbInfo] = useState<DbInfoT | null>(null)
   const [dbInfoLoading, setDbInfoLoading] = useState(false)
+
+  // ---------- راه‌اندازی خودکار هاست (ساخت جدول‌ها / انتقال دیتا) ----------
+  const [hostSetupBusy, setHostSetupBusy] = useState<'create' | 'migrate' | null>(null)
+  const [hostSetupResult, setHostSetupResult] = useState<string | null>(null)
+  const [migrateConfirm, setMigrateConfirm] = useState(false)
+
+  async function runHostSetup(action: 'create' | 'migrate') {
+    setHostSetupBusy(action)
+    setHostSetupResult(null)
+    try {
+      const r = await apiPost<{
+        ok: boolean
+        error?: string
+        createdTables?: string[]
+        bootstrapped?: boolean
+        copiedUsers?: number
+        copiedSettings?: number
+        copied?: number
+        updated?: number
+      }>('/api/system/db-setup', { action })
+      if (!r.ok) throw new Error(r.error || 'failed')
+      if (action === 'create') {
+        const parts: string[] = []
+        parts.push(
+          (r.createdTables?.length ?? 0) > 0
+            ? t(`${r.createdTables!.length} جدول ساخته شد`, `${r.createdTables!.length} جدولونه جوړ شول`, `${r.createdTables!.length} tables created`)
+            : t('همهٔ جدول‌ها از قبل موجود بود', 'ټول جدولونه له مخکې موجود وو', 'All tables already existed')
+        )
+        if (r.bootstrapped)
+          parts.push(
+            t(
+              `${r.copiedUsers ?? 0} کاربر و ${r.copiedSettings ?? 0} تنظیم از دستگاه به هاست کپی شد`,
+              `${r.copiedUsers ?? 0} کارن او ${r.copiedSettings ?? 0} امستنې هوسټ ته کاپي شوې`,
+              `${r.copiedUsers ?? 0} users and ${r.copiedSettings ?? 0} settings copied to host`
+            )
+          )
+        setHostSetupResult(parts.join(' — '))
+        toast.success(t('راه‌اندازی هاست کامل شد', 'هوسټ راه‌اندازې بشپړه شوه', 'Host setup finished'))
+      } else {
+        setHostSetupResult(
+          t(
+            `${r.copied ?? 0} سطر کپی و ${r.updated ?? 0} سطر به‌روز شد — دیتای هاست حالا مثل همین دستگاه است`,
+            `${r.copied ?? 0} کرښه کاپي او ${r.updated ?? 0} تازه شوه`,
+            `${r.copied ?? 0} rows copied and ${r.updated ?? 0} updated — host data now matches this device`
+          )
+        )
+        toast.success(t('انتقال دیتا به هاست کامل شد', 'ډاټا هوسټ ته ولېږدول شوه', 'Data migration to host finished'))
+      }
+      void refreshDbInfo()
+    } catch (e) {
+      setHostSetupResult(String((e as Error)?.message || e))
+      toast.error(t('راه‌اندازی هاست ناموفق بود', 'هوسټ راه‌اندازې ناکامه شوه', 'Host setup failed'))
+    } finally {
+      setHostSetupBusy(null)
+    }
+  }
 
   async function refreshDbInfo() {
     setDbInfoLoading(true)
@@ -766,6 +853,51 @@ export default function SettingsModule() {
         </CardContent>
       </Card>
 
+      {/* ظاهر برنامه — تم‌های رنگی و حالت روشن/تیره */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Palette className="h-4 w-4 text-primary" />
+            {t('ظاهر برنامه', 'د پروګرام بڼه', 'Appearance')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {COLOR_THEMES.map((ct) => {
+              const selected = activeTheme === ct.id
+              return (
+                <button
+                  key={ct.id}
+                  onClick={() => applyColorTheme(ct.id)}
+                  className={`rounded-xl border-2 overflow-hidden transition-all hover:-translate-y-0.5 ${
+                    selected ? 'border-primary shadow-sm' : 'border-transparent'
+                  }`}
+                  aria-label={t(ct.fa, ct.ps, ct.en)}
+                >
+                  <span className="block h-10 w-full" style={{ background: `linear-gradient(135deg, ${ct.dot}, ${ct.dot}99 60%, ${ct.dot}55)` }} />
+                  <span className="flex items-center justify-center gap-1 py-1.5 text-[11px] font-medium">
+                    {t(ct.fa, ct.ps, ct.en)}
+                    {selected && <Check className="h-3 w-3 text-primary" />}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <Separator />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={toggleDarkMode}>
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {isDark
+                ? t('حالت روشن', 'روښانه حالت', 'Light mode')
+                : t('حالت تیره', 'تیاره حالت', 'Dark mode')}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {t('تم فوراً اعمال و برای دفعات بعد ذخیره می‌شود.', 'ټینګ سمدلاسه پلي او د راتلونکو لپاره خوندي کېږي.', 'Themes apply instantly and are remembered.')}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* نسخه اندروید */}
       <Card>
         <CardHeader>
@@ -1133,6 +1265,89 @@ export default function SettingsModule() {
                 <p>{t('وضعیت نامشخص — دکمه «بررسی مجدد» را بزنید.', 'حالت نامعلوم — «بیا ازمویل» کلیک کړئ.', 'Status unknown — press Re-check.')}</p>
               )}
             </div>
+
+            {/* راه‌اندازی خودکار هاست — فقط ادمین، فقط نسخهٔ دسکتاپ */}
+            {isAdmin && connApi && (
+              <div className="rounded-lg border border-dashed p-3 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold">
+                    <Table2 className="h-3.5 w-3.5 text-primary" />
+                    {t('راه‌اندازی خودکار هاست', 'اتوماتیک هوسټ راه‌اندازې', 'Automatic host setup')}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2.5"
+                      disabled={hostSetupBusy !== null}
+                      onClick={() => void runHostSetup('create')}
+                    >
+                      {hostSetupBusy === 'create' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Table2 className="h-3 w-3" />}
+                      {t('ساخت جدول‌های گمشده', 'ورک جدولونه جوړول', 'Create missing tables')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2.5"
+                      disabled={hostSetupBusy !== null}
+                      onClick={() => setMigrateConfirm(true)}
+                    >
+                      <FolderInput className="h-3 w-3" />
+                      {t('انتقال دیتای این دستگاه به هاست', 'د دې دستگاه ډاټا هوسټ ته', 'Migrate this device data to host')}
+                    </Button>
+                  </div>
+                </div>
+                {hostSetupResult && <p className="text-[11px] text-muted-foreground leading-5">{hostSetupResult}</p>}
+                <p className="text-[11px] text-muted-foreground leading-5">
+                  {t(
+                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی کاربران محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
+                    '«جوړول» نوی/تش هوسټ چمتو کوي (۱۹ جدول + کاپي کارنانو). «انتقال» ټول د دې دستگاه ډاټا هوسټ ته اچي — کله چې مخکې بې هوسټه کارېدئ او اوس هوسټ ته ځئ.',
+                    '"Create tables" prepares a fresh/empty host (19 tables + copies local users). "Migrate" pushes all data from this device to the host — for when you worked locally before and now want to move to the host.'
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* تأیید انتقال دیتا به هاست */}
+            <AlertDialog open={migrateConfirm} onOpenChange={setMigrateConfirm}>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <FolderInput className="h-4 w-4 text-primary" />
+                    {t('انتقال دیتای این دستگاه به هاست', 'د دې دستگاه ډاټا هوسټ ته لېږدول', 'Migrate this device data to host')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2 text-sm">
+                    <span className="block">
+                      {t(
+                        'همهٔ دیتای این دستگاه (محصولات، مشتریان، فاکتورها، تولید و…) به هاست کپی و سطرهای موجود به‌روز می‌شوند. دیتای هاست حذف نمی‌شود.',
+                        'ټول د دې دستگاه ډاټا (محصولات، پیرودونکي، فاکتورونه، تولید او…) هوسټ ته کاپي او موجودې کرښې تازه کېږي. د هوسټ ډاټا نه حذفېږي.',
+                        'All data from this device (products, customers, invoices, production…) is copied to the host and existing rows are updated. Nothing on the host is deleted.'
+                      )}
+                    </span>
+                    <span className="block text-muted-foreground">
+                      {t(
+                        'این عملیات ممکن است بسته به حجم دیتا چند دقیقه طول بکشد؛ در طول انتقال برنامه را نبندید.',
+                        'دا عملیات کېدای شي د ډاټا حجم پورې څو دقیقې وکړي؛ د لېږد په جریان کې پروګرام مه بنده کړئ.',
+                        'This can take a few minutes depending on data size; keep the app open until it finishes.'
+                      )}
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={hostSetupBusy === 'migrate'}>{t('لغو', 'لغوه', 'Cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setMigrateConfirm(false)
+                      void runHostSetup('migrate')
+                    }}
+                    disabled={hostSetupBusy === 'migrate'}
+                  >
+                    {t('شروع انتقال', 'لېږد پیل کړئ', 'Start migration')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* سوییچ خودکار آنلاین/آفلاین + همگام‌سازی دوسویه */}
             <div

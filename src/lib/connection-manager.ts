@@ -10,6 +10,8 @@ import {
   type ClientPair,
   type SyncSummary,
 } from '@/lib/sync-engine'
+import { ensureHostReady } from '@/lib/host-setup'
+import { MYSQL_TABLE_NAMES } from '@/lib/mysql-ddl'
 
 /*
  * مدیریت اتصال — سوییچ خودکار آنلاین/آفلاین:
@@ -137,6 +139,33 @@ async function pingMysql(): Promise<void> {
 
 /* ------------------------------- سوییچ‌ها ------------------------------- */
 
+/**
+ * راه‌اندازی خودکار هاست — فقط یک‌بار در طول عمر پروسه:
+ * ساخت جدول‌های گمشده روی هاست تازه (۱۹ جدول) + بوت‌استرپ کاربران/تنظیمات
+ * وقتی هاست خالی است. نتیجه در لاگ سرور ثبت می‌شود.
+ */
+let hostSetupTried = false
+async function ensureHostOnce(): Promise<void> {
+  if (hostSetupTried) return
+  const pair = getPair()
+  if (!pair) return
+  hostSetupTried = true
+  try {
+    const r = await ensureHostReady(pair)
+    if (r.ok) {
+      console.log(
+        `[conn] host setup OK: tables ${r.tablesAfter}/${MYSQL_TABLE_NAMES.length}` +
+          ` created=[${r.createdTables.join(',') || '-'}]` +
+          (r.bootstrapped ? ` bootstrap(users:${r.copiedUsers}, settings:${r.copiedSettings})` : '')
+      )
+    } else {
+      console.warn(`[conn] host setup problem: ${r.error}`)
+    }
+  } catch (e) {
+    console.error('[conn] host setup failed:', e)
+  }
+}
+
 async function switchToOffline(errorText: string): Promise<void> {
   const pair = getPair()
   if (!dbInternal.hasLocal() || !pair) {
@@ -169,7 +198,10 @@ function switchToOnline(): void {
   s.syncing = true
   const since = s.offlineSince
   console.log('[conn] ✅ host reachable again — reconnect sync started')
-  void runReconnectSync(pair, since)
+  // اول راه‌اندازی هاست (جدول‌های گمشده) — بعد push/snapshot تا خطای NO_TABLES نبینیم
+  void ensureHostOnce()
+    .catch(() => {})
+    .then(() => runReconnectSync(pair, since))
     .then((summary) => {
       s.lastSyncAt = summary.finishedAt
       s.lastSyncSummary = summary
@@ -205,6 +237,8 @@ export async function checkNow(): Promise<ConnectionStatus> {
       // برگشت خودکار به هاست + همگام‌سازی
       switchToOnline()
     } else if (mode === 'host-mysql') {
+      // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/بوت‌استرپ) — یک‌بار
+      void ensureHostOnce()
       void maybeSnapshot()
     }
   } catch (e) {

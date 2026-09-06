@@ -117,13 +117,18 @@
 
 /* ===== تم‌های رنگی — فقط hue و اشباع رنگ عملیاتی عوض می‌شود =====
    پیش‌فرض (بدون data-theme): زمردی h=165
-   تم‌ها: فیروزه‌ای 195 | آبی 250 | بنفش 300 | یاقوتی 20 | طلایی 80 | گرافیتی 255 */
+   تم‌ها: فیروزه‌ای 195 | آبی 250 | بنفش 300 | یاقوتی 20 | طلایی 80 | گرافیتی 255
+   + سبز 130 | قهوه‌ای 55 | سرخابی 330 | اقیانوسی 225 */
 [data-theme='teal']    { --theme-h: 195; }
 [data-theme='azure']   { --theme-h: 250; }
 [data-theme='violet']  { --theme-h: 300; }
 [data-theme='rose']    { --theme-h: 20; }
 [data-theme='gold']    { --theme-h: 80;  --theme-c: 0.9; }
 [data-theme='graphite']{ --theme-h: 255; --theme-c: 0.07; }
+[data-theme='green']   { --theme-h: 130; }
+[data-theme='brown']   { --theme-h: 55;  --theme-c: 0.55; }
+[data-theme='magenta'] { --theme-h: 330; }
+[data-theme='ocean']   { --theme-h: 225; }
 
 @layer base {
   * {
@@ -146,6 +151,65 @@
   }
 }
 
+/* ===== ظاهر اختصاصی برنامه ===== */
+
+/* تغییر نرم تم رنگی و روشن/تیره */
+body,
+body::before {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ---- صفحهٔ ورود — گرادیان زنده بر اساس hue تم ---- */
+.auth-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, oklch(0.75 calc(0.13 * var(--theme-c, 1)) var(--theme-h, 165) / 0.32), transparent 60%),
+    radial-gradient(900px 480px at 0% 110%, oklch(0.68 0.11 calc(var(--theme-h, 165) + 55) / 0.26), transparent 55%),
+    radial-gradient(700px 400px at 50% 55%, oklch(0.62 0.12 calc(var(--theme-h, 165) - 40) / 0.10), transparent 60%);
+}
+.auth-hero::after {
+  /* شبکهٔ نقطه‌ای ظریف — حس مهندسی و تولید */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(oklch(0.5 0.02 var(--theme-h, 165) / 0.10) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+  pointer-events: none;
+}
+.auth-glass {
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 60px -24px oklch(0.3 0.03 var(--theme-h, 165) / 0.35), 0 0 0 1px oklch(0.5 0.01 var(--theme-h, 165) / 0.06);
+}
+
+/* ---- سایدبار: نشانگر فعال ---- */
+.nav-active-bar {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+.nav-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: oklch(0.55 0.01 var(--theme-h, 165) / 0.9);
+  padding-inline: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+/* ---- کارت‌ها: سایهٔ لطیف با رنگ تم ---- */
+@layer components {
+  .soft-card {
+    box-shadow: 0 1px 2px oklch(0.35 0.02 var(--theme-h, 165) / 0.05), 0 8px 24px -12px oklch(0.35 0.03 var(--theme-h, 165) / 0.10);
+  }
+}
+
 /* اسکرول‌بار سفارشی و ظریف برای لیست‌های بلند */
 ::-webkit-scrollbar {
   width: 6px;
@@ -155,11 +219,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.55 0.02 160 / 0.22);
+  background: oklch(0.55 calc(0.02 * var(--theme-c, 1)) var(--theme-h, 165) / 0.22);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0.03 160 / 0.38);
+  background: oklch(0.5 calc(0.03 * var(--theme-c, 1)) var(--theme-h, 165) / 0.38);
 }
 
 /* استایل چاپ فاکتور — فقط برگه فاکتور چاپ می‌شود */

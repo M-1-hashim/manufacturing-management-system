@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   LayoutDashboard, Package, FlaskConical, Boxes, Factory, ShoppingCart,
   Warehouse, Wallet, Users, BarChart3, Settings, LogOut, Menu, X,
@@ -29,6 +29,7 @@ import {
 
 import DashboardModule from '@/components/modules/dashboard'
 import BackupMenu from '@/components/shared/backup-menu'
+import SetupWizard from '@/components/shared/setup-wizard'
 import ProductsModule from '@/components/modules/products'
 import MaterialsModule from '@/components/modules/materials'
 import FormulasModule from '@/components/modules/formulas'
@@ -58,14 +59,25 @@ const NAV = [
   { id: 'settings', fa: 'تنظیمات', ps: 'امستنې', en: 'Settings', icon: Settings },
 ] as const
 
-// تم‌های رنگی برنامه — swatch برای نمایش در منو
+// گروه‌بندی منوی کنار — برای خوانایی بهتر
+const NAV_GROUPS: { key: string; labelFa: string; labelPs: string; labelEn: string; items: readonly string[] }[] = [
+  { key: 'ops', labelFa: 'عملیات روزانه', labelPs: 'ورځني کارونه', labelEn: 'Daily operations', items: ['dashboard', 'products', 'materials', 'formulas', 'production', 'sales'] },
+  { key: 'mgmt', labelFa: 'مدیریت', labelPs: 'مدیریت', labelEn: 'Management', items: ['inventory', 'finance', 'hr', 'reports'] },
+  { key: 'sys', labelFa: 'سیستم', labelPs: 'سیسټم', labelEn: 'System', items: ['users', 'audit', 'settings'] },
+]
+
+// تم‌های رنگی برنامه — swatch برای نمایش در منو و ویزارد
 const COLOR_THEMES = [
   { id: 'emerald', fa: 'زمردی', ps: 'زمرد', en: 'Emerald', dot: '#0a7d63' },
   { id: 'teal', fa: 'فیروزه‌ای', ps: 'فیروزه‌ای', en: 'Teal', dot: '#0b8ea0' },
+  { id: 'green', fa: 'سبز', ps: 'زرغون', en: 'Green', dot: '#2f9e44' },
   { id: 'azure', fa: 'آبی', ps: 'آبي', en: 'Azure', dot: '#3f6ae0' },
+  { id: 'ocean', fa: 'اقیانوسی', ps: 'سمندري', en: 'Ocean', dot: '#2f7ec2' },
   { id: 'violet', fa: 'بنفش', ps: 'بنفش', en: 'Violet', dot: '#8f52d6' },
+  { id: 'magenta', fa: 'سرخابی', ps: 'سرخابي', en: 'Magenta', dot: '#c04a97' },
   { id: 'rose', fa: 'یاقوتی', ps: 'یاقوتی', en: 'Rose', dot: '#d15062' },
   { id: 'gold', fa: 'طلایی', ps: 'طلایی', en: 'Gold', dot: '#a9841c' },
+  { id: 'brown', fa: 'قهوه‌ای', ps: 'نسواری', en: 'Brown', dot: '#8f6b45' },
   { id: 'graphite', fa: 'گرافیتی', ps: 'ګرافیتي', en: 'Graphite', dot: '#5c6470' },
 ] as const
 
@@ -166,8 +178,9 @@ interface DbStatusT {
 
 // ---------------- Login ----------------
 function LoginView() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const setUser = useAppStore((s) => s.setUser)
+  const setLang = useAppStore((s) => s.setLang)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -190,39 +203,85 @@ function LoginView() {
     }
   }
 
+  const langLabel = lang === 'fa' ? 'دری' : lang === 'ps' ? 'پښتو' : 'EN'
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="mx-auto h-14 w-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md mb-4">
-            <Factory className="h-7 w-7" />
+    <div className="min-h-screen auth-hero flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl grid lg:grid-cols-[1.1fr_1fr] gap-0 rounded-2xl overflow-hidden border bg-card/60 backdrop-blur-xl shadow-2xl">
+        {/* پنل برند — فقط دسکتاپ */}
+        <div className="hidden lg:flex flex-col justify-between p-10 relative">
+          <div>
+            <div className="h-14 w-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+              <Factory className="h-7 w-7" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight mt-6 leading-snug">
+              {t('سامانه جامع مدیریت تولید', 'د تولید جامع مدیریت سیسټم', 'Comprehensive Manufacturing ERP')}
+            </h1>
+            <p className="text-[13.5px] text-muted-foreground mt-3 leading-7 max-w-sm">
+              {t(
+                'مدیریت چرخهٔ کامل تولید — از مواد خام و فرمولاسیون تا تولید، فروش، انبار و مالی؛ همه در یک جا.',
+                'د تولید بشپړ چورلیزه اداره — له خامو موادو او فورمولونو تر تولید، پلورنې، ګدام او مالي؛ ټول په یو ځای کې.',
+                'Manage the full production cycle — raw materials and formulas to production, sales, inventory and finance; all in one place.'
+              )}
+            </p>
           </div>
-          <h1 className="text-[22px] font-bold tracking-tight">{t('سامانه مدیریت تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">
-            {t('مدیریت چرخه تولید از مواد خام تا فروش', 'له خامو موادو تر پلورنې د تولید چاپېریال', 'Production cycle: raw materials to sales')}
-          </p>
+          <ul className="space-y-3 text-[13px]">
+            {(
+              [
+                [t('۱۳ ماژول تخصصی', '۱۳ مسلکي ماډلونه', '13 specialized modules')],
+                [t('سه‌زبانه (دری/پشتو/انگلیسی) + راست‌به‌چپ', 'دوه‌ژبیز (دری/پښتو/انګلیسي) + RTL', 'Trilingual (Dari/Pashto/English) + RTL')],
+                [t('کارکرد آفلاین + همگام‌سازی خودکار', 'افلاین کار کول + اتوماتیک همغه کول', 'Offline-ready with automatic sync')],
+                [t('تقویم شمسی و افغانی', 'شمسي او افغاني تقویم', 'Shamsi & Afghan calendar')],
+              ] as const
+            ).map(([text]) => (
+              <li key={text} className="flex items-center gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Check className="h-3 w-3" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <form onSubmit={handleLogin} className="rounded-2xl border bg-card p-6 shadow-sm space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
-            <Input id="username" dir="ltr" value={username} onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin" autoComplete="username" required />
+        {/* فرم ورود */}
+        <div className="p-7 md:p-10 flex flex-col justify-center bg-card">
+          <div className="lg:hidden text-center mb-6">
+            <div className="mx-auto h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md mb-3">
+              <Factory className="h-6 w-6" />
+            </div>
+            <h1 className="text-lg font-bold tracking-tight">{t('سامانه مدیریت تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t('رمز عبور', 'پټ نوم', 'Password')}</Label>
-            <Input id="password" dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" autoComplete="current-password" required />
+
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-semibold text-base">{t('ورود به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</h2>
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => setLang(lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa')} title={t('تغییر زبان', 'ژبه بدلول', 'Change language')}>
+              <Languages className="h-4 w-4" />
+              <span className="text-sm">{langLabel}</span>
+            </Button>
           </div>
-          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-          <Button type="submit" className="w-full h-11" disabled={loading}>
-            {loading ? t('در حال ورود...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('ورود به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
-          </Button>
-          <div className="text-xs text-muted-foreground text-center space-y-1 pt-2 border-t">
-            <p>{t('حساب ادمین:', 'د ادمین حساب:', 'Admin account:')} <span dir="ltr" className="font-mono">admin / admin123</span></p>
-            <p>{t('کارکنان بخش‌ها با حساب اختصاصی خود وارد می‌شوند (ایجاد شده توسط ادمین)', 'د برخو کارکوونکي په خپلو ځانګړو حسابونو ننوځي', 'Department staff sign in with their own accounts (created by admin)')}</p>
-          </div>
-        </form>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
+              <Input id="username" dir="ltr" value={username} onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin" autoComplete="username" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('رمز عبور', 'پټ نوم', 'Password')}</Label>
+              <Input id="password" dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" autoComplete="current-password" required />
+            </div>
+            {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+            <Button type="submit" className="w-full h-11" disabled={loading}>
+              {loading ? t('در حال ورود...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('ورود به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
+            </Button>
+            <div className="text-xs text-muted-foreground text-center space-y-1 pt-3 border-t">
+              <p>{t('حساب ادمین:', 'د ادمین حساب:', 'Admin account:')} <span dir="ltr" className="font-mono">admin / admin123</span></p>
+              <p>{t('کارکنان بخش‌ها با حساب اختصاصی خود وارد می‌شوند (ایجاد شده توسط ادمین)', 'د برخو کارکوونکي په خپلو ځانګړو حسابونو ننوځي', 'Department staff sign in with their own accounts (created by admin)')}</p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )
@@ -447,24 +506,38 @@ function Shell() {
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-2.5 space-y-1" aria-label={t('منوی اصلی', 'اصلي مینو', 'Main menu')}>
-            {nav.map((item) => {
-              const active = activeTab === item.id
+          <nav className="flex-1 overflow-y-auto p-2.5" aria-label={t('منوی اصلی', 'اصلي مینو', 'Main menu')}>
+            {NAV_GROUPS.map((group) => {
+              const items = group.items
+                .map((id) => nav.find((n) => n.id === id))
+                .filter((n): n is (typeof NAV)[number] => !!n)
+              if (items.length === 0) return null
               return (
-                <button
-                  key={item.id}
-                  onClick={() => { setActiveTab(item.id as never); setSidebarOpen(false) }}
-                  className={cn(
-                    'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
-                    active
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{t(item.fa, item.ps, item.en)}</span>
-                </button>
+                <div key={group.key}>
+                  <p className="nav-label">{t(group.labelFa, group.labelPs, group.labelEn)}</p>
+                  <div className="space-y-0.5 mb-1">
+                    {items.map((item) => {
+                      const active = activeTab === item.id
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => { setActiveTab(item.id as never); setSidebarOpen(false) }}
+                          className={cn(
+                            'relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                            active
+                              ? 'bg-primary/10 text-primary font-semibold'
+                              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          )}
+                          aria-current={active ? 'page' : undefined}
+                        >
+                          {active && <span className="nav-active-bar" aria-hidden />}
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t(item.fa, item.ps, item.en)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
           </nav>
@@ -536,28 +609,37 @@ function Shell() {
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
 
-              {/* انتخاب‌گر تم رنگی */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {/* انتخاب‌گر تم رنگی — گرادیان زندهٔ ۱۱ تم */}
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')} title={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')}>
                     <Palette className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuLabel>{t('تم رنگی', 'د رنګ ټینګ', 'Color theme')}</DropdownMenuLabel>
-                  {COLOR_THEMES.map((ct) => (
-                    <DropdownMenuItem
-                      key={ct.id}
-                      onClick={() => applyColorTheme(ct.id)}
-                      className={cn('gap-2.5', colorTheme === ct.id && 'bg-accent')}
-                    >
-                      <span aria-hidden className="h-4 w-4 rounded-full border border-black/10 shadow-sm shrink-0" style={{ backgroundColor: ct.dot }} />
-                      <span className="flex-1 text-[13px]">{t(ct.fa, ct.ps, ct.en)}</span>
-                      {colorTheme === ct.id && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-60 p-3">
+                  <p className="text-xs font-semibold mb-2.5">{t('تم رنگی', 'د رنګ ټینګ', 'Color theme')}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {COLOR_THEMES.map((ct) => (
+                      <button
+                        key={ct.id}
+                        onClick={() => applyColorTheme(ct.id)}
+                        title={t(ct.fa, ct.ps, ct.en)}
+                        className={cn(
+                          'h-9 rounded-lg flex items-center justify-center transition-transform hover:scale-105',
+                          colorTheme === ct.id ? 'ring-2 ring-offset-1 ring-[var(--primary)]' : ''
+                        )}
+                        style={{ backgroundColor: ct.dot }}
+                        aria-label={t(ct.fa, ct.ps, ct.en)}
+                      >
+                        {colorTheme === ct.id && <Check className="h-4 w-4 text-white drop-shadow" />}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2.5 leading-4">
+                    {t('رنگ کلیدها، نمودارها و هایلایت‌ها را عوض می‌کند', 'د تڼیو، چارټونو او هایلایت رنګ بدلوي', 'Changes the color of buttons, charts and highlights')}
+                  </p>
+                </PopoverContent>
+              </Popover>
 
               <BackupMenu onGoSettings={() => setActiveTab('settings')} />
             </div>
@@ -588,10 +670,70 @@ function Shell() {
   )
 }
 
+// ---------------- دروازهٔ راه‌اندازی اولیه ----------------
+/*
+ * اولین باز شدن برنامه بعد از نصب → ویزارد تنظیمات (زبان/تم + هاست).
+ * تشخیص «بار اول»:
+ *   - فلگ localStorage (mfg-setup-completed) نباشد
+ *   - و کاربر ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
+ *   - و در نسخهٔ دسکتاپ، اتصال هاست از قبل فعال نباشد
+ * در نسخهٔ وب (مرورگر) ویزارد نمایش داده نمی‌شود — اتصال هاست از env سرور می‌آید.
+ */
+const SETUP_FLAG = 'mfg-setup-completed'
+
+function FirstRunGate() {
+  const [state, setState] = useState<'loading' | 'wizard' | 'app'>('loading')
+
+  useEffect(() => {
+    let alive = true
+    async function decide() {
+      // درگاه پشتیبانی: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
+      const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
+      if (!forceSetup && localStorage.getItem(SETUP_FLAG) === '1') {
+        if (alive) setState('app')
+        return
+      }
+      // کاربر ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
+      if (useAppStore.getState().user) {
+        localStorage.setItem(SETUP_FLAG, '1')
+        if (alive) setState('app')
+        return
+      }
+      if (window.dbConnection) {
+        try {
+          const info = await window.dbConnection.info()
+          if (info.active) {
+            // اتصال هاست از قبل فعال — نصب‌های قدیمی‌تر
+            localStorage.setItem(SETUP_FLAG, '1')
+            if (alive) setState('app')
+            return
+          }
+        } catch { /* IPC در دسترس نیست — ویزارد نشان بده */ }
+        if (alive) setState('wizard')
+        return
+      }
+      if (forceSetup) {
+        // درگاه پشتیبانی در مرورگر هم ویزارد را نشان می‌دهد
+        if (alive) setState('wizard')
+        return
+      }
+      // نسخهٔ وب/مرورگر — بدون ویزارد
+      localStorage.setItem(SETUP_FLAG, '1')
+      if (alive) setState('app')
+    }
+    void decide()
+    return () => { alive = false }
+  }, [])
+
+  if (state === 'loading') return <div className="min-h-screen bg-background" aria-busy="true" />
+  if (state === 'wizard') return <SetupWizard onDone={() => setState('app')} />
+  return <Shell />
+}
+
 export default function Home() {
   return (
     <I18nProvider>
-      <Shell />
+      <FirstRunGate />
     </I18nProvider>
   )
 }

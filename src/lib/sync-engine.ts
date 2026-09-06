@@ -25,7 +25,7 @@ type Row = Record<string, unknown>
 interface Delegate {
   findMany: (args?: Row) => Promise<Row[]>
   findUnique?: (args: Row) => Promise<Row | null>
-  createMany: (args: { data: Row[] }) => Promise<{ count: number }>
+  createMany: (args: { data: Row[]; skipDuplicates?: boolean }) => Promise<{ count: number }>
   deleteMany: (args?: Row) => Promise<{ count: number }>
   update: (args: Row) => Promise<Row>
 }
@@ -438,4 +438,87 @@ export async function pendingPushCount(pair: ClientPair, since: Date): Promise<n
   }
   total += await countPendingJournal(pair)
   return total
+}
+
+/* ------------------------------ انتقال کامل محلی → سرور ------------------------------ */
+
+let migrateBusy = false
+
+export interface MigrateResult {
+  copied: number
+  updated: number
+  perTable: { name: string; copied: number; updated: number }[]
+}
+
+/**
+ * انتقال کامل دیتای دستگاه محلی به هاست — برای کاربری که مدت‌ها محلی
+ * کار کرده و بعداً به هاست مهاجرت می‌کند. همهٔ ۱۹ جدول (شامل Setting،
+ * به‌جز کلیدهای sync.*) به‌ترتیبِ وابستگی روی هاست upsert می‌شوند:
+ * سطر جدید → createMany، سطر موجود → update (محلی برنده است).
+ * جدول‌های موجود روی هاست پاک نمی‌شوند — فقط محتوا پر/به‌روز می‌شود.
+ */
+export async function migrateLocalToServer(pair: ClientPair): Promise<MigrateResult> {
+  if (migrateBusy) throw new Error('انتقال قبلی هنوز در حال اجراست')
+  migrateBusy = true
+  const perTable: MigrateResult['perTable'] = []
+  let copied = 0
+  let updated = 0
+  try {
+    for (const t of TABLES) {
+      const localRows = await del(pair.local, t.name).findMany({ take: TAKE_LIMIT })
+      let c = 0
+      let u = 0
+      if (localRows.length > 0) {
+        const serverDel = del(pair.server, t.name)
+        const serverIds = new Set<string>()
+        if (t.name === 'Setting') {
+          const keys = await serverDel.findMany({ select: { key: true }, take: TAKE_LIMIT })
+          for (const k of keys) serverIds.add(String((k as Row).key))
+        } else {
+          const ids = await serverDel.findMany({ select: { id: true }, take: TAKE_LIMIT })
+          for (const r of ids) serverIds.add(String((r as Row).id))
+        }
+
+        const toCreate: Row[] = []
+        const toUpdate: Row[] = []
+        for (const row of localRows) {
+          const idKey = t.name === 'Setting' ? 'key' : 'id'
+          const id = row[idKey] != null ? String(row[idKey]) : null
+          if (!id) continue
+          if (serverIds.has(id)) toUpdate.push(row)
+          else toCreate.push(row)
+        }
+
+        for (let i = 0; i < toCreate.length; i += CHUNK) {
+          await serverDel.createMany({ data: toCreate.slice(i, i + CHUNK), skipDuplicates: true })
+        }
+        c = toCreate.length
+
+        for (let i = 0; i < toUpdate.length; i += CHUNK) {
+          const chunk = toUpdate.slice(i, i + CHUNK)
+          await pair.server.$transaction(async (tx) => {
+            const txd = (tx as unknown as Record<string, Delegate>)[t.name]
+            for (const row of chunk) {
+              const { id, ...data } = row
+              void id
+              if (t.name === 'Setting') {
+                const { key, ...val } = row
+                await txd.update({ where: { key: String(key) }, data: val })
+              } else {
+                await txd.update({ where: { id: String(row.id) }, data })
+              }
+            }
+          })
+        }
+        u = toUpdate.length
+      }
+      copied += c
+      updated += u
+      perTable.push({ name: t.name, copied: c, updated: u })
+      if (c + u > 0) console.log(`[sync] migrate ${t.name}: +${c} ~${u}`)
+    }
+    return { copied, updated, perTable }
+  } finally {
+    migrateBusy = false
+  }
 }
