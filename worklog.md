@@ -621,3 +621,25 @@ Stage Summary:
 - دیگر هیچ کاربری لازم نیست فایل db-connection.txt را جستجو کند: یا از داخل برنامه وصل می‌شود (تنظیمات → اتصال به هاست) و یا پوشه واقعاً در %APPDATA%\ManufacturingERP است که همه راهنماها می‌گویند
 - کاربران نسخه‌های ≤1.0.3 با نصب 1.0.4 دیتایشان خودکار منتقل می‌شود (بدون از دست رفتن داده)
 - Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.4
+
+---
+Task ID: 15
+Agent: main (Z.ai Code)
+Task: «به هاست وصل کردم ولی کار نمیکند دیتای اضافه نمیشود» + «جدول ها را من اضافه کردم» — ریشه‌یابی و رفع نهایی (v1.0.5)
+
+Work Log:
+- شل دوباره به کار برگشت؛ تست مستقیم MySQL هاست از سندباکس → ETIMEDOUT (فایروال هاست فقط IP کاربر را مجاز می‌داند) — تست مستقیم ناممکن ماند، پس از مسیر بستهٔ واقعی تست شد
+- کشف ریشهٔ واقعی «دیتای اضافه نمی‌شود»: node_modules/.prisma/client با provider=sqlite ساخته شده بود و build-desktop.sh هرگز کلاینت MySQL را generate نمی‌کرد → در بستهٔ ≤1.0.4 پس از اتصال به هاست، URL های mysql:// به کلاینت SQLite داده می‌شد و همهٔ کوئری‌ها خطا می‌دادند
+- تطبیق DDL: prisma migrate diff از schema.mysql.prisma در برابر docs/mysql-schema.sql → ۱۹/۱۹ جدول و همهٔ ستون‌ها دقیقاً یکسان (ایمپورت phpMyAdmin کاربر سالم بود)
+- رفع: generator دوم clientDesktop در schema.mysql.prisma (output=node_modules/prisma-mysql-client، binaryTargets native+windows) + سوییچ دوگانه در src/lib/db.ts (createRequire از cwd؛ mysql:// → کلاینت MySQL، غیر آن SQLite) + serverExternalPackages در next.config.ts + generate/copy/verify کلاینت در build-desktop.sh (کپی به standalone قبل از بسته‌بندی + تأیید در resources/server)
+- اثبات‌ها: (۱) تست سوییچ — mysql URL → خطای «Can't reach database server at asancrypto.net:3306» یعنی کلاینت MySQL فعال است؛ (۲) بستهٔ واقعی win-unpacked روی پورت 3006 حالت هاست → همان خطای شبکه (از ویندوز کاربر که 3306 باز است وصل می‌شود)؛ (۳) بسته روی 3005 حالت SQLite با demo db → login موفق + ساخت مشتری (نوشتن کار می‌کند) + db-info با ۱۹/۱۹ جدول schemaComplete
+- امکان جدید: GET /api/system/db-info (احراز هویت‌دار) — mode، نسخهٔ MySQL، تعداد جدول‌ها، جدول‌های گمشده، متن خطا؛ کارت اتصال تنظیمات اکنون باکس وضعیت زنده دارد (سبز/زرد/سرخ + دکمهٔ بررسی مجدد) — با مرورگر تست شد («حالت محلی (SQLite) … ۱۹ جدول»)
+- بیلد v1.0.5: win-unpacked 586M (هر دو موتور داخل resources/server/node_modules)، NSIS با debs تازه (sandbox ریست شده بود)، Setup.exe 158.6MB + Portable 250.8MB + README
+- Release v1.0.5 (id 383480865) با توضیحات کامل دری/انگلیسی؛ هر ۳ asset state=uploaded
+- نکتهٔ امنیتی: فایل تست حاوی رمز دیتابیس حذف و .tmp-tests/ به .gitignore اضافه شد
+- یادآوری: NSIS از /tmp/nsis-root (apt-get download nsis + nsis-common؛ بدون sudo)؛ makensis طولانی (~6min) فقط در پیش‌زمینه با timeout 600s زنده می‌ماند
+
+Stage Summary:
+- کاربر فقط باید v1.0.5 را نصب کند: کلاینت MySQL حالا داخل بسته است، جدول‌هایش هم در هاست کامل است → اتصال از داخل برنامه + سبز شدن باکس وضعیت = ذخیرهٔ داده در هاست کار می‌کند
+- برگشت دیتای محلی به هاست: خروجی JSON (قبل از اتصال) → آپلود بکاپ و بازیابی (بعد از اتصال) — در README و release notes نوشته شد
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.5
