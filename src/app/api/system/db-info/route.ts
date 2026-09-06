@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { APP_VERSION } from '@/lib/app-version'
 
 /*
  * وضعیت اتصال دیتابیس — برای کارت «اتصال برنامه به هاست» در تنظیمات.
  * به کاربر نشان می‌دهد برنامه واقعاً به کدام دیتابیس وصل است، نسخهٔ سرور،
  * و اینکه ۱۹ جدول سیستم کامل ساخته شده است یا نه.
+ * در حالت خطا، کد Prisma/MySQL به تشخیص سادهٔ فارسی ترجمه می‌شود تا کاربر
+ * بدون دانش فنی بفهمد مشکل کجاست (پورت بسته؟ رمز غلط؟ جدول‌های ناقص؟).
  */
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +26,34 @@ function parseUrl(url: string) {
   } catch {
     return { host: '', port: '', database: '' }
   }
+}
+
+type ErrorKind =
+  | 'UNREACHABLE' // پورت/فایروال/Remote MySQL
+  | 'AUTH' // رمز یا کاربر غلط
+  | 'NO_DATABASE' // نام دیتابیس غلط
+  | 'NO_TABLES' // جدول‌ها ساخته نشده
+  | 'BAD_URL' // آدرس خراب
+  | 'UNKNOWN'
+
+function classifyError(e: unknown): { code: string; kind: ErrorKind } {
+  const err = e as { code?: string; message?: string }
+  const code = String(err?.code || '')
+  const msg = String(err?.message || '')
+
+  if (code === 'P1001' || /Can't reach|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|getaddrinfo|EHOSTUNREACH/i.test(msg))
+    return { code: code || 'P1001', kind: 'UNREACHABLE' }
+  if (code === 'P1017' || /server refused|not allowed to connect|ER_HOST_NOT_PRIVILEGED|Host .* is not allowed/i.test(msg))
+    return { code: code || 'P1017', kind: 'UNREACHABLE' }
+  if (/Access denied/i.test(msg) || code === 'P2025')
+    return { code: code || 'ACCESS_DENIED', kind: 'AUTH' }
+  if (/Unknown database/i.test(msg) || /does not exist.*database|database.*does not exist/i.test(msg))
+    return { code: code || 'UNKNOWN_DB', kind: 'NO_DATABASE' }
+  if (code === 'P2021' || /does not exist in the (current )?database|TABLE_NAME|doesn't exist/i.test(msg))
+    return { code: code || 'P2021', kind: 'NO_TABLES' }
+  if (/must use|protocol|invalid.*url|malformed/i.test(msg))
+    return { code: code || 'BAD_URL', kind: 'BAD_URL' }
+  return { code: code || 'UNKNOWN', kind: 'UNKNOWN' }
 }
 
 export async function GET() {
@@ -55,6 +86,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      appVersion: APP_VERSION,
       mode: isMysql ? 'host-mysql' : 'local-sqlite',
       host,
       port,
@@ -66,14 +98,19 @@ export async function GET() {
       schemaComplete: missing.length === 0,
     })
   } catch (e) {
+    const { code, kind } = classifyError(e)
+    const msg = e instanceof Error ? e.message.split('\n').filter(Boolean).slice(-1)[0] || e.message.split('\n')[0] : String(e).split('\n')[0]
     return NextResponse.json(
       {
         ok: false,
+        appVersion: APP_VERSION,
         mode: isMysql ? 'host-mysql' : 'local-sqlite',
         host,
         port,
         database,
-        error: e instanceof Error ? e.message.split('\n')[0] : String(e).split('\n')[0],
+        errorCode: code,
+        errorKind: kind,
+        error: msg.slice(0, 220),
       },
       { status: 200 }
     )

@@ -51,6 +51,7 @@ interface DbConnApiT {
 // پاسخ GET /api/system/db-info — وضعیت واقعی اتصال دیتابیس
 interface DbInfoT {
   ok: boolean
+  appVersion?: string
   mode: 'host-mysql' | 'local-sqlite'
   host?: string
   port?: string
@@ -60,6 +61,8 @@ interface DbInfoT {
   expectedCount?: number
   missingTables?: string[]
   schemaComplete?: boolean
+  errorCode?: string
+  errorKind?: 'UNREACHABLE' | 'AUTH' | 'NO_DATABASE' | 'NO_TABLES' | 'BAD_URL' | 'UNKNOWN'
   error?: string
 }
 
@@ -862,6 +865,9 @@ export default function SettingsModule() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Server className="h-4 w-4 text-primary" />
               {t('اتصال برنامه به هاست (ذخیره دیتا در MySQL)', 'پروګرام له هوسټ سره نښلول (د ډاټا ساتل په MySQL کې)', 'Connect app to host (store data in MySQL)')}
+              <Badge variant="outline" className="font-mono" dir="ltr">
+                v{dbInfo?.appVersion || '?'}
+              </Badge>
               {connInfo?.active ? (
                 <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">{t('متصل به هاست', 'له هوسټ سره نښلول شوی', 'Connected to host')}</Badge>
               ) : (
@@ -923,12 +929,28 @@ export default function SettingsModule() {
                         </p>
                       </div>
                     ) : (
-                      <p>
-                        ❌ {t('اتصال به هاست برقرار نمی‌شود:', 'له هوسټ سره نښلون نه کېږي:', 'Cannot reach the host:')}
-                        {' '}<span dir="ltr" className="font-mono">{dbInfo.error || 'unknown error'}</span>
-                        <br />
-                        {t('بررسی کنید: Remote MySQL فعال باشد، پورت 3306 باز باشد و اطلاعات دیتابیس درست وارد شده باشد.', 'وګورئ: Remote MySQL فعال وي، بورډ 3306 خلاص وي او معلومات سم وي.', 'Check: Remote MySQL enabled, port 3306 open, credentials correct.')}
-                      </p>
+                      <div>
+                        <p>
+                          ❌ {t('اتصال به هاست برقرار نمی‌شود:', 'له هوسټ سره نښلون نه کېږي:', 'Cannot reach the host:')}
+                          {' '}<span dir="ltr" className="font-mono">{dbInfo.error || 'unknown error'}</span>
+                        </p>
+                        <p className="mt-1 font-mono" dir="ltr">
+                          app v{dbInfo.appVersion || '?'} · error code: {dbInfo.errorCode || '?'} · target: {dbInfo.host}{dbInfo.port ? `:${dbInfo.port}` : ''} · db: {dbInfo.database || '?'}
+                        </p>
+                        <p className="mt-1">
+                          {dbInfo.errorKind === 'AUTH'
+                            ? t('🔑 رمز یا نام کاربری دیتابیس غلط است — در cPanel → MySQL Databases دوباره چک کنید.', '🔑 پاسورد یا د کاروونکی نوم غلط دی — په cPanel کې بیا وګورئ.', 'Wrong database password or username — recheck in cPanel → MySQL Databases.')
+                            : dbInfo.errorKind === 'NO_DATABASE'
+                              ? t('🗄 دیتابیس با این نام پیدا نشد — نام را دقیقاً مثل cPanel بنویسید (مثل username_dbname).', '🗄 ډاټابیس د دې نوم سره نه موندل کېږي — نوم دقیقاً لکه cPanel ولیکئ.', 'Database not found — write the name exactly as in cPanel.')
+                              : dbInfo.errorKind === 'NO_TABLES'
+                                ? t('📋 وصل شد ولی جدول‌ها ساخته نشده‌اند — فایل SQL هاست را در phpMyAdmin ایمپورت کنید.', '📋 ونښلول خو جدولونه نه دي جوړ شوي — د SQL هوسټ فایل په phpMyAdmin وارد کړئ.', 'Connected but tables are missing — import the host SQL file in phpMyAdmin.')
+                                : t(
+                                    '🌐 سرور MySQL پیدا نشد. معمول‌ترین علت‌ها: (۱) IP دستگاه شما در Remote MySQL هاست ثبت نیست یا عوض شده — در cPanel → Remote MySQL علامت % را اضافه کنید؛ (۲) پورت 3306 در فایروال هاست بسته است — از پشتیبانی هاست بخواهید بازش کند؛ (۳) آدرس هاست اشتباه است.',
+                                    '🌐 د MySQL سرور نه موندل کېږي: (۱) ستاسو IP په Remote MySQL کې نه دی یا بدل شوی — په cPanel کې % ورزیات کړئ؛ (۲) بورډ 3306 تړلی دی — له هوسټ ملاتړ وغواړئ؛ (۳) د هوسټ پته غلطه ده.',
+                                    'MySQL server not reachable. Likely causes: (1) your IP is missing/changed in Remote MySQL — add % in cPanel; (2) port 3306 blocked by host firewall — ask hosting support; (3) wrong host address.'
+                                  )}
+                        </p>
+                      </div>
                     )
                   ) : (
                     <p>

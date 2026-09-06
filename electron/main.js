@@ -317,11 +317,22 @@ ipcMain.handle('db-connection:info', () => {
 });
 
 ipcMain.handle('db-connection:save', (_event, payload) => {
-  const host = String(payload && payload.host ? payload.host : '').trim();
+  let host = String(payload && payload.host ? payload.host : '').trim();
   const port = String(payload && payload.port ? payload.port : '').trim() || '3306';
-  const database = String(payload && payload.database ? payload.database : '').trim();
+  let database = String(payload && payload.database ? payload.database : '').trim();
   const user = String(payload && payload.user ? payload.user : '').trim();
-  const password = String(payload && payload.password != null ? payload.password : '');
+  const password = String(payload && payload.password != null ? payload.password : '').trim();
+  /*
+   * مقاوم‌سازی ورودی کاربر — خطاهای رایج تایپ:
+   *  - چسباندن آدرس سایت با پروتکل: https://asancrypto.net یا mysql://host
+   *  - آدرس همراه با مسیر: host/db یا host:3306
+   */
+  host = host
+    .replace(/^mysql:\/\//i, '')
+    .replace(/^https?:\/\//i, '')
+    .split(/[/?]/)[0]
+    .trim();
+  database = database.split(/[/?]/)[0].trim();
   if (!host || !database || !user) {
     return { ok: false, error: 'MISSING_FIELDS' };
   }
@@ -431,7 +442,7 @@ async function main() {
   const dbPath = ensureDatabase();
   const dbOverride = databaseUrlOverride();
   logLine(
-    `starting ManufacturingERP (packaged=${isPackaged}) db=${
+    `starting ManufacturingERP v${app.getVersion()} (packaged=${isPackaged}) db=${
       dbOverride ? 'host-mysql' : dbPath
     }`
   );
