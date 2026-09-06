@@ -683,3 +683,16 @@ Stage Summary:
 - کاربر دیگر در قطعی اینترنت هیچ خطایی نمی‌بیند: برنامه خودکار روی آخرین کپی دیتای سرور کار می‌کند (بج زرد)، بعد از وصل شدن (≤۱۵ ثانیه) همهٔ تغییرات آفلاین به هاست می‌رود و دیتای تازه برمی‌گردد — بدون هیچ کاری
 - حتی «وصل نمیشود» قبلی هم پوشش داده شد: وقتی هاست در دسترس نیست، برنامه به‌جای خطا روی دیتابیس محلی ادامه می‌دهد
 - محدودیت‌های مستندشده: تنظیمات (Setting) آفلاین سینک نمی‌شود (بدون timestamp)؛ فیلدهای بدون updatedAt فقط سطرهای جدید را push می‌کنند؛ حذف‌های آفلاین با ژورنال پوشش داده شد
+
+Work Log (Task 17 — ادامه: ریلیز):
+- باگ حیاتی بستهٔ واقعی: در production standalone، باندل instrumentation نمونهٔ جدا از db.ts می‌گیرد و manager یک core را آفلاین می‌کرد در حالی که routeها core دیگری را روی mysql نگه می‌داشتند (خطای connection-pool در login) — کش core روی globalThis حالا بی‌قید و شرط است
+- e2e بستهٔ واقعی win-unpacked با DATABASE_URL=mysql:// غیرقابل‌دسترس: سوییچ آفلاین ~۸ ثانیه، login موفق، ساخت مشتری روی SQLite محلی، pendingPush 1→2، db-info = host-offline با ۱۹/۱۹ جدول و UNREACHABLE
+- تست‌های موتور سینک (دو SQLite): push=2، LWW دوسویه، replay حذف=۱، اسنپ‌شات با حفظ sync.* و پاک‌شدن offlineSince — همه سبز
+- رفع‌های دیگر حین تست: (۱) fallback کلاینت SQLite به‌جای MySQL حذف شد (پینگ کاذب جواب می‌داد)؛ (۲) مقایسهٔ delegate/model در replayJournal؛ (۳) ژورنال حذف فقط پس از موفقیت عملیات
+- Release v1.0.7 (id 383655928): Setup.exe 166.4MB + Portable 264.2MB + README — هر ۳ asset state=uploaded (نکته: آپلود asset باید به uploads.github.com باشد؛ api.github.com → 404)
+- NSIS: sandbox دوباره ریست شده بود — debs تازه (nsis 3.11) به /tmp/nsis-root استخراج شد؛ PE32 + نسخهٔ 1.0.7.0 تأیید شد
+- agent-browser: بج هدر «دیتابیس محلی» در حالت local، پنل سوییچ خودکار با دکمه‌ها رندر شد، دکمهٔ «بررسی اتصال» toast موفق داد، کنسول صفر خطا، موبایل OK؛ lint تمیز
+
+Stage Summary:
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.7
+- پاسخ نهایی به درخواست کاربر: سیستم حالا خودکار در قطعی اینترنت به دیتابیس محلی (با دیتای سرور) برمی‌گردد و بعد از وصل شدن خودکار به سرور وصل و دوطرفه همگام می‌شود
