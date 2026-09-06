@@ -46,16 +46,18 @@ else
   echo "WARN: windows engine copy failed"
 fi
 
-echo "[3b/6] Shipping MySQL Prisma client into packaged server..."
+echo "[3b/6] Shipping MySQL Prisma client into standalone..."
 # src/lib/db.ts requires this folder at runtime when DATABASE_URL is mysql:
-rm -rf desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client
-cp -a node_modules/prisma-mysql-client desktop-dist/win-unpacked/resources/server/node_modules/
-test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/index.js \
-  && echo "  OK: prisma-mysql-client in packaged server" \
-  || { echo "FAIL: prisma-mysql-client NOT in packaged server"; exit 1; }
-test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/query_engine-windows.dll.node \
-  && echo "  OK: windows mysql engine present in packaged server" \
-  || { echo "FAIL: windows mysql engine NOT in packaged server"; exit 1; }
+# placing it in the standalone's node_modules means step [5b] carries it into
+# resources/server automatically (cp -a).
+rm -rf .next-electron/standalone/node_modules/prisma-mysql-client
+cp -a node_modules/prisma-mysql-client .next-electron/standalone/node_modules/
+test -f .next-electron/standalone/node_modules/prisma-mysql-client/index.js \
+  && echo "  OK: prisma-mysql-client in standalone" \
+  || { echo "FAIL: prisma-mysql-client NOT in standalone"; exit 1; }
+test -f .next-electron/standalone/node_modules/prisma-mysql-client/query_engine-windows.dll.node \
+  && echo "  OK: windows mysql engine present in standalone" \
+  || { echo "FAIL: windows mysql engine NOT in standalone"; exit 1; }
 
 echo "[4/6] Preparing bundled demo database..."
 mkdir -p desktop-assets/demo-db
@@ -98,13 +100,20 @@ if (j.productName !== "ManufacturingERP") { console.error("FAIL: packaged produc
 console.log("  OK: packaged productName = " + j.productName + " (userData = %APPDATA%\\ManufacturingERP)");
 '
 
-echo "[6/6] Verifying output..."
+echo "[5c/6] Verifying packaged server contents..."
+test -f desktop-dist/win-unpacked/resources/server/server.js && echo "OK: server.js in place" || { echo "FAIL: server.js missing"; exit 1; }
+test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/index.js \
+  && echo "OK: prisma-mysql-client carried into packaged server" \
+  || { echo "FAIL: prisma-mysql-client missing from packaged server"; exit 1; }
+test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/query_engine-windows.dll.node \
+  && echo "OK: windows mysql engine in packaged server" \
+  || { echo "FAIL: windows mysql engine missing from packaged server"; exit 1; }
+
+test -d desktop-dist/win-unpacked/resources/server/.next-electron/static && echo "OK: static assets in place" || { echo "FAIL: static assets missing"; exit 1; }
 ls -la desktop-dist/win-unpacked | head -25
-test -f desktop-dist/win-unpacked/resources/server/server.js && echo "OK: server.js in place" || echo "FAIL: server.js missing"
-test -d desktop-dist/win-unpacked/resources/server/.next-electron/static && echo "OK: static assets in place" || echo "FAIL: static assets missing"
 test -d desktop-dist/win-unpacked/resources/server/node_modules/next && echo "OK: node_modules in place" || echo "FAIL: node_modules missing"
 test -f desktop-dist/win-unpacked/resources/server/node_modules/.prisma/client/query_engine-windows.dll.node \
-  && echo "OK: windows prisma engine present in packaged server" \
-  || echo "WARN: windows prisma engine MISSING from packaged server"
+  && echo "OK: windows prisma (sqlite) engine present in packaged server" \
+  || echo "WARN: windows prisma (sqlite) engine MISSING from packaged server"
 du -sh desktop-dist/win-unpacked
 echo "BUILD DONE: desktop-dist/win-unpacked"

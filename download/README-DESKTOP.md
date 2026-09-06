@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.4** — 🔧 **CRITICAL PATH FIX**: in versions ≤ 1.0.3 the per-user data folder was actually `%APPDATA%\nextjs_tailwind_shadcn_ts` (a misleading technical name) while all guides pointed to `%APPDATA%\ManufacturingERP` — which is why many users could not find `db-connection.txt`. **v1.0.4 fixes the folder to `%APPDATA%\ManufacturingERP` for good and automatically migrates ALL existing data (database, backups, config) from the old folder on first start — nothing is lost.** Plus v1.0.3's host connection from inside the app: Settings → "اتصال برنامه به هاست" — enter your cPanel MySQL host/database/user/password in a simple form; the app writes its own config file, so your data is stored on your shared hosting (MySQL) instead of the local file.
+**Version 1.0.5** — 🛠 **THE HOST-CONNECTION SAVING BUG IS FIXED**: in versions ≤ 1.0.4 the Windows package shipped ONLY the SQLite database client, so after connecting to your hosting MySQL every save silently failed ("دیتای اضافه نمی‌شود"). **v1.0.5 ships BOTH database clients** (SQLite for offline local mode + MySQL for host mode) and switches automatically. The app also now shows a **live database status box** in Settings (connected? MySQL version? are all 19 tables on the host complete? exact connection error text) so you can verify the host connection yourself. v1.0.4 fixes the config folder to `%APPDATA%\ManufacturingERP` and auto-migrates old data; v1.0.3 adds host connection from inside the app.
 
 ---
 
@@ -10,11 +10,11 @@
 
 | File | Size | What it is |
 |---|---|---|
-| `ManufacturingERP-Setup.exe` | ~143 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA-solid). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~235 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `ManufacturingERP-Setup.exe` | ~159 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA-solid). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
+| `ManufacturingERP-Windows-Portable.zip` | ~251 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
 | `README-DESKTOP.md` | — | This file. |
 
-Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and a SQLite database engine (Prisma). **No internet connection, no Node.js, and no external database server are required** — everything runs locally on the machine.
+Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and database clients for BOTH SQLite (offline local mode) and MySQL (shared-hosting mode). **No internet connection and no Node.js are required** — local mode works fully offline; host mode needs your hosting MySQL to be reachable.
 
 Supported OS: **Windows 10 / 11, 64-bit** (x64).
 
@@ -61,9 +61,10 @@ Supported OS: **Windows 10 / 11, 64-bit** (x64).
 Since v1.0.3 you do NOT need to find any config file by hand (and since v1.0.4 the config folder is guaranteed to be `%APPDATA%\ManufacturingERP`):
 
 1. In cPanel create a MySQL database + user and allow remote access (Remote MySQL → add `%` or your IP).
-2. In the app: **Settings** → **"اتصال برنامه به هاست (ذخیره دیتا در MySQL)"** → fill host / port (3306) / database / user / password → **Save & connect**. The app restarts connected to the host.
-3. Move existing data: first click **"خروجی JSON (انتقال به هاست)"** (backup section), connect to the host, then restore that JSON file.
-4. Import the empty table structure on the host once, using `mysql-schema.sql` (Settings → backup card → "فایل SQL هاست") in phpMyAdmin.
+2. Import the empty table structure on the host once, using `mysql-schema.sql` (Settings → backup card → "فایل SQL هاست") in phpMyAdmin — the Settings status box will show **19/19 tables** when complete.
+3. In the app: **Settings** → **"اتصال برنامه به هاست (ذخیره دیتا در MySQL)"** → fill host / port (3306) / database / user / password → **Save & connect**. The app restarts connected to the host.
+4. Move existing data: first click **"خروجی JSON (انتقال به هاست)"** (backup section), connect to the host, then restore that JSON file.
+5. Verify: the **"وضعیت فعلی دیتابیس"** box at the top of that Settings card must turn green (✅ connected, MySQL version, 19/19 tables). If it is red, it shows the exact reason (port blocked / wrong credentials / tables missing).
 
 Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hosting-guide.md`.
 
@@ -99,8 +100,8 @@ npx electron-builder --win nsis
 ## نسخهٔ دری — خلاصهٔ راهنما
 
 ### فایل‌های تحویل‌شده
-- **`ManufacturingERP-Setup.exe`** (~۱۴۳ مېگابایت): نصاب اصلی ویندوز. یک بار اجرا کنید، پوشه را انتخاب کنید و تمام. شورتکات در منوی استارت و دسکتاپ ساخته می‌شود و از بخش Add/Remove Programs هم قابل حذف است.
-- **`ManufacturingERP-Windows-Portable.zip`** (~۲۳۵ مېگابایت): نسخهٔ قابل‌حمل بدون نصب. زیپ را استخراج کرده و فایل `ManufacturingERP.exe` را داخل پوشهٔ `win-unpacked` اجرا کنید.
+- **`ManufacturingERP-Setup.exe`** (~۱۵۹ مېگابایت): نصاب اصلی ویندوز. یک بار اجرا کنید، پوشه را انتخاب کنید و تمام. شورتکات در منوی استارت و دسکتاپ ساخته می‌شود و از بخش Add/Remove Programs هم قابل حذف است.
+- **`ManufacturingERP-Windows-Portable.zip`** (~۲۵۱ مېگابایت): نسخهٔ قابل‌حمل بدون نصب. زیپ را استخراج کرده و فایل `ManufacturingERP.exe` را داخل پوشهٔ `win-unpacked` اجرا کنید.
 
 ### نصب و اجرا
 ۱. اگر ویندوز پیام SmartScreen نشان داد (برنامه امضای دیجیتال ندارد)، روی **More info → Run anyway** کلیک کنید.
@@ -121,12 +122,18 @@ npx electron-builder --win nsis
 ### نیازمندی‌ها
 - ویندوز ۱۰ یا ۱۱ — ۶۴ بیت (x64)
 
+### ✨ تازه در نسخه ۱.۰.۵ — رفع کامل مشکل ذخیرهٔ داده در هاست
+در نسخه‌های قبلی، پس از وصل شدن به هاست، ذخیرهٔ داده‌ها کار نمی‌کرد (بستهٔ برنامه فقط کلاینت SQLite را داشت). اکنون:
+- **ذخیره در هاست واقعاً کار می‌کند** — برنامه هر دو کلاینت دیتابیس (SQLite محلی + MySQL هاست) را دارد و خودکار بین آن‌ها سوییچ می‌کند.
+- **کارت وضعیت زندهٔ دیتابیس** در تنظیمات: سبز = وصل است و ۱۹/۱۹ جدول کامل است؛ زرد = جدول‌ها ناقص است (کدام‌ها؟)؛ سرخ = علت دقیق قطعی (پورت بسته/رمز غلط/…).
+
 ### ✨ تازه در نسخه ۱.۰.۳ — اتصال به هاست از داخل برنامه
 دیگر لازم نیست فایل `db-connection.txt` را دستی پیدا کنید:
 1. در cPanel هاست، دیتابیس MySQL و کاربر بسازید و در **Remote MySQL** علامت `%` (یا IP خود) را اضافه کنید.
-2. در برنامه: **تنظیمات** → کارت **«اتصال برنامه به هاست (ذخیره دیتا در MySQL)»** → آدرس هاست، پورت (۳۳۰۶)، نام دیتابیس، نام کاربری و رمز را وارد کنید → **«ذخیره و اتصال به هاست»**. برنامه خودش فایل تنظیمات را می‌نویسد و دوباره باز می‌شود.
-3. انتقال دیتای فعلی: اول **«خروجی JSON (انتقال به هاست)»** را بگیرید، بعد وصل شوید و همان فایل را در بخش پشتیبان‌گیری بازیابی کنید.
-4. ساختار جداول را یک بار در phpMyAdmin هاست با فایل **`mysql-schema.sql`** ایمپورت کنید.
+2. ساختار جداول را یک بار در phpMyAdmin هاست با فایل **`mysql-schema.sql`** ایمپورت کنید (وقتی کامل شد، کارت وضعیت ۱۹/۱۹ جدول نشان می‌دهد).
+3. در برنامه: **تنظیمات** → کارت **«اتصال برنامه به هاست (ذخیره دیتا در MySQL)»** → آدرس هاست، پورت (۳۳۰۶)، نام دیتابیس، نام کاربری و رمز را وارد کنید → **«ذخیره و اتصال به هاست»**. برنامه خودش فایل تنظیمات را می‌نویسد و دوباره باز می‌شود.
+4. انتقال دیتای فعلی: اول **«خروجی JSON (انتقال به هاست)»** را بگیرید، بعد وصل شوید و همان فایل را در بخش پشتیبان‌گیری بازیابی کنید.
+5. تأیید نهایی: باکس **«وضعیت فعلی دیتابیس»** بالای همان کارت باید سبز شود (✅ وصل — نسخهٔ MySQL — ۱۹/۱۹ جدول).
 
 راهنمای کامل گام‌به‌گام (دری): فایل `hosting-guide.md` — از داخل برنامه قابل دانلود است.
 
