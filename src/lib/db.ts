@@ -113,7 +113,10 @@ function buildCore(): DbCore {
 }
 
 const core: DbCore = globalForDb.__mfgDbCore ?? buildCore()
-if (process.env.NODE_ENV !== 'production') globalForDb.__mfgDbCore = core
+// همیشه روی globalThis کش می‌شود — در بستهٔ production، باندل instrumentation
+// از باندل routeها جداست؛ بدون این کش، هر باندل «core» جدا می‌گرفت و سوییچ
+// حالت آنلاین/آفلاین فقط برای یکی اعمال می‌شد (باگ اتصال-استخر در بستهٔ واقعی)
+globalForDb.__mfgDbCore = core
 
 /* ------------------------- ژورنال حذف در حالت آفلاین ------------------------- */
 
