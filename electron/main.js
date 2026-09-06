@@ -166,10 +166,13 @@ function migrateLegacyUserData() {
   }
 }
 
+/*
+ * دیتابیس محلی — همیشه ساخته می‌شود، حتی وقتی هاست تنظیم شده است:
+ * - حالت عادی محلی: دیتای اصلی همین‌جاست
+ * - حالت هاست MySQL: این فایل «کپی آفلاین» است؛ وقتی اینترنت قطع شود
+ *   برنامه خودکار روی همین فایل کار می‌کند و بعد از وصل شدن همگام می‌شود
+ */
 function ensureDatabase() {
-  // حالت هاست MySQL: فایل محلی لازم نیست
-  if (databaseUrlOverride()) return null;
-
   // Writable data dir next to user profile: userData/data/custom.db
   const dataDir = path.join(app.getPath('userData'), 'data');
   fs.mkdirSync(dataDir, { recursive: true });
@@ -218,6 +221,8 @@ function startServerOnPort(port, dbPath, dbUrlOverride) {
       NODE_ENV: 'production',
       PORT: String(port),
       DATABASE_URL: dbUrlOverride || 'file:' + dbPathPosix,
+      // دیتابیس محلی همیشه مشخص است — در حالت قطعی اینترنت، سرور روی آن سوییچ می‌کند
+      LOCAL_DATABASE_URL: 'file:' + dbPathPosix,
       HOSTNAME: '127.0.0.1',
     };
 
@@ -443,7 +448,7 @@ async function main() {
   const dbOverride = databaseUrlOverride();
   logLine(
     `starting ManufacturingERP v${app.getVersion()} (packaged=${isPackaged}) db=${
-      dbOverride ? 'host-mysql' : dbPath
+      dbOverride ? 'host-mysql (offline fallback: ' + dbPath + ')' : dbPath
     }`
   );
 

@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getState } from '@/lib/connection-manager'
 import { APP_VERSION } from '@/lib/app-version'
 
 /*
  * وضعیت اتصال دیتابیس — برای کارت «اتصال برنامه به هاست» در تنظیمات.
  * به کاربر نشان می‌دهد برنامه واقعاً به کدام دیتابیس وصل است، نسخهٔ سرور،
  * و اینکه ۱۹ جدول سیستم کامل ساخته شده است یا نه.
+ *
+ * حالت‌ها:
+ *   host-mysql   → کوئری روی هاست؛ وضعیت واقعی اتصال MySQL
+ *   host-offline → هاست در دسترس نیست؛ برنامه روی کپی محلی (SQLite) کار
+ *                  می‌کند — آخرین خطای هاست + زمان اسنپ‌شات محلی گزارش می‌شود
+ *   local-sqlite → حالت محلی بدون هاست
  * در حالت خطا، کد Prisma/MySQL به تشخیص سادهٔ فارسی ترجمه می‌شود تا کاربر
  * بدون دانش فنی بفهمد مشکل کجاست (پورت بسته؟ رمز غلط؟ جدول‌های ناقص؟).
  */
@@ -41,7 +48,7 @@ function classifyError(e: unknown): { code: string; kind: ErrorKind } {
   const code = String(err?.code || '')
   const msg = String(err?.message || '')
 
-  if (code === 'P1001' || /Can't reach|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|getaddrinfo|EHOSTUNREACH/i.test(msg))
+  if (code === 'P1001' || /Can't reach|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|getaddrinfo|EHOSTUNREACH|PING_TIMEOUT/i.test(msg))
     return { code: code || 'P1001', kind: 'UNREACHABLE' }
   if (code === 'P1017' || /server refused|not allowed to connect|ER_HOST_NOT_PRIVILEGED|Host .* is not allowed/i.test(msg))
     return { code: code || 'P1017', kind: 'UNREACHABLE' }
@@ -60,12 +67,17 @@ export async function GET() {
   const url = process.env.DATABASE_URL || ''
   const isMysql = url.startsWith('mysql:')
   const { host, port, database } = parseUrl(url)
+  const mgr = getState()
+  const mode = mgr.mode // local | host-mysql | host-offline
+
+  // در حالت آفلاین، کوئری‌ها روی کپی محلی زده می‌شوند (کلاینت فعال SQLite است)
+  const effectiveIsMysql = isMysql && mode === 'host-mysql'
 
   try {
     let version = ''
     let tables: string[] = []
 
-    if (isMysql) {
+    if (effectiveIsMysql) {
       const verRows: Array<{ v: string }> = await db.$queryRawUnsafe(
         'SELECT VERSION() AS v'
       )
@@ -76,10 +88,10 @@ export async function GET() {
       tables = rows.map((r) => String(r.TABLE_NAME))
     } else {
       const rows: Array<{ name: string }> = await db.$queryRawUnsafe(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_Sync%' ORDER BY name"
       )
       tables = rows.map((r) => String(r.name))
-      version = 'SQLite (local)'
+      version = effectiveIsMysql ? '' : 'SQLite (local)'
     }
 
     const missing = EXPECTED_TABLES.filter((t) => !tables.includes(t))
@@ -87,30 +99,46 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       appVersion: APP_VERSION,
-      mode: isMysql ? 'host-mysql' : 'local-sqlite',
+      mode: mode === 'host-offline' ? 'host-offline' : effectiveIsMysql ? 'host-mysql' : 'local-sqlite',
+      configuredForHost: isMysql,
       host,
       port,
       database,
-      version,
+      version: effectiveIsMysql ? version : 'SQLite (local copy)',
       tableCount: tables.length,
       expectedCount: EXPECTED_TABLES.length,
       missingTables: missing,
       schemaComplete: missing.length === 0,
+      // اطلاعات حالت آفلاین
+      lastHostError: mgr.lastError,
+      lastHostErrorKind: mgr.lastErrorKind,
+      lastHostErrorCode: mgr.lastErrorCode,
+      lastHostOkAt: mgr.lastOkAt,
+      lastCheckAt: mgr.lastCheckAt,
+      offlineSince: mgr.offlineSince,
+      lastSnapshotAt: mgr.lastSnapshotAt,
+      lastSyncAt: mgr.lastSyncAt,
+      syncing: mgr.syncing,
     })
   } catch (e) {
+    // اگر کوئری وضعیت روی خود هاست (حالت mysql) خطا داد → احتمالاً همین حالا قطع شده
     const { code, kind } = classifyError(e)
     const msg = e instanceof Error ? e.message.split('\n').filter(Boolean).slice(-1)[0] || e.message.split('\n')[0] : String(e).split('\n')[0]
     return NextResponse.json(
       {
         ok: false,
         appVersion: APP_VERSION,
-        mode: isMysql ? 'host-mysql' : 'local-sqlite',
+        mode: mode === 'host-offline' ? 'host-offline' : effectiveIsMysql ? 'host-mysql' : 'local-sqlite',
+        configuredForHost: isMysql,
         host,
         port,
         database,
         errorCode: code,
         errorKind: kind,
         error: msg.slice(0, 220),
+        lastHostError: mgr.lastError,
+        offlineSince: mgr.offlineSince,
+        lastSnapshotAt: mgr.lastSnapshotAt,
       },
       { status: 200 }
     )

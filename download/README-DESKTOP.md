@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.5** — 🛠 **THE HOST-CONNECTION SAVING BUG IS FIXED**: in versions ≤ 1.0.4 the Windows package shipped ONLY the SQLite database client, so after connecting to your hosting MySQL every save silently failed ("دیتای اضافه نمی‌شود"). **v1.0.5 ships BOTH database clients** (SQLite for offline local mode + MySQL for host mode) and switches automatically. The app also now shows a **live database status box** in Settings (connected? MySQL version? are all 19 tables on the host complete? exact connection error text) so you can verify the host connection yourself. v1.0.4 fixes the config folder to `%APPDATA%\ManufacturingERP` and auto-migrates old data; v1.0.3 adds host connection from inside the app.
+**Version 1.0.7** — 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC**: when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**: offline changes are pushed to the host (last-write-wins), offline deletions are replayed, and a fresh copy of the server data is pulled back. No buttons, no data loss. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
 
 ---
 
@@ -63,8 +63,15 @@ Since v1.0.3 you do NOT need to find any config file by hand (and since v1.0.4 t
 1. In cPanel create a MySQL database + user and allow remote access (Remote MySQL → add `%` or your IP).
 2. Import the empty table structure on the host once, using `mysql-schema.sql` (Settings → backup card → "فایل SQL هاست") in phpMyAdmin — the Settings status box will show **19/19 tables** when complete.
 3. In the app: **Settings** → **"اتصال برنامه به هاست (ذخیره دیتا در MySQL)"** → fill host / port (3306) / database / user / password → **Save & connect**. The app restarts connected to the host.
-4. Move existing data: first click **"خروجی JSON (انتقال به هاست)"** (backup section), connect to the host, then restore that JSON file.
+4. Move existing data: first click **"خروجی JSON (انتقال به هاست)"** (backup section), connect to the host, then restore that JSON file. (This one-time migration stays manual; everything afterwards is automatic.)
 5. Verify: the **"وضعیت فعلی دیتابیس"** box at the top of that Settings card must turn green (✅ connected, MySQL version, 19/19 tables). If it is red, it shows the exact reason (port blocked / wrong credentials / tables missing).
+
+### Auto online/offline (new in v1.0.7)
+
+- While connected, the app silently keeps a **safety copy of the server data on the device** (refreshed every 15 minutes, or via "کپی دیتای سرور به دستگاه" in Settings).
+- When the host becomes unreachable (internet down, hosting down, port blocked): within ~8–30 s the app **switches itself to the local copy** — the header badge turns amber «آفلاین — دیتابیس محلی» and shows the number of pending changes. You keep working; nothing is lost.
+- When the host is reachable again: the app **switches back automatically** (≤ 15 s), pushes all offline changes (last-write-wins per record), replays offline deletions, and pulls a fresh snapshot. The badge turns green «متصل به سرور» and shows «همگام‌سازی…» while syncing.
+- Notes: settings changes made while offline are not synced back (records without timestamps are only synced as new rows); every other add/edit/delete is covered.
 
 Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hosting-guide.md`.
 
@@ -121,6 +128,12 @@ npx electron-builder --win nsis
 
 ### نیازمندی‌ها
 - ویندوز ۱۰ یا ۱۱ — ۶۴ بیت (x64)
+
+### ✨ تازه در نسخه ۱.۰.۷ — قطع/وصل خودکار اینترنت + همگام‌سازی دوسویه
+- وقتی اینترنت یا هاست قطع شود، برنامه **خودکار روی آخرین کپی دیتای سرور (روی همین دستگاه) کار می‌کند** — بج هدر زرد می‌شود: «آفلاین — دیتابیس محلی». هیچ خطایی نمی‌بینید و کار متوقف نمی‌شود.
+- هر وقت اتصال برگردد (بررسی هر ۱۵ ثانیه)، برنامه **خودکار به هاست وصل می‌شود و همه‌چیز را همگام می‌کند**: تغییرات آفلاین به سرور منتقل می‌شود، حذف‌های آفلاین تکرار می‌شود و جدیدترین دیتای سرور دریافت می‌شود.
+- در حالت اتصال، هر ۱۵ دقیقه یک کپی امن از دیتای سرور روی دستگاه گرفته می‌شود تا همیشه برای حالت آفلاین آماده باشد (دکمهٔ «کپی دیتای سرور به دستگاه» برای کپی فوری).
+- برای اولین انتقال دیتا به هاست همچنان مسیر «خروجی JSON → اتصال → بازیابی» یک‌بار انجام می‌شود؛ بعد از آن همه‌چیز خودکار است.
 
 ### ✨ تازه در نسخه ۱.۰.۵ — رفع کامل مشکل ذخیرهٔ داده در هاست
 در نسخه‌های قبلی، پس از وصل شدن به هاست، ذخیرهٔ داده‌ها کار نمی‌کرد (بستهٔ برنامه فقط کلاینت SQLite را داشت). اکنون:

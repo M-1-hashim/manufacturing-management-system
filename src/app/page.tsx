@@ -24,6 +24,7 @@ import {
   LayoutDashboard, Package, FlaskConical, Boxes, Factory, ShoppingCart,
   Warehouse, Wallet, Users, BarChart3, Settings, LogOut, Menu, X,
   Wifi, WifiOff, Languages, Sun, Moon, Lock, UserCog, History, KeyRound, RefreshCw, Palette, Check,
+  Cloud, CloudOff, Database,
 } from 'lucide-react'
 
 import DashboardModule from '@/components/modules/dashboard'
@@ -150,6 +151,19 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
 // برای toast — import در سطح بالا (sonner)
 import { toast } from 'sonner'
 
+// وضعیت اتصال دیتابیس (پاسخ GET /api/system/connection-status)
+interface DbStatusT {
+  ok: boolean
+  configured: boolean
+  mode: 'local' | 'host-mysql' | 'host-offline'
+  host: string | null
+  port: string | null
+  syncing: boolean
+  offlineSince: string | null
+  pendingPush: number | null
+  lastError: string | null
+}
+
 // ---------------- Login ----------------
 function LoginView() {
   const { t } = useI18n()
@@ -227,6 +241,7 @@ function Shell() {
   const [dark, setDark] = useState(false)
   const [colorTheme, setColorTheme] = useState('emerald')
   const [online, setOnline] = useState(true)
+  const [dbStatus, setDbStatus] = useState<DbStatusT | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
   // تم تیره/روشن + تم رنگی
@@ -263,6 +278,26 @@ function Shell() {
       window.removeEventListener('offline', update)
     }
   }, [])
+
+  // وضعیت اتصال دیتابیس (سرور به کدام دیتابیس وصل است؟) — هر ۲۰ ثانیه
+  useEffect(() => {
+    if (!user || !online) return
+    let alive = true
+    async function poll() {
+      try {
+        const s = await apiGet<DbStatusT>('/api/system/connection-status')
+        if (alive) setDbStatus(s)
+      } catch {
+        if (alive) setDbStatus(null)
+      }
+    }
+    void poll()
+    const id = setInterval(poll, 20_000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [user, online])
 
   // اعتبارسنجی نشست با سرور — اگر کوکی منقضی/نامعتبر باشد خروج خودکار
   useEffect(() => {
@@ -328,6 +363,57 @@ function Shell() {
 
   const langLabel = lang === 'fa' ? 'دری' : lang === 'ps' ? 'پښتو' : 'EN'
   const nextLang = lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa'
+
+  // بج وضعیت اتصال دیتابیس — بر اساس وضعیت واقعی سرور (نه فقط navigator.onLine)
+  const dbBadge = (() => {
+    if (!online)
+      return {
+        cls: 'text-red-600 border-red-300',
+        icon: <WifiOff className="h-3.5 w-3.5" />,
+        label: t('آفلاین', 'آفلاین', 'Offline'),
+        title: t('اتصال اینترنت دستگاه قطع است', 'انترنت دستگاه قطع دی', 'Device internet is offline'),
+      }
+    if (dbStatus?.mode === 'host-offline')
+      return {
+        cls: 'border-amber-400 text-amber-600',
+        icon: <CloudOff className="h-3.5 w-3.5" />,
+        label: t('آفلاین — دیتابیس محلی', 'افلاین — ځایی ډاټابیس', 'Offline — Local DB'),
+        title:
+          t(
+            'هاست در دسترس نیست — برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، همهٔ تغییرات خودکار با سرور همگام می‌شود',
+            'هوسټ نه لرېږي — پروګرام په ځایی ډاټابیس کار کوي او له نښلېدو وروسته ټول بدلونونه اتوماتیک همغه کېږي',
+            'Host unreachable — the app works on the local database copy; all changes sync automatically once the host is back'
+          ) +
+          (dbStatus.pendingPush ? ` — ${dbStatus.pendingPush} ` + t('تغییر در انتظار', 'بدلون په انتظار', 'pending changes') : ''),
+      }
+    if (dbStatus?.syncing)
+      return {
+        cls: 'border-amber-400 text-amber-600',
+        icon: <RefreshCw className="h-3.5 w-3.5 animate-spin" />,
+        label: t('همگام‌سازی…', 'همغه کول…', 'Syncing…'),
+        title: t('در حال همگام‌سازی تغییرات آفلاین با سرور', 'د افلاین بدلونونو همغه کول', 'Syncing offline changes with the server'),
+      }
+    if (dbStatus?.mode === 'host-mysql')
+      return {
+        cls: 'text-emerald-600 border-emerald-300',
+        icon: <Cloud className="h-3.5 w-3.5" />,
+        label: t('متصل به سرور', 'سرور نښلی', 'Server'),
+        title: `${t('دیتا روی هاست ذخیره می‌شود', 'ډاټا په هوسټ کې خوندي کېږي', 'Data is stored on the host')}${dbStatus.host ? `: ${dbStatus.host}` : ''}`,
+      }
+    if (dbStatus?.mode === 'local')
+      return {
+        cls: 'text-muted-foreground border-border',
+        icon: <Database className="h-3.5 w-3.5" />,
+        label: t('دیتابیس محلی', 'ځایی ډاټابیس', 'Local DB'),
+        title: t('بدون هاست — دیتا فقط روی همین دستگاه ذخیره می‌شود', 'بې هوسټه — ډاټا یوازې په همدې دستگاه کې', 'No host configured — data stays on this device'),
+      }
+    return {
+      cls: 'text-emerald-600 border-emerald-300',
+      icon: <Wifi className="h-3.5 w-3.5" />,
+      label: t('آنلاین', 'آنلاین', 'Online'),
+      title: '',
+    }
+  })()
 
   return (
     <DirectionProvider dir={dir}>
@@ -433,9 +519,9 @@ function Shell() {
                   <span className="text-xs font-bold" dir="ltr">{pendingOps}</span>
                 </button>
               )}
-              <Badge variant="outline" className={cn('gap-1.5 h-8 px-2.5', online ? 'text-emerald-600 border-emerald-300' : 'text-red-600 border-red-300')}>
-                {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">{online ? t('آنلاین', 'آنلاین', 'Online') : t('آفلاین', 'آفلاین', 'Offline')}</span>
+              <Badge variant="outline" className={cn('gap-1.5 h-8 px-2.5', dbBadge.cls)} title={dbBadge.title}>
+                {dbBadge.icon}
+                <span className="hidden sm:inline">{dbBadge.label}</span>
               </Badge>
 
               <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => useAppStore.getState().setLang(nextLang as never)} title={t('تغییر زبان', 'ژبه بدلول', 'Change language')}>

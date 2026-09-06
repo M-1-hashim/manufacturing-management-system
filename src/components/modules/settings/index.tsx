@@ -52,7 +52,8 @@ interface DbConnApiT {
 interface DbInfoT {
   ok: boolean
   appVersion?: string
-  mode: 'host-mysql' | 'local-sqlite'
+  mode: 'host-mysql' | 'local-sqlite' | 'host-offline'
+  configuredForHost?: boolean
   host?: string
   port?: string
   database?: string
@@ -64,6 +65,32 @@ interface DbInfoT {
   errorCode?: string
   errorKind?: 'UNREACHABLE' | 'AUTH' | 'NO_DATABASE' | 'NO_TABLES' | 'BAD_URL' | 'UNKNOWN'
   error?: string
+  lastHostError?: string | null
+  lastHostErrorKind?: string | null
+  offlineSince?: string | null
+  lastSnapshotAt?: string | null
+  lastSyncAt?: string | null
+  syncing?: boolean
+}
+
+// پاسخ GET /api/system/connection-status — وضعیت سوییچ خودکار آنلاین/آفلاین
+interface ConnStatusT {
+  ok: boolean
+  configured: boolean
+  mode: 'local' | 'host-mysql' | 'host-offline'
+  host: string | null
+  port: string | null
+  database: string | null
+  lastCheckAt: string | null
+  lastOkAt: string | null
+  lastError: string | null
+  offlineSince: string | null
+  syncing: boolean
+  snapshotting: boolean
+  lastSyncAt: string | null
+  lastSnapshotAt: string | null
+  lastSyncError: string | null
+  pendingPush: number | null
 }
 
 declare global {
@@ -148,6 +175,54 @@ export default function SettingsModule() {
   useEffect(() => {
     void refreshDbInfo()
   }, [])
+
+  // ---------- سوییچ خودکار آنلاین/آفلاین + همگام‌سازی ----------
+  const [connStatus, setConnStatus] = useState<ConnStatusT | null>(null)
+  const [syncAction, setSyncAction] = useState<string | null>(null)
+
+  async function refreshConnStatus() {
+    try {
+      setConnStatus(await apiGet<ConnStatusT>('/api/system/connection-status'))
+    } catch {
+      /* بی‌صدا — فقط نمایش وضعیت است */
+    }
+  }
+
+  useEffect(() => {
+    void refreshConnStatus()
+    const id = setInterval(() => { void refreshConnStatus() }, 15_000)
+    return () => clearInterval(id)
+  }, [])
+
+  async function runSyncAction(action: 'check' | 'sync-now' | 'snapshot-now') {
+    setSyncAction(action)
+    try {
+      const res = await apiPost<{ ok: boolean; result?: string; error?: string; rows?: number }>('/api/system/sync-actions', { action })
+      if (res.ok) {
+        if (action === 'check') {
+          toast.success(t('بررسی اتصال انجام شد', 'ازمویلنه بشته شو', 'Connection check done'))
+        } else if (action === 'sync-now') {
+          toast.success(
+            res.result === 'sync started'
+              ? t('هاست وصل شد — همگام‌سازی آغاز گردید', 'هوسټ ونښل — همغه کول پیل شو', 'Host connected — sync started')
+              : res.result
+                ? t('کپی دیتای سرور گرفته شد', 'د سرور ډاټا کاپي شو', 'Server data copied')
+                : t('درخواست انجام شد', 'غوښتنه ترسره شوه', 'Request done')
+          )
+        } else if (action === 'snapshot-now') {
+          toast.success(`${t('کپی کامل دیتای سرور روی دستگاه گرفته شد', 'ډاټا کاپي شو', 'Server data copied to device')}${res.rows != null ? ` (${formatNumber(res.rows)} ${t('سطر', 'کرښه', 'rows')})` : ''}`)
+        }
+      } else {
+        toast.error(res.error || t('عملیات ناموفق بود', 'عملیه ناکامه شوه', 'Operation failed'))
+      }
+      await refreshConnStatus()
+      void refreshDbInfo()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطای نامشخص', 'ناڅرګنده ستونزه', 'Unknown error'))
+    } finally {
+      setSyncAction(null)
+    }
+  }
 
   useEffect(() => {
     if (!connApi) return
@@ -886,6 +961,8 @@ export default function SettingsModule() {
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'
                     : dbInfo?.ok && dbInfo.mode === 'host-mysql' && !dbInfo.schemaComplete
                       ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                        : dbInfo?.ok && dbInfo.mode === 'host-offline'
+                          ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
                       : dbInfo && !dbInfo.ok && dbInfo.mode === 'host-mysql'
                         ? 'border-destructive/40 bg-destructive/10 text-destructive'
                         : 'border-border bg-muted/40 text-muted-foreground')
@@ -952,6 +1029,19 @@ export default function SettingsModule() {
                         </p>
                       </div>
                     )
+                  ) : dbInfo.mode === 'host-offline' ? (
+                    <div>
+                      <p>
+                        ⚠️ {t(
+                          'هاست در دسترس نیست — برنامه خودکار به دیتابیس محلی برگشته و روی آخرین کپی دیتای سرور کار می‌کند. همهٔ تغییرات محفوظ است و بعد از وصل شدن اینترنت، خودکار با سرور همگام می‌شود.',
+                          'هوسټ نه لرېږي — پروګرام اتوماتیک ځایی ډاټابیس ته ګرځېدلی او په وروستۍ کاپي کار کوي. ټول بدلونونه خوندي دي او له نښلېدو وروسته اتوماتیک همغه کېږي.',
+                          'Host unreachable — the app automatically switched to the local database (last copy of server data). All changes are safe and will sync automatically once internet returns.'
+                        )}
+                      </p>
+                      {dbInfo.lastHostError && (
+                        <p className="mt-1 font-mono" dir="ltr">{dbInfo.lastHostError.slice(0, 160)}</p>
+                      )}
+                    </div>
                   ) : (
                     <p>
                       {t('حالت محلی (SQLite) — دیتا فقط در همین دستگاه ذخیره می‌شود. برای ذخیره در هاست، اطلاعات بالا را پر و ذخیره کنید.', 'ځایی حالت (SQLite) — ډاټا یوازې په همدې ماشین کې خوندي کېږي.', 'Local mode (SQLite) — data is stored only on this device. Fill the form below to store data on your host.')}
@@ -962,6 +1052,86 @@ export default function SettingsModule() {
               ) : (
                 <p>{t('وضعیت نامشخص — دکمه «بررسی مجدد» را بزنید.', 'حالت نامعلوم — «بیا ازمویل» کلیک کړئ.', 'Status unknown — press Re-check.')}</p>
               )}
+            </div>
+
+            {/* سوییچ خودکار آنلاین/آفلاین + همگام‌سازی دوسویه */}
+            <div
+              className={
+                'rounded-lg border p-3 text-xs leading-6 ' +
+                (connStatus?.mode === 'host-mysql'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'
+                  : connStatus?.mode === 'host-offline'
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                    : 'border-border bg-muted/40 text-muted-foreground')
+              }
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  {t('قطع/وصل خودکار اینترنت (همگام‌سازی)', 'اتوماتیک قطع/وصل (همغه کول)', 'Auto online/offline (sync)')}
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('check')} disabled={syncAction !== null}>
+                    <RefreshCw className={'h-3 w-3' + (syncAction === 'check' ? ' animate-spin' : '')} />
+                    {t('بررسی اتصال', 'د نښلولو ازمویل', 'Check connection')}
+                  </Button>
+                  {connStatus?.mode === 'host-mysql' && (
+                    <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('snapshot-now')} disabled={syncAction !== null || connStatus.snapshotting}>
+                      <HardDriveDownload className="h-3 w-3" />
+                      {t('کپی دیتای سرور به دستگاه', 'د سرور ډاټا کاپي', 'Copy server data to device')}
+                    </Button>
+                  )}
+                  <Button size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('sync-now')} disabled={syncAction !== null || connStatus?.syncing}>
+                    <ArrowLeftRight className="h-3 w-3" />
+                    {connStatus?.mode === 'host-offline'
+                      ? t('تلاش برای اتصال و همگام‌سازی', 'هڅه د نښلولو او همغه کولو', 'Try connect & sync')
+                      : t('همگام‌سازی اکنون', 'اوس همغه کول', 'Sync now')}
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-1.5 space-y-0.5">
+                {connStatus?.mode === 'host-mysql' && (
+                  <p>
+                    ✅ {t(
+                      'متصل به هاست — دیتا مستقیم روی سرور ذخیره می‌شود و هر ۱۵ دقیقه یک کپی امن روی همین دستگاه گرفته می‌شود تا در قطعی اینترنت هم موجود باشد.',
+                      'له هوسټ سره نښلی — ډاټا مستقیم په سرور خوندي کېږي او هر ۱۵ دقیقه یوه امنه کاپي په همدې دستگاه کې اخیستل کېږي.',
+                      'Connected to host — data is saved directly on the server and a safety copy is kept on this device every 15 minutes for offline use.'
+                    )}
+                    {connStatus.lastSnapshotAt ? ` (${t('آخرین کپی:', 'وروستۍ کاپي:', 'Last copy:')} ${fmtDate(connStatus.lastSnapshotAt)})` : ''}
+                  </p>
+                )}
+                {connStatus?.mode === 'host-offline' && (
+                  <>
+                    <p>
+                      ⚠️ {t('هاست قطع است — برنامه روی دیتابیس محلی کار می‌کند. زمان قطع:', 'هوسټ پرې دی — پروګرام په ځایی ډاټابیس کار کوي. د پرې کېدو وخت:', 'Host is down — app is working on the local database. Since:')} <span dir="ltr">{connStatus.offlineSince ? fmtDate(connStatus.offlineSince) : '—'}</span>
+                      {connStatus.pendingPush != null ? ` — ${formatNumber(connStatus.pendingPush)} ${t('تغییر در انتظار همگام‌سازی', 'بدلون په انتظار همغه کولو', 'changes pending sync')}` : ''}
+                    </p>
+                    <p>
+                      {t(
+                        'هر وقت اینترنت وصل شود (حداکثر ۱۵ ثانیه بعد) همهٔ تغییرات خودکار به سرور منتقل و جدیدترین دیتا دریافت می‌شود — نیازی به هیچ کاری نیست.',
+                        'له انترنت له نښلېدو سره (تر ۱۵ ثانیو) ټول بدلونونه اتوماتیک سرور ته ځي او نوی ډاټا راځي — هیڅ کار ته اړتیا نشته.',
+                        'When internet returns (within ~15 seconds) all changes are pushed to the server and fresh data is pulled automatically — no action needed.'
+                      )}
+                    </p>
+                  </>
+                )}
+                {connStatus?.syncing && <p className="font-semibold">⟳ {t('در حال همگام‌سازی تغییرات با سرور…', 'د سرور سره همغه کول…', 'Syncing changes with server…')}</p>}
+                {connStatus?.mode === 'local' && (
+                  <p>
+                    {t(
+                      'هاست تنظیم نشده — دیتا فقط روی همین دستگاه ذخیره می‌شود. برای فعال‌کردن همگام‌سازی خودکار، اطلاعات هاست را در فرم زیر ذخیره کنید.',
+                      'هوسټ نه دی تنظیم شوی — ډاټا یوازې په همدې دستگاه کې. د فعالولو لپاره د هوسټ معلومات خوندي کړئ.',
+                      'No host configured — data stays on this device. Save host details below to enable auto sync.'
+                    )}
+                  </p>
+                )}
+                {!connStatus && <p>{t('در حال دریافت وضعیت…', 'د حالت ترلاسه کول…', 'Loading status…')}</p>}
+                {connStatus?.lastSyncError && (
+                  <p className="text-destructive">
+                    {t('خطای آخرین همگام‌سازی:', 'د وروستي همغه کولو ستونزه:', 'Last sync error:')} <span dir="ltr" className="font-mono">{connStatus.lastSyncError.slice(0, 140)}</span>
+                  </p>
+                )}
+              </div>
             </div>
             {connApi ? (
               <>
@@ -974,9 +1144,9 @@ export default function SettingsModule() {
                 </p>
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   {t(
-                    'مهم: دیتای محلی به‌صورت خودکار به هاست منتقل نمی‌شود. اول دکمه «خروجی JSON (انتقال به هاست)» را بزنید، بعد اینجا وصل شوید و در بخش پشتیبان‌گیری همان فایل را بازیابی کنید.',
-                    'مهم: ځایی ډاټا اتوماتیک هوسټ ته نه لېږدول کېږي. لومړی «د JSON صادرول» کلیک کړئ، بیا دلته وصل شئ او هماغه فایل بیا رغوئ.',
-                    'Important: local data is not moved automatically. First export the JSON backup, connect here, then restore that file from the backup section.'
+                    'مهم: برای اولین انتقال دیتای فعلی به هاست، اول دکمه «خروجی JSON (انتقال به هاست)» را بزنید، بعد اینجا وصل شوید و در بخش پشتیبان‌گیری همان فایل را بازیابی کنید. بعد از آن، همه‌چیز خودکار است: در قطعی اینترنت برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، تغییرات خودکار همگام می‌شود.',
+                    'مهم: د لومړي ځل لېږدولو لپاره «د JSON صادرول» وکاروئ، بیا دلته وصل شئ او هماغه فایل بیا رغوئ. وروسته هرڅه اتوماتیک دي.',
+                    'Important: for the first migration export the JSON backup, connect here, then restore that file. After that everything is automatic: on internet loss the app works locally and syncs automatically when back online.'
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
