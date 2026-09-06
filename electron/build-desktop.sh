@@ -8,8 +8,21 @@ echo "[1/6] Building Next.js standalone (NEXT_DIST_DIR=.next-electron — isolat
 export NEXT_DIST_DIR=.next-electron
 export NODE_ENV=production
 export NEXT_TELEMETRY_DISABLED=1
+
+echo "[1b/6] Generating SECOND Prisma client (provider=mysql) for host-connection mode..."
+# The default client stays SQLite (local/offline mode). This second client is
+# what src/lib/db.ts switches to at runtime when DATABASE_URL starts with mysql:
+# — without it, every save in host mode fails ("data is not added" bug ≤ v1.0.4).
+DATABASE_URL="mysql://build:build@localhost:3306/build" bunx prisma generate \
+  --schema prisma/schema.mysql.prisma \
+  --generator clientDesktop
+test -f node_modules/prisma-mysql-client/index.js || { echo "FAIL: mysql client not generated"; exit 1; }
+test -f node_modules/prisma-mysql-client/query_engine-windows.dll.node \
+  || { echo "FAIL: windows mysql engine missing from generated client"; exit 1; }
+echo "  OK: prisma-mysql-client ready (index.js + query_engine-windows.dll.node)"
+
 if [ "${DESKTOP_SKIP_NEXT_BUILD:-0}" = "1" ]; then
-  echo "  skipped (DESKTOP_SKIP_NEXT_BUILD=1)"
+  echo "  next build skipped (DESKTOP_SKIP_NEXT_BUILD=1)"
 else
   bunx next build
 fi
@@ -32,6 +45,17 @@ if cp node_modules/.prisma/client/query_engine-windows.dll.node .next-electron/s
 else
   echo "WARN: windows engine copy failed"
 fi
+
+echo "[3b/6] Shipping MySQL Prisma client into packaged server..."
+# src/lib/db.ts requires this folder at runtime when DATABASE_URL is mysql:
+rm -rf desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client
+cp -a node_modules/prisma-mysql-client desktop-dist/win-unpacked/resources/server/node_modules/
+test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/index.js \
+  && echo "  OK: prisma-mysql-client in packaged server" \
+  || { echo "FAIL: prisma-mysql-client NOT in packaged server"; exit 1; }
+test -f desktop-dist/win-unpacked/resources/server/node_modules/prisma-mysql-client/query_engine-windows.dll.node \
+  && echo "  OK: windows mysql engine present in packaged server" \
+  || { echo "FAIL: windows mysql engine NOT in packaged server"; exit 1; }
 
 echo "[4/6] Preparing bundled demo database..."
 mkdir -p desktop-assets/demo-db

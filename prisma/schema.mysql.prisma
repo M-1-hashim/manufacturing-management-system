@@ -17,6 +17,18 @@ generator client {
   binaryTargets = ["native", "windows"]
 }
 
+/*
+ * نسخهٔ دسکتاپ: کلاینت دوم MySQL در پوشهٔ جدا ساخته می‌شود تا کنار کلاینت
+ * SQLite (پیش‌فرض) داخل setup.exe قرار بگیرد؛ src/lib/db.ts در زمان اجرا
+ * بر اساس DATABASE_URL بین این دو سوییچ می‌کند.
+ * ساخت: prisma generate --schema prisma/schema.mysql.prisma --generator clientDesktop
+ */
+generator clientDesktop {
+  provider      = "prisma-client-js"
+  output        = "../node_modules/prisma-mysql-client"
+  binaryTargets = ["native", "windows"]
+}
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")

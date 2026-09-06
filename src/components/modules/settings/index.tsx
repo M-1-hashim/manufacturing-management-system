@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -46,6 +46,21 @@ interface DbConnApiT {
   reset: () => Promise<{ ok: boolean; path?: string; error?: string }>
   openFolder: () => Promise<{ ok: boolean; path?: string; error?: string }>
   relaunch: () => Promise<{ ok: boolean }>
+}
+
+// پاسخ GET /api/system/db-info — وضعیت واقعی اتصال دیتابیس
+interface DbInfoT {
+  ok: boolean
+  mode: 'host-mysql' | 'local-sqlite'
+  host?: string
+  port?: string
+  database?: string
+  version?: string
+  tableCount?: number
+  expectedCount?: number
+  missingTables?: string[]
+  schemaComplete?: boolean
+  error?: string
 }
 
 declare global {
@@ -111,6 +126,25 @@ export default function SettingsModule() {
   const [connForm, setConnForm] = useState({ host: '', port: '3306', database: '', user: '', password: '' })
   const [connSaving, setConnSaving] = useState(false)
   const [connResetting, setConnResetting] = useState(false)
+
+  // ---------- وضعیت واقعی دیتابیس (کدام حالت؟ وصل است؟ جدول‌ها کامل؟) ----------
+  const [dbInfo, setDbInfo] = useState<DbInfoT | null>(null)
+  const [dbInfoLoading, setDbInfoLoading] = useState(false)
+
+  async function refreshDbInfo() {
+    setDbInfoLoading(true)
+    try {
+      setDbInfo(await apiGet<DbInfoT>('/api/system/db-info'))
+    } catch {
+      /* بی‌صدا — کارت وضعیت فقط اطلاع‌رسانی است */
+    } finally {
+      setDbInfoLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void refreshDbInfo()
+  }, [])
 
   useEffect(() => {
     if (!connApi) return
@@ -836,6 +870,77 @@ export default function SettingsModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* وضعیت واقعی اتصال — پاسخ مستقیم از دیتابیس، نه فقط فایل تنظیمات */}
+            <div
+              className={
+                'rounded-lg border p-3 text-xs leading-6 ' +
+                (dbInfoLoading
+                  ? 'border-border bg-muted/40 text-muted-foreground'
+                  : dbInfo?.ok && dbInfo.mode === 'host-mysql' && dbInfo.schemaComplete
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200'
+                    : dbInfo?.ok && dbInfo.mode === 'host-mysql' && !dbInfo.schemaComplete
+                      ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200'
+                      : dbInfo && !dbInfo.ok && dbInfo.mode === 'host-mysql'
+                        ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                        : 'border-border bg-muted/40 text-muted-foreground')
+              }
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <Database className="h-3.5 w-3.5" />
+                  {t('وضعیت فعلی دیتابیس', 'د ډاټابیس اوسنی حالت', 'Current database status')}
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2" onClick={() => { void refreshDbInfo() }} disabled={dbInfoLoading}>
+                  <RefreshCw className={'h-3 w-3' + (dbInfoLoading ? ' animate-spin' : '')} />
+                  {t('بررسی مجدد', 'بیا ازمویل', 'Re-check')}
+                </Button>
+              </div>
+              {dbInfoLoading ? (
+                <p>{t('در حال بررسی اتصال…', 'د نښلولو ازمویل…', 'Checking connection…')}</p>
+              ) : dbInfo ? (
+                <div className="mt-1 space-y-1">
+                  {dbInfo.mode === 'host-mysql' ? (
+                    dbInfo.ok && dbInfo.schemaComplete ? (
+                      <p>
+                        ✅ {t('برنامه واقعاً به هاست وصل است و ذخیرهٔ داده فعال است.', 'پروګرام رښتیا له هوسټ سره نښلی او خوندي کول فعال دي.', 'The app is genuinely connected to the host and saving works.')}
+                        {' — '}<span dir="ltr" className="font-mono">MySQL {dbInfo.version || '?'} · {dbInfo.host}{dbInfo.port ? `:${dbInfo.port}` : ''} · {dbInfo.database}</span>
+                        {' — '}{t(`جدول‌ها: ${dbInfo.tableCount ?? 0}/${dbInfo.expectedCount ?? 19}`, `جدولونه: ${dbInfo.tableCount ?? 0}/${dbInfo.expectedCount ?? 19}`, `Tables: ${dbInfo.tableCount ?? 0}/${dbInfo.expectedCount ?? 19}`)}
+                      </p>
+                    ) : dbInfo.ok && !dbInfo.schemaComplete ? (
+                      <div>
+                        <p>
+                          ⚠️ {t(
+                            `اتصال به هاست برقرار است ولی جدول‌ها کامل نیست (${dbInfo.tableCount ?? 0} از ${dbInfo.expectedCount ?? 19}) — تا زمانی که همهٔ جدول‌ها ساخته نشوند، ذخیرهٔ داده کار نمی‌کند.`,
+                            `له هوسټ سره نښلون برقرار دی خو جدولونه بشپړ نه دي (${dbInfo.tableCount ?? 0} له ${dbInfo.expectedCount ?? 19}) — تر هغه چې ټول جدولونه جوړ نشي، خوندي کول کار نه کوي.`,
+                            `Host reachable but tables are incomplete (${dbInfo.tableCount ?? 0} of ${dbInfo.expectedCount ?? 19}) — saving will not work until all tables exist.`
+                          )}
+                        </p>
+                        <p className="mt-1">
+                          {t('جدول‌های گمشده:', 'ورک جدولونه:', 'Missing tables:')} <span dir="ltr" className="font-mono">{(dbInfo.missingTables || []).join(', ')}</span>
+                        </p>
+                        <p className="mt-1">
+                          {t('راه‌حل: فایل SQL هاست (دکمه «دانلود فایل SQL هاست» در بخش پشتیبان‌گیری) را در phpMyAdmin هاست ایمپورت کنید.', 'حل: د SQL هوسټ فایل په phpMyAdmin کې وارد کړئ.', 'Fix: import the host SQL file (backup section) in your hosting phpMyAdmin.')}
+                        </p>
+                      </div>
+                    ) : (
+                      <p>
+                        ❌ {t('اتصال به هاست برقرار نمی‌شود:', 'له هوسټ سره نښلون نه کېږي:', 'Cannot reach the host:')}
+                        {' '}<span dir="ltr" className="font-mono">{dbInfo.error || 'unknown error'}</span>
+                        <br />
+                        {t('بررسی کنید: Remote MySQL فعال باشد، پورت 3306 باز باشد و اطلاعات دیتابیس درست وارد شده باشد.', 'وګورئ: Remote MySQL فعال وي، بورډ 3306 خلاص وي او معلومات سم وي.', 'Check: Remote MySQL enabled, port 3306 open, credentials correct.')}
+                      </p>
+                    )
+                  ) : (
+                    <p>
+                      {t('حالت محلی (SQLite) — دیتا فقط در همین دستگاه ذخیره می‌شود. برای ذخیره در هاست، اطلاعات بالا را پر و ذخیره کنید.', 'ځایی حالت (SQLite) — ډاټا یوازې په همدې ماشین کې خوندي کېږي.', 'Local mode (SQLite) — data is stored only on this device. Fill the form below to store data on your host.')}
+                      {dbInfo.ok && dbInfo.tableCount != null ? ` (${t(`${dbInfo.tableCount} جدول`, `${dbInfo.tableCount} جدولونه`, `${dbInfo.tableCount} tables`)})` : ''}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p>{t('وضعیت نامشخص — دکمه «بررسی مجدد» را بزنید.', 'حالت نامعلوم — «بیا ازمویل» کلیک کړئ.', 'Status unknown — press Re-check.')}</p>
+              )}
+            </div>
             {connApi ? (
               <>
                 <p className="text-sm text-muted-foreground">

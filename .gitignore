@@ -69,3 +69,4 @@ server.log
 # runtime/temp
 tool-results/
 .zscripts/
+.tmp-tests/
