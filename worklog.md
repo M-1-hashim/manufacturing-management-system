@@ -696,3 +696,24 @@ Work Log (Task 17 — ادامه: ریلیز):
 Stage Summary:
 - Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.7
 - پاسخ نهایی به درخواست کاربر: سیستم حالا خودکار در قطعی اینترنت به دیتابیس محلی (با دیتای سرور) برمی‌گردد و بعد از وصل شدن خودکار به سرور وصل و دوطرفه همگام می‌شود
+---
+Task ID: 18
+Agent: main (Z.ai Code)
+Task: هاست اشتراکی Namecheap = Remote MySQL کاملاً بسته → تونل SSH داخلی برنامه (v1.0.8)
+
+Work Log:
+- کاربر سند رسمی Namecheap را فرستاد: روی Shared Hosting اتصال مستقیم MySQL (3306) غیرفعال است و تنها راه رسمی «تونل SSH» است (پورت 21098) — این معمای «وصل نمیشود» قدیمی را حل کرد
+- electron/ssh-tunnel.js (خالص Node با ssh2): کلاس SshTunnel — انتخاب پورت محلی آزاد (5522..5541)، forwardOut برای هر اتصال، keepalive 15s، reconnect با backoff (1→15s)، probeSsh() یک‌باره برای تست (kind: AUTH/NETWORK/TIMEOUT)
+- تست e2e تونل با سرور SSH ساختگی (خود ssh2 حالت سرور دارد، امضای رویداد tcpip: (accept,reject,info)): 12/12 پاس — فوروارد رفت‌وبرگشت، رمز غلط=AUTH، مرگ سرور→reconnecting→restart→online→دیتا دوباره جاری، stop تمیز
+- main.js: فرمت جدید db-connection.txt با کلیدهای ssh-mode/ssh-host/ssh-port/ssh-user/ssh-password (سازگار با فایل قدیمی فقط-url)؛ در ssh-mode تونل قبل از سرور بالا می‌آید و DATABASE_URL از پورت واقعی تونل ساخته می‌شود؛ اگر SSH نیاید برنامه همان‌طور با URL مرده بوت می‌شود و connection-manager موجود (v1.0.7) به محلی سوییچ می‌کند؛ IPC جدید db-connection:test؛ sanitizeHost حالا host:port چسبیده را هم می‌شکند؛ module.exports برای تست
+- preload.js: متد test؛ settings UI: دو کارت انتخاب حالت (تونل SSH / مستقیم-VPS)، فیلدست SSH (سرور/21098/یوزر/رمز cPanel)، دکمهٔ «تست اتصال SSH» با toast سه‌زبانه، نقطهٔ وضعیت تونل (سبز/کهربایی-pulse/زغالی)، متن خطای UNREACHABLE برای هدف 127.0.0.1 (تونل) و برای هاست اشتراکی (تونل توصیه می‌شود)
+- build-desktop.sh: ssh2+asn1+bcrypt-pbkdf+safer-buffer+tweetnacl (فقط pure-JS) به resources/app/node_modules کپی و require-verify می‌شود؛ build/نیتیو لینوکسی حذف (fallback جی‌اس ssh2 امن است)
+- باگ جانبی پیدا و رفع شد: page.tsx اسکرول افقی خیالی موبایل (سایدبار translate شده) → overflow-x-clip روی shell
+- تست‌ها: lint تمیز؛ agent-browser (ماک window.dbConnection): فرم SSH دسکتاپ+موبایل، پیش‌پرکردن از info، سوییچ حالت‌ها، toast تست، H-OVERFLOW رفع؛ 22/22 round-trip فرمت فایل (legacy+ssh+empty+sanitize) با استاب الکترون؛ e2e بستهٔ واقعی با URL تونل مرده (127.0.0.1:5522 خالی): بوت→host-offline→ورود→نوشتن روی SQLite→pendingPush=2
+- بیلد کامل + NSIS (168MB, PE32, version 1.0.8.0 تأیید با strings -el) + Portable (265MB)؛ NSIS دوباره از deb (3.11) به /tmp/nsis-root با NSISDIR env؛ Release v1.0.8 (id 383707309) — هر ۲ asset state=uploaded (آپلود به uploads.github.com)
+- commit 35093b2 push شد (push این بار با token-in-URL چون credential helper نبود)
+
+Stage Summary:
+- برای کاربر روی Namecheap: فقط ۳ کار در cPanel (ساخت دیتابیس+کاربر، Enable کردن Manage Shell، خواندن serverXXX.web-hosting.com از ایمیل) و بعد در برنامه: حالت تونل SSH + تست + ذخیره — بدون PuTTY
+- تونل مرده دیگر «خطا» نیست: بج زرد آفلاین + کار کامل روی کپی محلی + همگام‌سازی خودکار بعد از برگشت
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.8
