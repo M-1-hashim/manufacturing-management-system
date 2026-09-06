@@ -717,3 +717,25 @@ Stage Summary:
 - برای کاربر روی Namecheap: فقط ۳ کار در cPanel (ساخت دیتابیس+کاربر، Enable کردن Manage Shell، خواندن serverXXX.web-hosting.com از ایمیل) و بعد در برنامه: حالت تونل SSH + تست + ذخیره — بدون PuTTY
 - تونل مرده دیگر «خطا» نیست: بج زرد آفلاین + کار کامل روی کپی محلی + همگام‌سازی خودکار بعد از برگشت
 - Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.8
+
+---
+Task ID: 19
+Agent: main (Z.ai Code)
+Task: «هاست وصل شد — تست و دیباگ کامل نقطه‌به‌نقطه + دیزاین زیبا و تم‌های مختلف + ویزارد تنظیمات هاست در اولین باز شدن» (v1.0.9)
+
+Work Log:
+- ویزارد راه‌اندازی اولیه (src/components/shared/setup-wizard.tsx + FirstRunGate در page.tsx): گام ۱ زبان + ۱۱ تم رنگی؛ گام ۲ انتخاب محل دیتا (فقط این دستگاه / هاست)؛ گام ۳ فرم هاست (تونل SSH با تست اتصال IPC / مستقیم) + راهنمای cPanel؛ گام ۴ ذخیره + ری‌استارت. تشخیص بار اول: فلگ mfg-setup-completed + نبودن کاربر ذخیره‌شده + (دسکتاپ) عدم فعال‌بودن اتصال هاست؛ درگاه پشتیبانی ?setup=1 ویزارد را دوباره نشان می‌دهد؛ در مرورگر (وب) ویزارد نمایش داده نمی‌شود
+- راه‌اندازی خودکار هاست: src/lib/mysql-ddl.ts (۱۹ دستور CREATE TABLE IF NOT EXISTS منطبق بر schema.mysql.prisma با FK/ایندکس‌های Prisma)؛ src/lib/host-setup.ts (createHostTables + ensureHostReady: بوت‌استرپ کاربران/تنظیمات محلی → هاست خالی)؛ هوک در connection-manager: بعد از اولین پینگ موفق و قبل از reconnect-sync یک‌بار اجرا می‌شود — هاست نو خودش آماده می‌شود (بدون phpMyAdmin)
+- API ادمین /api/system/db-setup: GET وضعیت جدول‌ها/کاربران هاست؛ POST create (جدول‌ها + بوت‌استرپ)؛ POST migrate (انتقال کامل محلی→هاست)
+- sync-engine: migrateLocalToServer — upsert کامل هر ۱۹ جدول (به‌جز sync.*) به ترتیب وابستگی؛ Delegate.createMany نوع skipDuplicates گرفت
+- دیزاین: ۴ تم جدید (green h130 / brown h55 / magenta h330 / ocean h225) → ۱۱ تم؛ globals.css: .auth-hero (گرادیان hue-محور + شبکه نقطه‌ای)، .auth-glass، .nav-active-bar، .nav-label، اسکرول‌بار هم‌رنگ تم؛ صفحهٔ ورود دو پنله (معرفی + فرم شیشه‌ای)؛ سایدبار گروهی (عملیات روزانه/مدیریت/سیستم) با نشانگر فعال؛ انتخاب‌گر تم هدر → Popover گرید ۱۱ رنگی
+- تنظیمات: کارت «ظاهر برنامه» (گالری ۱۱ تم با پیش‌نمایش گرادیانی + کلید روشن/تیره state-دار)؛ بخش «راه‌اندازی خودکار هاست» (دکمه‌های ساخت جدول‌های گمشده + انتقال دیتای دستگاه به هاست با AlertDialog تأیید) — فقط ادمین + دسکتاپ
+- تست DDL روی MariaDB واقعی ۱۱.۸ (deb-extract در sandbox): ۱۹/۱۹ جدول ساخته شد، اجرای تکراری امن، utf8mb4_unicode_ci؛ e2e با کلاینت‌های واقعی Prisma: بوت‌استرپ ۱۰ کاربر + ۹ تنظیم به هاست خالی ✓، migrate کامل ۲۴۵ سطر (تعداد جدول‌ها محلی=هاست) ✓، تست FK فروش+قلم و حذف آبشاری ✓ — (نکتهٔ diagnost: اجرای اول grep لوله‌شده output را خورد و «bootstrap:false» گمراه‌کننده بود؛ اجرای تمیز درست بود)
+- تست مرورگری نقطه‌به‌نقطه: ورود/خروج، هر ۱۳ ماژول (داشبورد تا تنظیمات) بدون خطای کنسول؛ CRUD محصول (ساخت+حذف با دیالوگ)؛ سوییچ زندهٔ تم (violet/gold) + حالت تیره؛ انگلیسی LTR کامل؛ موبایل ۳۹۰px بدون overflow سایدبار گروهی؛ فوتر در صفحات بلند طبیعی پуш می‌شود؛ بج «دیتابیس محلی» سالم
+- باگ حین تست: فرمول صفحه‌جای‌گذاری ?setup=1 ابتدا چک مرورگر را رد نمی‌کرد — اصلاح شد (forceSetup روی هر دو شرط)
+- ریلیز: lint تمیز؛ بیلد Next standalone + دو کلاینت Prisma + win-unpacked (590MB)؛ smoke بسته (login با demo db) ✓؛ NSIS Setup.exe 168MB (PE32، 1.0.9.0 با strings -el) + Portable 266MB؛ Release v1.0.9 (id 383750465) — هر ۳ asset state=uploaded (uploads.github.com)؛ commit d58ba3a push شد
+
+Stage Summary:
+- کاربر بعد از نصب v1.0.9: اولین باز شدن → ویزارد (زبان/رنگ/هاست) → بعد از اتصال به هاست، برنامه خودش جدول‌ها را می‌سازد و کاربران را کپی می‌کند → ورود فوری؛ «به هاست وصل کردم ولی جدول نیست» کاملاً حذف شد
+- ۱۱ تم رنگی + صفحهٔ ورود و منوی جدید؛ سوییچ زنده از هدر و تنظیمات
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.9
