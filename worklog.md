@@ -643,3 +643,21 @@ Stage Summary:
 - کاربر فقط باید v1.0.5 را نصب کند: کلاینت MySQL حالا داخل بسته است، جدول‌هایش هم در هاست کامل است → اتصال از داخل برنامه + سبز شدن باکس وضعیت = ذخیرهٔ داده در هاست کار می‌کند
 - برگشت دیتای محلی به هاست: خروجی JSON (قبل از اتصال) → آپلود بکاپ و بازیابی (بعد از اتصال) — در README و release notes نوشته شد
 - Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.5
+
+---
+Task ID: 16
+Agent: main (Z.ai Code)
+Task: «وصل نمیشود» — نسخهٔ تشخیصی v1.0.6 (نسخهٔ برنامه + ترجمهٔ کد خطا + مقاوم‌سازی ورودی)
+
+Work Log:
+- تست مجدد هاست از سندباکس → باز ETIMEDOUT؛ پیام «وصل نمیشود» بدون متن خطا قابل تشخیص نبود → تصمیم: برنامه خودش عامل دقیق را نشان دهد
+- src/lib/app-version.ts (APP_VERSION منبع واحد) + db-info: appVersion + errorCode/errorKind (UNREACHABLE/AUTH/NO_DATABASE/NO_TABLES/BAD_URL) با راه‌حل سادهٔ سه‌زبانه
+- UI: بج نسخه (v1.0.6) کنار عنوان کارت اتصال + باکس سرخ: کد خطا، مقصد، علت و راه‌حل مشخص (% در Remote MySQL / باز کردن 3306 توسط پشتیبانی / چک رمز / نام دقیق دیتابیس)
+- main.js save(): پاک‌سازی ورودی (حذف https:// یا mysql:// و مسیر/پورت از host، trim پسورد) + لاگ نسخه در startup
+- تست: lint تمیز؛ dev → بج v1.0.6 + وضعیت محلی ۱۹ جدول (agent-browser)؛ بستهٔ واقعی: login + db-info با appVersion:1.0.6
+- بیلد کامل + NSIS (166MB) + Portable (263MB)؛ Release v1.0.6 (id 383508314) — هر ۳ asset state=uploaded؛ commit/push شد
+- فرض‌های اولیهٔ «وصل نمیشود» به ترتیب احتمال: نسخهٔ 1.0.5 هنوز نصب نیست / IP کاربر در Remote MySQL عوض شده (پویاست) / رمز غلط / 3306 در فایروال هاست بسته
+
+Stage Summary:
+- با v1.0.6 هر گزارش «وصل نمیشود» خود توضیحی است: بج نسخه + کد خطا + علت + راه‌حل در همان کارت — کاربر کافی است اسکرین‌شات بگیرد
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.6
