@@ -418,7 +418,10 @@ function Shell() {
   return (
     <DirectionProvider dir={dir}>
     <div className="app-shell min-h-screen flex flex-col print:hidden" dir={lang === 'en' ? 'ltr' : 'rtl'}>
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-x-clip">
+        {/* overflow-x-clip: سایدبارِ بسته در موبایل با translate بیرون صفحه می‌رود؛
+            بدون این، اسکرول افقی خیالی در موبایل ظاهر می‌شد (clip برخلاف hidden
+            کانتینر اسکرول نمی‌سازد و sticky هدر نمی‌شکند) */}
         {/* پوشش موبایل */}
         {sidebarOpen && (
           <div className="fixed inset-0 bg-black/40 z-40 lg:hidden no-print" onClick={() => setSidebarOpen(false)} />

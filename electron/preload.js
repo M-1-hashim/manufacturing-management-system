@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('desktopInfo', {
 contextBridge.exposeInMainWorld('dbConnection', {
   info: () => ipcRenderer.invoke('db-connection:info'),
   save: (payload) => ipcRenderer.invoke('db-connection:save', payload),
+  test: (payload) => ipcRenderer.invoke('db-connection:test', payload),
   reset: () => ipcRenderer.invoke('db-connection:reset'),
   openFolder: () => ipcRenderer.invoke('db-connection:openFolder'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),

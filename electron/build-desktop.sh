@@ -76,8 +76,25 @@ cp -a .next-electron/standalone desktop-dist/win-unpacked/resources/server
   rm -rf download desktop-dist skills tool-results tests examples mini-services src electron .zscripts .agent-ctx db 2>/dev/null || true
   rm -f dev.log server.log .env 2>/dev/null || true
 )
-# Defensive: main.js uses only node builtins — no deps may ship in resources/app
+# Ship ONLY the SSH tunnel deps (main.js requires ./ssh-tunnel.js -> ssh2).
+# ssh2 + its pure-JS deps are copied; native optional deps (cpu-features/nan)
+# are NOT shipped — ssh2 falls back gracefully without them (guarded require),
+# and a Linux-compiled native module would break on Windows anyway.
+APP_NM=desktop-dist/win-unpacked/resources/app/node_modules
 rm -rf desktop-dist/win-unpacked/resources/app/node_modules
+mkdir -p "$APP_NM"
+for m in ssh2 asn1 bcrypt-pbkdf safer-buffer tweetnacl; do
+  if [ -d "node_modules/$m" ]; then
+    cp -a "node_modules/$m" "$APP_NM/$m"
+  else
+    echo "FAIL: node_modules/$m missing (run: bun add ssh2)"; exit 1
+  fi
+done
+# optional native speedup built for Linux — must NOT ship to Windows (ssh2 has
+# a pure-JS fallback and requires it through guarded try/catch)
+rm -rf "$APP_NM/ssh2/build" "$APP_NM/ssh2/lib/protocol/build"
+node -e "require(process.argv[1] + '/ssh2'); console.log('  OK: ssh2 loads from packaged app')" "$PWD/$APP_NM"
+echo "  OK: ssh2 (+asn1 bcrypt-pbkdf safer-buffer tweetnacl) shipped into resources/app/node_modules"
 
 # CRITICAL (v1.0.4 fix): the packaged package.json MUST carry productName.
 # Without it Electron derives the per-user data dir from `name`

@@ -13,10 +13,20 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// تونل SSH — برای هاست‌های اشتراکی (Namecheap/cPanel) که Remote MySQL بسته است
+let sshTunnelLib = null;
+try {
+  sshTunnelLib = require('./ssh-tunnel.js');
+} catch (e) {
+  // اگر ssh2 در بسته نیست، برنامه بدون تونل هم کار می‌کند (اتصال مستقیم/محلی)
+  console.error('ssh-tunnel module unavailable:', e && e.message);
+}
+
 const BASE_PORT = 37815;
 const MAX_PORT_ATTEMPTS = 21; // 37815 .. 37835
 const READY_TIMEOUT_MS = 90000; // poll up to 90s per port
 const POLL_INTERVAL_MS = 500;
+const SSH_TUNNEL_PORT = 5522; // پورت محلی تونل (روی دستگاه کاربر)
 
 const isPackaged = app.isPackaged;
 const SERVER_DIR = isPackaged
@@ -27,6 +37,7 @@ let serverChild = null;
 let serverPort = null;
 let mainWindow = null;
 let quitting = false;
+let sshTunnelInstance = null; // تونل فعال (فقط در حالت ssh)
 
 /* ---------------------------------------------------------------- logging */
 
@@ -71,11 +82,14 @@ function templateLines(activeUrl) {
     '#',
     '# حالت پیش‌فرض: دیتابیس محلی (SQLite) — همین فایل را دست‌نخورده رها کنید',
     '#',
-    '# برای ذخیره دیتا در هاست اشتراکی (MySQL):',
-    '#   ۱) در cPanel هاست: MySQL Databases → ساخت دیتابیس و کاربر',
-    '#   ۲) در cPanel: Remote MySQL → افزودن IP دستگاه یا علامت %',
-    '#   ۳) خط mysql:// زیر را ویرایش کنید (اگر # ابتدای آن هست حذف کنید)',
-    '#   ۴) برنامه را ببندید و دوباره باز کنید',
+    '# برای ذخیره دیتا در هاست، از داخل برنامه (تنظیمات → اتصال به هاست) استفاده کنید.',
+    '# این فایل به‌صورت خودکار نوشته می‌شود؛ فرمت آن:',
+    '#   mysql://DBUSER:PASSWORD@HOST:PORT/DBNAME      ← خط اتصال',
+    '#   ssh-mode=ssh | direct                        ← نوع اتصال (پیش‌فرض: direct)',
+    '#   ssh-host= / ssh-port= / ssh-user= / ssh-password=   ← فقط در حالت ssh',
+    '#',
+    '# حالت ssh (تونل SSH) برای هاست‌های اشتراکی (Namecheap/cPanel) است که اتصال',
+    '# مستقیم MySQL (پورت 3306) روی آن‌ها بسته است — برنامه خودش تونل می‌سازد.',
     '#',
   ];
   lines.push(activeUrl ? activeUrl : '# mysql://DBUSER:PASSWORD@HOST_ADDRESS:3306/DBNAME');
@@ -95,41 +109,46 @@ function maskUrl(url) {
 }
 
 function parseActiveOverride() {
-  const out = { active: false, url: null, host: null, port: '3306', database: null, user: null };
+  const out = {
+    active: false, url: null, host: null, port: '3306', database: null, user: null,
+    password: null,
+    sshMode: false, sshHost: null, sshPort: '21098', sshUser: null, sshPassword: null,
+  };
   try {
     const lines = fs.readFileSync(connectionConfigPath(), 'utf8').split(/\r?\n/);
-    const value = lines.map((l) => l.trim()).find((l) => l && !l.startsWith('#'));
-    if (value && value.startsWith('mysql://')) {
-      out.active = true;
-      out.url = value;
-      try {
-        const u = new URL(value);
-        out.host = u.hostname;
-        out.port = u.port || '3306';
-        out.database = u.pathname.replace(/^\//, '');
-        out.user = decodeURIComponent(u.username || '');
-      } catch (_e) {
-        /* URL ناقص — فقط حالت فعال گزارش می‌شود */
+    for (const raw of lines) {
+      const l = raw.trim();
+      if (!l || l.startsWith('#')) continue;
+      if (l.startsWith('mysql://')) {
+        if (!out.active) {
+          out.active = true;
+          out.url = l;
+          try {
+            const u = new URL(l);
+            out.host = u.hostname;
+            out.port = u.port || '3306';
+            out.database = u.pathname.replace(/^\//, '');
+            out.user = decodeURIComponent(u.username || '');
+            out.password = decodeURIComponent(u.password || '');
+          } catch (_e) { /* URL ناقص — فقط حالت فعال گزارش می‌شود */ }
+        }
+        continue;
+      }
+      const eq = l.indexOf('=');
+      if (eq > 0) {
+        const key = l.slice(0, eq).trim();
+        const val = l.slice(eq + 1).trim();
+        if (key === 'ssh-mode') out.sshMode = val === 'ssh';
+        else if (key === 'ssh-host') out.sshHost = val;
+        else if (key === 'ssh-port') out.sshPort = val || '21098';
+        else if (key === 'ssh-user') out.sshUser = val;
+        else if (key === 'ssh-password') out.sshPassword = val;
       }
     }
   } catch (_e) {
     /* فایل خوانده نشد — حالت محلی */
   }
   return out;
-}
-
-function databaseUrlOverride() {
-  try {
-    if (!fs.existsSync(connectionConfigPath())) {
-      // ساخت فایل راهنما در اولین اجرا — کاربر فقط یک خط را ویرایش می‌کند
-      writeConnectionFile(null);
-      return null;
-    }
-  } catch (_e) {
-    /* نوشتن ناموفق — حالت محلی */
-  }
-  const parsed = parseActiveOverride();
-  return parsed.active ? parsed.url : null;
 }
 
 /*
@@ -318,37 +337,90 @@ ipcMain.handle('db-connection:info', () => {
     port: parsed.port,
     database: parsed.database,
     user: parsed.user,
+    sshMode: parsed.sshMode,
+    sshHost: parsed.sshHost,
+    sshPort: parsed.sshPort,
+    sshUser: parsed.sshUser,
+    tunnelStatus: sshTunnelInstance ? sshTunnelInstance.status : null,
+    tunnelLocalPort: sshTunnelInstance ? sshTunnelInstance.localPort : null,
   };
 });
 
-ipcMain.handle('db-connection:save', (_event, payload) => {
-  let host = String(payload && payload.host ? payload.host : '').trim();
-  const port = String(payload && payload.port ? payload.port : '').trim() || '3306';
-  let database = String(payload && payload.database ? payload.database : '').trim();
-  const user = String(payload && payload.user ? payload.user : '').trim();
-  const password = String(payload && payload.password != null ? payload.password : '').trim();
-  /*
-   * مقاوم‌سازی ورودی کاربر — خطاهای رایج تایپ:
-   *  - چسباندن آدرس سایت با پروتکل: https://asancrypto.net یا mysql://host
-   *  - آدرس همراه با مسیر: host/db یا host:3306
-   */
-  host = host
+/* پاک‌سازی و نرمال‌سازی ورودی اتصال — مقاوم به خطاهای رایج تایپ */
+function sanitizeHost(input) {
+  return String(input || '')
+    .trim()
     .replace(/^mysql:\/\//i, '')
     .replace(/^https?:\/\//i, '')
-    .split(/[/?]/)[0]
+    .split(/[/:?]/)[0] // مسیر، پورت چسبیده (host:3306) و کوئری جدا می‌شود — پورت فیلد خودش را دارد
     .trim();
-  database = database.split(/[/?]/)[0].trim();
-  if (!host || !database || !user) {
+}
+
+ipcMain.handle('db-connection:save', (_event, payload) => {
+  const mode = String(payload && payload.mode ? payload.mode : 'direct').trim() === 'ssh' ? 'ssh' : 'direct';
+  let host = sanitizeHost(payload && payload.host);
+  const port = String(payload && payload.port ? payload.port : '').trim() || '3306';
+  let database = String(payload && payload.database ? payload.database : '').split(/[/?]/)[0].trim();
+  const user = String(payload && payload.user ? payload.user : '').trim();
+  const password = String(payload && payload.password != null ? payload.password : '').trim();
+
+  let sshHost = sanitizeHost(payload && payload.sshHost);
+  const sshPort = String(payload && payload.sshPort ? payload.sshPort : '').trim() || '21098';
+  const sshUser = String(payload && payload.sshUser ? payload.sshUser : '').trim();
+  const sshPassword = String(payload && payload.sshPassword != null ? payload.sshPassword : '');
+
+  if (mode === 'ssh') {
+    // در حالت تونل: اتصال MySQL همیشه از داخل سرور (127.0.0.1) انجام می‌شود
+    if (!sshHost || !sshUser || !database || !user) {
+      return { ok: false, error: 'MISSING_FIELDS' };
+    }
+    if (sshPassword.length === 0) {
+      return { ok: false, error: 'MISSING_SSH_PASSWORD' };
+    }
+    host = '127.0.0.1';
+  } else if (!host || !database || !user) {
     return { ok: false, error: 'MISSING_FIELDS' };
   }
-  const url = `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+
+  const url = `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${mode === 'ssh' ? SSH_TUNNEL_PORT : port}/${database}`;
   try {
-    const cfgPath = writeConnectionFile(url);
-    logLine(`db-connection.txt updated -> host mode (${host}:${port}/${database})`);
+    const cfgPath = connectionConfigPath();
+    fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
+    const lines = [url, `ssh-mode=${mode}`];
+    if (mode === 'ssh') {
+      lines.push(
+        `ssh-host=${sshHost}`,
+        `ssh-port=${sshPort}`,
+        `ssh-user=${sshUser}`,
+        `ssh-password=${sshPassword}`
+      );
+    }
+    fs.writeFileSync(cfgPath, templateLines(url) + lines.join('\r\n') + '\r\n', 'utf8');
+    logLine(`db-connection.txt updated -> mode=${mode} ${mode === 'ssh' ? `ssh(${sshUser}@${sshHost}:${sshPort})` : `${host}:${port}`}/${database}`);
     return { ok: true, path: cfgPath, maskedUrl: maskUrl(url) };
   } catch (err) {
     logLine(`db-connection.txt write failed: ${err && err.message ? err.message : err}`);
     return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+/* تست سریع اتصال SSH — قبل از ذخیره، تا کاربر فوراً بداند مقادیر درست است */
+ipcMain.handle('db-connection:test', async (_event, payload) => {
+  if (!sshTunnelLib) return { ok: false, kind: 'NETWORK', error: 'ssh module not available in this build' };
+  const sshHost = sanitizeHost(payload && payload.sshHost);
+  const sshPort = String(payload && payload.sshPort ? payload.sshPort : '').trim() || '21098';
+  const sshUser = String(payload && payload.sshUser ? payload.sshUser : '').trim();
+  const sshPassword = String(payload && payload.sshPassword != null ? payload.sshPassword : '');
+  if (!sshHost || !sshUser) return { ok: false, kind: 'FIELDS', error: 'MISSING_FIELDS' };
+  try {
+    const r = await sshTunnelLib.probeSsh(
+      { sshHost, sshPort, sshUser, sshPassword },
+      10000
+    );
+    logLine(`db-connection:test -> ${r.ok ? 'OK' : r.kind + ' ' + (r.error || '')}`);
+    return r;
+  } catch (err) {
+    return { ok: false, kind: 'NETWORK', error: String(err && err.message ? err.message : err) };
   }
 });
 
@@ -445,11 +517,47 @@ async function main() {
   migrateLegacyUserData();
 
   const dbPath = ensureDatabase();
-  const dbOverride = databaseUrlOverride();
+  const cfg = parseActiveOverride();
+  let dbOverride = cfg.active ? cfg.url : null;
+
+  /*
+   * حالت تونل SSH (هاست اشتراکی): اول تونل، بعد سرور.
+   * DATABASE_URL از روی پورت واقعی تونل ساخته می‌شود (نه مقدار داخل فایل).
+   * اگر SSH نیامد، برنامه با همان URL بالا می‌آید — لایهٔ failover موجود
+   * (connection-manager) خودکار روی دیتابیس محلی می‌رود تا تونل وصل شود.
+   */
+  if (cfg.active && cfg.sshMode) {
+    if (!sshTunnelLib) {
+      logLine('ERROR: ssh-mode configured but ssh-tunnel module is missing — staying local until fixed');
+    } else {
+      try {
+        sshTunnelInstance = new sshTunnelLib.SshTunnel({
+          sshHost: cfg.sshHost,
+          sshPort: cfg.sshPort || '21098',
+          sshUser: cfg.sshUser,
+          sshPassword: cfg.sshPassword || '',
+          remoteHost: '127.0.0.1',
+          remotePort: 3306, // MySQL روی سرور همیشه از داخل (127.0.0.1:3306) در دسترس است
+          preferredLocalPort: SSH_TUNNEL_PORT,
+          log: logLine,
+        });
+        const t = await sshTunnelInstance.start(25000);
+        logLine(
+          `ssh tunnel ${t.ok ? 'ready' : 'NOT ready (will keep retrying)'}: ` +
+          `${cfg.sshUser}@${cfg.sshHost}:${cfg.sshPort} local=127.0.0.1:${t.localPort} ${t.error || ''}`
+        );
+        if (t.localPort) {
+          dbOverride = sshTunnelInstance.localUrl(cfg.user, cfg.password || '', cfg.database);
+        }
+      } catch (e) {
+        logLine(`ssh tunnel start failed: ${e && e.message ? e.message : e}`);
+      }
+    }
+  }
+
   logLine(
-    `starting ManufacturingERP v${app.getVersion()} (packaged=${isPackaged}) db=${
-      dbOverride ? 'host-mysql (offline fallback: ' + dbPath + ')' : dbPath
-    }`
+    `starting ManufacturingERP v${app.getVersion()} (packaged=${isPackaged}) ` +
+    `db=${dbOverride ? (cfg.sshMode ? 'host-mysql-via-ssh-tunnel (offline fallback: ' + dbPath + ')' : 'host-mysql (offline fallback: ' + dbPath + ')') : dbPath}`
   );
 
   const started = await startEmbeddedServer(dbPath, dbOverride);
@@ -491,6 +599,10 @@ app.on('window-all-closed', () => {
     try { serverChild.kill(); } catch (_e) { /* ignore */ }
     serverChild = null;
   }
+  if (sshTunnelInstance) {
+    void sshTunnelInstance.stop();
+    sshTunnelInstance = null;
+  }
   app.quit();
 });
 
@@ -498,6 +610,10 @@ app.on('before-quit', () => {
   quitting = true;
   if (serverChild) {
     try { serverChild.kill(); } catch (_e) { /* ignore */ }
+  }
+  if (sshTunnelInstance) {
+    void sshTunnelInstance.stop();
+    sshTunnelInstance = null;
   }
 });
 
@@ -507,3 +623,9 @@ app.on('quit', () => {
     try { serverChild.kill(); } catch (_e) { /* ignore */ }
   }
 });
+
+/*
+ * export برای تست‌پذیری (الکترون main بودن این فایل را تحت تأثیر نمی‌گذارد):
+ * فرمت db-connection.txt باید بین save() و parseActiveOverride() round-trip شود
+ */
+module.exports = { parseActiveOverride, templateLines, sanitizeHost };

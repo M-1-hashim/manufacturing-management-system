@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ import { clearOfflineCache } from '@/lib/offline-client'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 
-// ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخه ۱.۰.۳ به بعد) ----------
+// ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخهٔ ۱.۰.۳ به بعد) ----------
 interface DbConnInfoT {
   ok: boolean
   path: string
@@ -38,11 +38,31 @@ interface DbConnInfoT {
   port: string
   database: string | null
   user: string | null
+  sshMode: boolean
+  sshHost: string | null
+  sshPort: string
+  sshUser: string | null
+  tunnelStatus: string | null
+  tunnelLocalPort: number | null
+}
+
+interface ConnSavePayloadT {
+  mode: 'ssh' | 'direct'
+  host: string
+  port: string
+  database: string
+  user: string
+  password: string
+  sshHost: string
+  sshPort: string
+  sshUser: string
+  sshPassword: string
 }
 
 interface DbConnApiT {
   info: () => Promise<DbConnInfoT>
-  save: (payload: { host: string; port: string; database: string; user: string; password: string }) => Promise<{ ok: boolean; path?: string; maskedUrl?: string; error?: string }>
+  save: (payload: ConnSavePayloadT) => Promise<{ ok: boolean; path?: string; maskedUrl?: string; error?: string }>
+  test: (payload: { sshHost: string; sshPort: string; sshUser: string; sshPassword: string }) => Promise<{ ok: boolean; kind?: string; error?: string }>
   reset: () => Promise<{ ok: boolean; path?: string; error?: string }>
   openFolder: () => Promise<{ ok: boolean; path?: string; error?: string }>
   relaunch: () => Promise<{ ok: boolean }>
@@ -153,9 +173,14 @@ export default function SettingsModule() {
   // ---------- اتصال به هاست از داخل برنامه (فقط نسخه ویندوز جدید) ----------
   const [connApi] = useState<DbConnApiT | null>(() => (typeof window !== 'undefined' ? window.dbConnection ?? null : null))
   const [connInfo, setConnInfo] = useState<DbConnInfoT | null>(null)
-  const [connForm, setConnForm] = useState({ host: '', port: '3306', database: '', user: '', password: '' })
+  const [connForm, setConnForm] = useState({
+    mode: 'ssh' as 'ssh' | 'direct',
+    host: '', port: '3306', database: '', user: '', password: '',
+    sshHost: '', sshPort: '21098', sshUser: '', sshPassword: '',
+  })
   const [connSaving, setConnSaving] = useState(false)
   const [connResetting, setConnResetting] = useState(false)
+  const [connTesting, setConnTesting] = useState(false)
 
   // ---------- وضعیت واقعی دیتابیس (کدام حالت؟ وصل است؟ جدول‌ها کامل؟) ----------
   const [dbInfo, setDbInfo] = useState<DbInfoT | null>(null)
@@ -235,10 +260,14 @@ export default function SettingsModule() {
         if (info.active) {
           setConnForm((c) => ({
             ...c,
+            mode: info.sshMode ? 'ssh' : 'direct',
             host: info.host || '',
             port: info.port || '3306',
             database: info.database || '',
             user: info.user || '',
+            sshHost: info.sshHost || '',
+            sshPort: info.sshPort || '21098',
+            sshUser: info.sshUser || '',
           }))
         }
       })
@@ -248,23 +277,68 @@ export default function SettingsModule() {
     }
   }, [connApi])
 
+  async function testSshConnection() {
+    if (!connApi) return
+    if (!connForm.sshHost.trim() || !connForm.sshUser.trim()) {
+      toast.error(t('آدرس سرور و نام کاربری SSH الزامی است', 'د SSH پته او کاروونکی نوم اړین دي', 'SSH server address and username are required'))
+      return
+    }
+    setConnTesting(true)
+    try {
+      const res = await connApi.test({
+        sshHost: connForm.sshHost.trim(),
+        sshPort: connForm.sshPort.trim() || '21098',
+        sshUser: connForm.sshUser.trim(),
+        sshPassword: connForm.sshPassword,
+      })
+      if (res.ok) {
+        toast.success(t('✅ اتصال SSH موفق بود — مقادیر درست است، حالا ذخیره کنید', '✅ د SSH نښلول بریالی شو — اوس خوندي کړئ', '✅ SSH connection OK — now save'))
+      } else if (res.kind === 'AUTH') {
+        toast.error(t('🔑 رمز یا نام کاربری SSH (همان cPanel) غلط است', '🔑 د SSH (cPanel) پاسورد یا کاروونکی غلط دی', 'Wrong SSH (cPanel) username or password'))
+      } else if (res.kind === 'TIMEOUT') {
+        toast.error(t('⏳ از سرور پاسخی نیامد — اینترنت یا فایروال را چک کنید', '⏳ له سرور ځواب نه شو — انترنت یا فایروال وګورئ', 'No response from server — check internet/firewall'))
+      } else {
+        toast.error(t('🌐 سرور SSH پیدا نشد — آدرس/پورت را چک کنید و در cPanel → Manage Shell دسترسی SSH را فعال کنید', '🌐 د SSH سرور نه موندل شو — پته/بورډ وګورئ او په cPanel → Manage Shell کې SSH فعاله کړئ', 'SSH server not reachable — check address/port and enable SSH in cPanel → Manage Shell'))
+      }
+    } catch {
+      toast.error(t('خطا در تست اتصال', 'د ازمویلې ستونزه', 'Test failed'))
+    } finally {
+      setConnTesting(false)
+    }
+  }
+
   async function saveHostConnection() {
     if (!connApi) return
-    if (!connForm.host.trim() || !connForm.database.trim() || !connForm.user.trim()) {
+    const ssh = connForm.mode === 'ssh'
+    if (ssh) {
+      if (!connForm.sshHost.trim() || !connForm.sshUser.trim() || !connForm.database.trim() || !connForm.user.trim()) {
+        toast.error(t('آدرس SSH، نام کاربری SSH، نام دیتابیس و نام کاربری دیتابیس الزامی است', 'د SSH پته، د SSH کاروونکی، د ډاټابیس نوم او کاروونکی اړین دي', 'SSH address, SSH user, database name and username are required'))
+        return
+      }
+      if (!connForm.sshPassword) {
+        toast.error(t('رمز SSH (همان رمز cPanel) الزامی است', 'د SSH پاسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required'))
+        return
+      }
+    } else if (!connForm.host.trim() || !connForm.database.trim() || !connForm.user.trim()) {
       toast.error(t('آدرس هاست، نام دیتابیس و نام کاربری الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
       return
     }
     setConnSaving(true)
     try {
       const res = await connApi.save({
+        mode: connForm.mode,
         host: connForm.host.trim(),
         port: connForm.port.trim() || '3306',
         database: connForm.database.trim(),
         user: connForm.user.trim(),
         password: connForm.password,
+        sshHost: connForm.sshHost.trim(),
+        sshPort: connForm.sshPort.trim() || '21098',
+        sshUser: connForm.sshUser.trim(),
+        sshPassword: connForm.sshPassword,
       })
       if (!res.ok) {
-        throw new Error(res.error === 'MISSING_FIELDS'
+        throw new Error(res.error === 'MISSING_FIELDS' || res.error === 'MISSING_SSH_PASSWORD'
           ? t('فیلدهای الزامی را کامل کنید', 'فیلدهای الزامی را کامل کنید', 'Missing required fields')
           : res.error || t('خطای نامشخص', 'ناڅرګنده ستونزه', 'Unknown error'))
       }
@@ -1021,11 +1095,17 @@ export default function SettingsModule() {
                               ? t('🗄 دیتابیس با این نام پیدا نشد — نام را دقیقاً مثل cPanel بنویسید (مثل username_dbname).', '🗄 ډاټابیس د دې نوم سره نه موندل کېږي — نوم دقیقاً لکه cPanel ولیکئ.', 'Database not found — write the name exactly as in cPanel.')
                               : dbInfo.errorKind === 'NO_TABLES'
                                 ? t('📋 وصل شد ولی جدول‌ها ساخته نشده‌اند — فایل SQL هاست را در phpMyAdmin ایمپورت کنید.', '📋 ونښلول خو جدولونه نه دي جوړ شوي — د SQL هوسټ فایل په phpMyAdmin وارد کړئ.', 'Connected but tables are missing — import the host SQL file in phpMyAdmin.')
-                                : t(
-                                    '🌐 سرور MySQL پیدا نشد. معمول‌ترین علت‌ها: (۱) IP دستگاه شما در Remote MySQL هاست ثبت نیست یا عوض شده — در cPanel → Remote MySQL علامت % را اضافه کنید؛ (۲) پورت 3306 در فایروال هاست بسته است — از پشتیبانی هاست بخواهید بازش کند؛ (۳) آدرس هاست اشتباه است.',
-                                    '🌐 د MySQL سرور نه موندل کېږي: (۱) ستاسو IP په Remote MySQL کې نه دی یا بدل شوی — په cPanel کې % ورزیات کړئ؛ (۲) بورډ 3306 تړلی دی — له هوسټ ملاتړ وغواړئ؛ (۳) د هوسټ پته غلطه ده.',
-                                    'MySQL server not reachable. Likely causes: (1) your IP is missing/changed in Remote MySQL — add % in cPanel; (2) port 3306 blocked by host firewall — ask hosting support; (3) wrong host address.'
-                                  )}
+                                : dbInfo.host === '127.0.0.1'
+                                  ? t(
+                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) اینترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس سرور SSH، پورت (معمولاً 21098) و نام کاربری/رمز cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
+                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH سرور پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پاسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
+                                      '🔗 SSH tunnel cannot connect. Check: (1) internet is on; (2) SSH access enabled in cPanel → Manage Shell; (3) SSH server address, port (usually 21098) and cPanel credentials are correct — the "Test SSH connection" button gives an exact answer. Until the tunnel connects, the app works on the local database.'
+                                    )
+                                  : t(
+                                      '🌐 سرور MySQL پیدا نشد. اگر هاست شما اشتراکی است (Namecheap و اکثر cPanelها)، اتصال مستقیم پورت 3306 همیشه بسته است — در فرم پایین حالت «تونل SSH» را انتخاب و ذخیره کنید. برای VPS/سرور اختصاصی: (۱) IP دستگاه در Remote MySQL ثبت و به‌روز باشد؛ (۲) پورت 3306 در فایروال باز باشد؛ (۳) آدرس هاست درست باشد.',
+                                      '🌐 د MySQL سرور نه موندل کېږي. که هوسټ مو شریک دی (Namecheap او ډېری cPanel)، مستقیم نښلول 3306 تل تړلی وي — په فرم کې «د SSH تونل» حالت غوره او خوندي کړئ. د VPS لپاره: (۱) IP په Remote MySQL کې اوسمن وي؛ (۲) بورډ 3306 پرانیستی وي؛ (۳) پته سمه وي.',
+                                      '🌐 MySQL server not reachable. If you are on shared hosting (Namecheap and most cPanels), direct port 3306 is always blocked — switch to SSH tunnel mode in the form below and save. For VPS/dedicated: (1) your IP registered/updated in Remote MySQL; (2) port 3306 open in firewall; (3) correct host address.'
+                                    )}
                         </p>
                       </div>
                     )
@@ -1149,33 +1229,138 @@ export default function SettingsModule() {
                     'Important: for the first migration export the JSON backup, connect here, then restore that file. After that everything is automatic: on internet loss the app works locally and syncs automatically when back online.'
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="hHost">{t('آدرس هاست', 'د هوسټ پته', 'Host address')}</Label>
-                    <Input id="hHost" dir="ltr" placeholder="yourdomain.com" autoComplete="off" value={connForm.host} onChange={(e) => setConnForm({ ...connForm, host: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="hPort">{t('پورت (معمولاً 3306)', 'بورډ (معمولاً 3306)', 'Port (usually 3306)')}</Label>
-                    <Input id="hPort" dir="ltr" inputMode="numeric" placeholder="3306" value={connForm.port} onChange={(e) => setConnForm({ ...connForm, port: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="hDb">{t('نام دیتابیس', 'د ډاټابیس نوم', 'Database name')}</Label>
-                    <Input id="hDb" dir="ltr" placeholder="cpuser_erp" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
-                    <Input id="hUser" dir="ltr" placeholder="cpuser_erp" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
-                    <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
-                  </div>
+                {/* انتخاب روش اتصال — تونل SSH (هاست اشتراکی) یا اتصال مستقیم */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConnForm({ ...connForm, mode: 'ssh' })}
+                    className={
+                      'rounded-lg border p-3 text-start transition-colors ' +
+                      (connForm.mode === 'ssh'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border bg-background hover:bg-muted/50')
+                    }
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <KeyRound className="h-4 w-4 text-primary" />
+                      {t('تونل SSH — هاست اشتراکی', 'د SSH تونل — شریک هوسټ', 'SSH tunnel — shared hosting')}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground leading-5">
+                      {t(
+                        'برای Namecheap و هر cPanel که اتصال مستقیم MySQL (3306) بسته است — برنامه خودش تونل امن می‌سازد.',
+                        'د Namecheap او هر cPanel چې مستقیم نښلول (3306) تړلی وي — پروګرام پخپله تونل جوړوي.',
+                        'For Namecheap and any cPanel with remote MySQL (3306) blocked — the app builds a secure tunnel itself.'
+                      )}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConnForm({ ...connForm, mode: 'direct' })}
+                    className={
+                      'rounded-lg border p-3 text-start transition-colors ' +
+                      (connForm.mode === 'direct'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border bg-background hover:bg-muted/50')
+                    }
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <Server className="h-4 w-4 text-primary" />
+                      {t('اتصال مستقیم — VPS / سرور اختصاصی', 'مستقیم نښلول — VPS / ځانګړی سرور', 'Direct connection — VPS / dedicated')}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground leading-5">
+                      {t(
+                        'وقتی MySQL روی شبکه داخلی یا سروری در دسترس است که پورت 3306 آن باز است.',
+                        'کله چې MySQL په داخلي شبکه یا هغه سرور وي چې بورډ 3306 یې پرانیستی وي.',
+                        'When MySQL is on a LAN or a server with port 3306 open.'
+                      )}
+                    </span>
+                  </button>
                 </div>
+
+                {connForm.mode === 'ssh' ? (
+                  <>
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-6 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+                      <p className="font-semibold">
+                        {t('تنظیم در cPanel (یک‌بار):', 'په cPanel کې امستنه (یو ځل):', 'Setup in cPanel (once):')}
+                      </p>
+                      <p>
+                        ۱) {t('«Manage My Databases» → دیتابیس و کاربر بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
+                        {'  '}۲) {t('«Manage Shell» → دسترسی SSH را Enable کنید.', '«Manage Shell» → د SSH لاسرسی فعاله کړئ.', '«Manage Shell» → enable SSH access.')}
+                      </p>
+                      <p>
+                        {t(
+                          'آدرس سرور SSH در ایمیل خوش‌آمد هاست است (مثل server370.web-hosting.com)، پورت آن معمولاً 21098، و نام کاربری/رمز SSH همان ورود cPanel است.',
+                          'د SSH سرور پته په د هوسټ د هرکلي بریښنالیک کې ده (لکه server370.web-hosting.com)، بورډ یې معمولاً 21098 دی، او د SSH کاروونکی/پاسورد هماغه د cPanel ننوتل دی.',
+                          'The SSH server address is in your hosting welcome email (e.g. server370.web-hosting.com), port is usually 21098, and SSH user/password are your cPanel login.'
+                        )}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="sHost">{t('آدرس سرور SSH', 'د SSH سرور پته', 'SSH server address')}</Label>
+                        <Input id="sHost" dir="ltr" placeholder="server370.web-hosting.com" autoComplete="off" value={connForm.sshHost} onChange={(e) => setConnForm({ ...connForm, sshHost: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="sPort">{t('پورت SSH (معمولاً 21098)', 'د SSH بورډ (معمولاً 21098)', 'SSH port (usually 21098)')}</Label>
+                        <Input id="sPort" dir="ltr" inputMode="numeric" placeholder="21098" value={connForm.sshPort} onChange={(e) => setConnForm({ ...connForm, sshPort: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="sUser">{t('نام کاربری SSH (همان cPanel)', 'د SSH کاروونکی (همان cPanel)', 'SSH username (same as cPanel)')}</Label>
+                        <Input id="sUser" dir="ltr" placeholder="cpuser" autoComplete="off" value={connForm.sshUser} onChange={(e) => setConnForm({ ...connForm, sshUser: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="sPass">{t('رمز SSH (همان رمز cPanel)', 'د SSH پاسورد (همان د cPanel)', 'SSH password (same as cPanel)')}</Label>
+                        <Input id="sPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.sshPassword} onChange={(e) => setConnForm({ ...connForm, sshPassword: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="hDb">{t('نام دیتابیس', 'د ډاټابیس نوم', 'Database name')}</Label>
+                        <Input id="hDb" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                        <Input id="hUser" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                        <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hHost">{t('آدرس هاست', 'د هوسټ پته', 'Host address')}</Label>
+                      <Input id="hHost" dir="ltr" placeholder="your-server.com" autoComplete="off" value={connForm.host} onChange={(e) => setConnForm({ ...connForm, host: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hPort">{t('پورت (معمولاً 3306)', 'بورډ (معمولاً 3306)', 'Port (usually 3306)')}</Label>
+                      <Input id="hPort" dir="ltr" inputMode="numeric" placeholder="3306" value={connForm.port} onChange={(e) => setConnForm({ ...connForm, port: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hDb">{t('نام دیتابیس', 'د ډاټابیس نوم', 'Database name')}</Label>
+                      <Input id="hDb" dir="ltr" placeholder="erp_db" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                      <Input id="hUser" dir="ltr" placeholder="erp_user" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                      <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={saveHostConnection} disabled={connSaving} className="gap-2">
                     <Save className="h-4 w-4" />
                     {connSaving ? t('در حال ذخیره…', 'خوندي کول…', 'Saving…') : t('ذخیره و اتصال به هاست', 'خوندي او نښلول', 'Save & connect to host')}
                   </Button>
+                  {connForm.mode === 'ssh' && (
+                    <Button variant="outline" onClick={testSshConnection} disabled={connTesting} className="gap-2">
+                      <ShieldCheck className={'h-4 w-4' + (connTesting ? ' animate-pulse' : '')} />
+                      {connTesting ? t('در حال تست SSH…', 'د SSH ازمویل…', 'Testing SSH…') : t('تست اتصال SSH', 'د SSH نښلول ازمویل', 'Test SSH connection')}
+                    </Button>
+                  )}
                   <Button variant="outline" className="gap-2" onClick={() => { void connApi.openFolder() }}>
                     <FolderOpen className="h-4 w-4" />
                     {t('باز کردن پوشه تنظیمات', 'د امستنې فولډر پرانیستل', 'Open settings folder')}
@@ -1187,18 +1372,34 @@ export default function SettingsModule() {
                     </Button>
                   )}
                 </div>
+                {connInfo?.sshMode && connInfo.tunnelStatus && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5" dir="ltr">
+                    <span className={'inline-block h-2 w-2 rounded-full ' + (connInfo.tunnelStatus === 'online' ? 'bg-emerald-500' : connInfo.tunnelStatus === 'stopped' ? 'bg-zinc-400' : 'bg-amber-500 animate-pulse')} />
+                    SSH tunnel: {connInfo.tunnelStatus}{connInfo.tunnelLocalPort ? ` @127.0.0.1:${connInfo.tunnelLocalPort}` : ''}
+                  </p>
+                )}
                 {connInfo?.path && (
                   <p className="text-xs text-muted-foreground break-all" dir="ltr">
                     {t('فایل تنظیمات:', 'د امستنې فایل:', 'Config file:')} <span className="font-mono">{connInfo.path}</span>
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    'توجه: در cPanel هاست باید Remote MySQL فعال باشد (IP دستگاه یا علامت % اضافه شده باشد). اگر بعد از ذخیره برنامه وصل نشد، پورت 3306 ممکن است در هاست شما بسته باشد — از پشتیبانی هاست بپرسید.',
-                    'پاملرنه: په cPanel کې باید Remote MySQL فعال وي. که وصل نشو، بورډ 3306 به تړلی وي — له هوسټ ملاتړ پوښتنه وکړئ.',
-                    'Note: Remote MySQL must be enabled in cPanel (add your IP or %). If the app cannot connect afterwards, port 3306 may be blocked — ask your hosting support.'
-                  )}
-                </p>
+                {connForm.mode === 'ssh' ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      'توجه: در حالت تونل نیازی به Remote MySQL نیست — فقط در cPanel → Manage Shell دسترسی SSH فعال باشد. برنامه در هر بار اجرا تونل را خودکار وصل می‌کند؛ اگر تونل قطع شود برنامه روی دیتابیس محلی ادامه می‌دهد و بعداً خودکار همگام می‌شود.',
+                      'پاملرنه: په تونل حالت کې Remote MySQL ته اړتیا نشته — یوازې په cPanel → Manage Shell کې SSH فعال وي. پروګرام په هر پرانیستل کې تونل اتوماتیک نښلوي؛ که تونل پرې شي، پروګرام په ځایی ډاټابیس کار کوي او وروسته اتوماتیک همغه کېږي.',
+                      'Note: tunnel mode does not need Remote MySQL — only enable SSH in cPanel → Manage Shell. The app reconnects the tunnel automatically on every launch; if the tunnel drops, the app keeps working on the local database and syncs automatically later.'
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      'توجه: در هاست‌های اشتراکی (Namecheap و اکثر cPanelها) اتصال مستقیم MySQL بسته است و فقط حالت «تونل SSH» کار می‌کند. اتصال مستقیم برای VPS/سرور اختصاصی است.',
+                      'پاملرنه: په شریکو هوسټونو کې مستقیم نښلول تړلی وي — یوازې «د SSH تونل» کار کوي. مستقیم نښلول د VPS لپاره دي.',
+                      'Note: on shared hosts (Namecheap and most cPanels) direct MySQL is blocked — only SSH tunnel works. Direct mode is for VPS/dedicated servers.'
+                    )}
+                  </p>
+                )}
               </>
             ) : (
               <div className="space-y-3">
