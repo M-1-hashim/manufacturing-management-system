@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, dbInternal } from '@/lib/db'
 import { getState } from '@/lib/connection-manager'
 import { APP_VERSION } from '@/lib/app-version'
 
@@ -70,8 +70,10 @@ export async function GET() {
   const mgr = getState()
   const mode = mgr.mode // local | host-mysql | host-offline
 
-  // در حالت آفلاین، کوئری‌ها روی کپی محلی زده می‌شوند (کلاینت فعال SQLite است)
-  const effectiveIsMysql = isMysql && mode === 'host-mysql'
+  // در معماری محلی‌محور، برنامه همیشه روی SQLite کار می‌کند؛ این گزارش
+  // وضعیت دیتابیسِ «فعالِ برنامه» (محلی) را نشان می‌دهد. جدول‌های محلی
+  // همیشه کامل ساخته شده‌اند (db push دسکتاپ).
+  const effectiveIsMysql = isMysql && !dbInternal.hasLocal()
 
   try {
     let version = ''
@@ -99,7 +101,8 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       appVersion: APP_VERSION,
-      mode: mode === 'host-offline' ? 'host-offline' : effectiveIsMysql ? 'host-mysql' : 'local-sqlite',
+      // mode = وضعیت اتصال به هاست (نه محل ذخیره — داده همیشه محلی است)
+      mode: mode === 'host-offline' ? 'host-offline' : isMysql ? 'host-mysql' : 'local-sqlite',
       configuredForHost: isMysql,
       host,
       port,
@@ -128,7 +131,7 @@ export async function GET() {
       {
         ok: false,
         appVersion: APP_VERSION,
-        mode: mode === 'host-offline' ? 'host-offline' : effectiveIsMysql ? 'host-mysql' : 'local-sqlite',
+        mode: mode === 'host-offline' ? 'host-offline' : isMysql ? 'host-mysql' : 'local-sqlite',
         configuredForHost: isMysql,
         host,
         port,

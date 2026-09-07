@@ -7,27 +7,35 @@ import {
   snapshotServerToLocal,
   runReconnectSync,
   pendingPushCount,
+  syncTick,
+  getLastTickResult,
+  pruneServerTombstones,
+  countMismatchTables,
   type ClientPair,
   type SyncSummary,
 } from '@/lib/sync-engine'
 import { ensureHostReady } from '@/lib/host-setup'
 import { MYSQL_TABLE_NAMES } from '@/lib/mysql-ddl'
+import { ensureLocalSchema } from '@/lib/local-schema'
 
 /*
- * مدیریت اتصال — سوییچ خودکار آنلاین/آفلاین:
+ * مدیریت اتصال + زمان‌بند همگام‌سازی لحظه‌ای — معماری محلی‌محور:
  *
- * - هر ۱۵ ثانیه یک SELECT 1 روی هاست MySQL زده می‌شود (تایم‌اوت ۸ ثانیه)
- * - حالت آنلاین (host-mysql): دو خطای پیاپی (یا اولین خطا در ۶۰ ثانیهٔ اول)
- *   → سوییچ به دیتابیس محلی (host-offline). از این لحظه همهٔ خواندن/نوشتن‌ها
- *   روی آخرین کپی دیتای سرور (SQLite) انجام می‌شود و حذف‌ها ژورنال می‌شوند.
- * - حالت آفلاین (host-offline): با اولین پینگ موفق → برگشت خودکار به هاست +
- *   همگام‌سازی کامل (push تغییرات آفلاین → تکرار حذف‌ها → اسنپ‌شات سرور)
- * - بدون هاست (local): هیچ تایمری روشن نمی‌شود.
+ * - برنامه همیشه روی دیتابیس محلی (SQLite) کار می‌کند → سرعت maksimum
+ * - هر ۳ ثانیه یک «تیک» همگام‌سازی دوسویه اجرا می‌شود (فقط دلتاها؛
+ *   تیک بی‌کار فقط ۲ رفت‌وبرگشت شبکه دارد)
+ * - هر ۱۵ ثانیه پینگ هاست (SELECT 1) — برای تشخیص قطعی/وصل شدن
+ * - قطعی: بعد از دو خطای پیاپی (یا اولین خطا در ۶۰ ثانیهٔ اول) → بج
+ *   «آفلاین» + تیک‌ها متوقف + تغییرات روی محلی صف می‌شوند
+ * - وصل شدن: برگشت خودکار → push تغییرات آفلاین + اسنپ‌شات کامل
+ * - هر ۱۵ دقیقه «مطابق‌سازی تور ایمنی»: اگر شمارش سطرها ناهم‌خوان باشد
+ *   و هیچ تغییر ارسال‌نشده‌ای وجود نداشته باشد → اسنپ‌شات اصلاحی
  */
 
 export const CHECK_INTERVAL_MS = 15_000
 export const PING_TIMEOUT_MS = 8_000
-const SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000
+export const TICK_INTERVAL_MS = 3_000
+const RECONCILE_INTERVAL_MS = 15 * 60 * 1000
 const FAILS_TO_SWITCH = 2
 const BOOT_GRACE_MS = 60_000
 
@@ -55,9 +63,13 @@ export interface ConnectionStatus {
 interface ManagerState {
   started: boolean
   timer: ReturnType<typeof setInterval> | null
+  tickTimer: ReturnType<typeof setInterval> | null
+  reconcileTimer: ReturnType<typeof setInterval> | null
   startedAt: number
   checking: boolean
   fails: number
+  hostReady: boolean
+  hostSetupTried: boolean
   lastCheckAt: string | null
   lastOkAt: string | null
   lastError: string | null
@@ -80,9 +92,13 @@ function st(): ManagerState {
     g.__mfgConnMgr = {
       started: false,
       timer: null,
+      tickTimer: null,
+      reconcileTimer: null,
       startedAt: Date.now(),
       checking: false,
       fails: 0,
+      hostReady: false,
+      hostSetupTried: false,
       lastCheckAt: null,
       lastOkAt: null,
       lastError: null,
@@ -137,44 +153,49 @@ async function pingMysql(): Promise<void> {
   })
 }
 
-/* ------------------------------- سوییچ‌ها ------------------------------- */
+/* ------------------------------- راه‌اندازی هاست ------------------------------- */
 
 /**
- * راه‌اندازی خودکار هاست — فقط یک‌بار در طول عمر پروسه:
- * ساخت جدول‌های گمشده روی هاست تازه (۱۹ جدول) + بوت‌استرپ کاربران/تنظیمات
- * وقتی هاست خالی است. نتیجه در لاگ سرور ثبت می‌شود.
+ * راه‌اندازی خودکار هاست — یک‌بار در طول عمر پروسه:
+ * ساخت/به‌روزرسانی جدول‌های هاست (۱۹ جدول + ستون‌های جدید + جدول سنگ‌قبر)
+ * + بوت‌استرپ کاربران/تنظیمات وقتی هاست خالی است.
  */
-let hostSetupTried = false
-async function ensureHostOnce(): Promise<void> {
-  if (hostSetupTried) return
+async function ensureHostOnce(): Promise<boolean> {
+  const s = st()
+  if (s.hostReady) return true
+  if (s.hostSetupTried) return false
   const pair = getPair()
-  if (!pair) return
-  hostSetupTried = true
+  if (!pair) return false
+  s.hostSetupTried = true
   try {
     const r = await ensureHostReady(pair)
     if (r.ok) {
+      s.hostReady = true
       console.log(
         `[conn] host setup OK: tables ${r.tablesAfter}/${MYSQL_TABLE_NAMES.length}` +
-          ` created=[${r.createdTables.join(',') || '-'}]` +
+          ` created=[${r.createdTables.join(',') || '-'}] migrated=[${r.migratedColumns.join(',') || '-'}]` +
           (r.bootstrapped ? ` bootstrap(users:${r.copiedUsers}, settings:${r.copiedSettings})` : '')
       )
-    } else {
-      console.warn(`[conn] host setup problem: ${r.error}`)
+      return true
     }
+    console.warn(`[conn] host setup problem: ${r.error}`)
+    return false
   } catch (e) {
     console.error('[conn] host setup failed:', e)
+    return false
   }
 }
+
+/* ------------------------------- سوییچ‌ها ------------------------------- */
 
 async function switchToOffline(errorText: string): Promise<void> {
   const pair = getPair()
   if (!dbInternal.hasLocal() || !pair) {
     // استقرار وب روی هاست — دیتابیس محلی در کار نیست؛ فقط گزارش
-    console.error('[conn] host unreachable and no local db — staying on mysql:', errorText)
+    console.error('[conn] host unreachable and no local db — staying on host:', errorText)
     return
   }
   const s = st()
-  dbInternal.setActive('sqlite')
   dbInternal.setMode('host-offline')
   s.fails = 0
   if (!s.offlineSince) s.offlineSince = new Date().toISOString()
@@ -184,43 +205,100 @@ async function switchToOffline(errorText: string): Promise<void> {
   } catch (e) {
     console.error('[conn] persist offline meta failed:', e)
   }
-  console.warn(`[conn] ⚠ OFFLINE mode — host unreachable (${errorText}). Working on local SQLite since ${s.offlineSince}`)
+  console.warn(`[conn] ⚠ OFFLINE mode — host unreachable (${errorText}). Changes queued locally since ${s.offlineSince}`)
 }
 
-function switchToOnline(): void {
+async function switchToOnline(): Promise<void> {
   const pair = getPair()
   if (!pair) return
   const s = st()
-  dbInternal.setActive('mysql')
   dbInternal.setMode('host-mysql')
   s.fails = 0
   void setMeta(pair, 'sync.lastMode', 'host-mysql').catch(() => {})
   s.syncing = true
-  const since = s.offlineSince
   console.log('[conn] ✅ host reachable again — reconnect sync started')
-  // اول راه‌اندازی هاست (جدول‌های گمشده) — بعد push/snapshot تا خطای NO_TABLES نبینیم
-  void ensureHostOnce()
-    .catch(() => {})
-    .then(() => runReconnectSync(pair, since))
-    .then((summary) => {
-      s.lastSyncAt = summary.finishedAt
-      s.lastSyncSummary = summary
-      s.lastSyncError = null
-      s.offlineSince = null
-      console.log('[conn] reconnect sync finished:', JSON.stringify(summary))
-    })
-    .catch((e) => {
-      s.lastSyncError = String((e as Error)?.message || e)
-      console.error('[conn] reconnect sync failed:', e)
-    })
-    .finally(() => {
-      s.syncing = false
-    })
+  try {
+    const ready = await ensureHostOnce()
+    if (!ready) throw new Error('host setup failed')
+    // اگر دستگاه محلی خالی است (نصب تازه روی دستگاه جدید) → اول کپی کامل سرور
+    await ensureInitialPull(pair)
+    const summary = await runReconnectSync(pair, s.offlineSince)
+    s.lastSyncAt = summary.finishedAt
+    s.lastSyncSummary = summary
+    s.lastSyncError = null
+    s.offlineSince = null
+    console.log('[conn] reconnect sync finished:', JSON.stringify(summary))
+  } catch (e) {
+    s.lastSyncError = String((e as Error)?.message || e)
+    console.error('[conn] reconnect sync failed:', e)
+  } finally {
+    s.syncing = false
+  }
+}
+
+/* --------------------------- اولین کپی سرور → دستگاه --------------------------- */
+
+let initialPullDone = false
+
+/**
+ * اگر دیتابیس محلی هیچ کاربری ندارد و هاست در دسترس است، کامل کپی می‌شود
+ * (نصب تازه روی دستگاه جدید / پاک‌شدن دیتابیس محلی). از مسیر لاگین هم
+ * قابل فراخوانی است تا اولین ورود بدون داده انجام نشود.
+ */
+export async function ensureInitialPull(pair?: ClientPair): Promise<boolean> {
+  const p = pair ?? getPair()
+  if (!p) return false
+  if (initialPullDone) return true
+  try {
+    const userCount = await p.local.user.count()
+    if (userCount > 0) {
+      initialPullDone = true
+      return true
+    }
+    const s = st()
+    s.snapshotting = true
+    try {
+      const r = await snapshotServerToLocal(p)
+      initialPullDone = true
+      s.lastSnapshotAt = new Date().toISOString()
+      s.lastSnapshotRows = r.rows
+      console.log(`[conn] initial pull from host OK: ${r.rows} rows`)
+      return true
+    } finally {
+      s.snapshotting = false
+    }
+  } catch (e) {
+    console.error('[conn] initial pull failed:', e)
+    return false
+  }
+}
+
+/* ------------------------------- تیک همگام‌سازی ------------------------------- */
+
+async function runTick(): Promise<void> {
+  const s = st()
+  const pair = getPair()
+  if (!pair) return
+  if (dbInternal.getMode() !== 'host-mysql' || !s.hostReady || s.syncing) return
+  try {
+    const r = await syncTick(pair)
+    if (!r.ok && r.error && !r.error.startsWith('tables:')) {
+      // خطای سطح شبکه/سرور — بگذار پینگ سریع بعدی وضعیت را تشخیص دهد
+      s.fails++
+      if (dbInternal.getMode() === 'host-mysql' && s.fails >= FAILS_TO_SWITCH) {
+        await switchToOffline(`tick: ${r.error}`)
+      }
+    } else if (r.ok || (r.error ?? '').startsWith('tables:')) {
+      s.fails = Math.max(0, s.fails - 1)
+    }
+  } catch (e) {
+    console.error('[conn] tick crashed:', e)
+  }
 }
 
 /* ------------------------------- بررسی دوره‌ای ------------------------------- */
 
-export async function checkNow(): Promise<ConnectionStatus> {
+export async function checkNow(): Promise<ReturnType<typeof getState>> {
   const s = st()
   if (!dbInternal.mysqlConfigured() || s.checking) return getState()
   s.checking = true
@@ -235,11 +313,13 @@ export async function checkNow(): Promise<ConnectionStatus> {
     const mode = dbInternal.getMode()
     if (mode === 'host-offline') {
       // برگشت خودکار به هاست + همگام‌سازی
-      switchToOnline()
+      await switchToOnline()
     } else if (mode === 'host-mysql') {
-      // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/بوت‌استرپ) — یک‌بار
-      void ensureHostOnce()
-      void maybeSnapshot()
+      // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/ستون‌ها/بوت‌استرپ) — یک‌بار
+      const ready = await ensureHostOnce()
+      if (ready) {
+        await ensureInitialPull()
+      }
     }
   } catch (e) {
     const { code, kind } = classifyError(e)
@@ -258,21 +338,32 @@ export async function checkNow(): Promise<ConnectionStatus> {
   return getState()
 }
 
-async function maybeSnapshot(): Promise<void> {
+/* ------------------- مطابق‌سازی دوره‌ای (تور ایمنی) ------------------- */
+
+async function reconcile(): Promise<void> {
   const s = st()
   const pair = getPair()
-  if (!pair || s.snapshotting || s.syncing) return
-  const last = s.lastSnapshotAt ? Date.parse(s.lastSnapshotAt) : 0
-  if (Date.now() - last < SNAPSHOT_INTERVAL_MS) return
-  s.snapshotting = true
+  if (!pair) return
+  if (dbInternal.getMode() !== 'host-mysql' || !s.hostReady || s.syncing || s.snapshotting) return
   try {
-    const r = await snapshotServerToLocal(pair)
-    s.lastSnapshotAt = new Date().toISOString()
-    s.lastSnapshotRows = r.rows
+    await pruneServerTombstones(pair)
+    // فقط وقتی هیچ تغییر در صف نیست — وگرنه ناهم‌خوانی طبیعی است
+    const pending = await pendingPushCount(pair)
+    if (pending > 0) return
+    const mismatched = await countMismatchTables(pair)
+    if (mismatched.length === 0) return
+    console.warn(`[conn] row-count mismatch on [${mismatched.join(',')}] — running repair snapshot`)
+    s.snapshotting = true
+    try {
+      const r = await snapshotServerToLocal(pair)
+      s.lastSnapshotAt = new Date().toISOString()
+      s.lastSnapshotRows = r.rows
+      console.log(`[conn] repair snapshot OK: ${r.rows} rows`)
+    } finally {
+      s.snapshotting = false
+    }
   } catch (e) {
-    console.error('[conn] background snapshot failed:', e)
-  } finally {
-    s.snapshotting = false
+    console.error('[conn] reconcile failed:', e)
   }
 }
 
@@ -284,19 +375,23 @@ export function startConnectionManager(): void {
   s.started = true
   s.startedAt = Date.now()
 
+  void ensureLocalSchema()
+
   if (!dbInternal.mysqlConfigured()) {
     dbInternal.setMode('local')
     console.log('[conn] no host configured — local SQLite mode')
     return
   }
 
+  const pair = getPair()
+  if (!pair) {
+    // استقرار وب روی هاست (بدون دیتابیس محلی) — بدون failover و بدون سینک
+    dbInternal.setMode('host-mysql')
+    console.log('[conn] mysql configured but no local db — local-first disabled (web deploy)')
+    return
+  }
+
   void (async () => {
-    const pair = getPair()
-    if (!pair) {
-      // استقرار وب روی هاست (بدون دیتابیس محلی) — بدون failover
-      console.log('[conn] mysql configured but no local db — failover disabled (web deploy)')
-      return
-    }
     try {
       installOfflineJournaling()
       await ensureJournalTable(pair)
@@ -306,7 +401,6 @@ export function startConnectionManager(): void {
       s.lastSyncAt = await getMeta(pair, 'sync.lastSyncAt')
       if (lastMode === 'host-offline' || (storedOffline && storedOffline.length > 4)) {
         // اجرای قبلی در حالت آفلاین تمام شده — همین‌طور شروع کن (سریع و امن)
-        dbInternal.setActive('sqlite')
         dbInternal.setMode('host-offline')
         s.offlineSince = storedOffline && storedOffline.length > 4 ? storedOffline : new Date().toISOString()
         await setMeta(pair, 'sync.offlineSince', s.offlineSince)
@@ -317,12 +411,14 @@ export function startConnectionManager(): void {
     }
     void checkNow()
     s.timer = setInterval(() => void checkNow(), CHECK_INTERVAL_MS)
+    s.tickTimer = setInterval(() => void runTick(), TICK_INTERVAL_MS)
+    s.reconcileTimer = setInterval(() => void reconcile(), RECONCILE_INTERVAL_MS)
   })()
 }
 
 /* ------------------------------- اکشن‌های دستی ------------------------------- */
 
-/** «همگام‌سازی اکنون»: در آفلاین تلاش برای اتصال؛ در آنلاین اسنپ‌شات تازه */
+/** «همگام‌سازی اکنون»: در آفلاین تلاش برای اتصال؛ در آنلاین یک تیک فوری */
 export async function triggerSyncNow(): Promise<{ action: string; result?: string; error?: string }> {
   const s = st()
   const mode = dbInternal.getMode()
@@ -334,18 +430,14 @@ export async function triggerSyncNow(): Promise<{ action: string; result?: strin
   }
   if (mode === 'host-mysql') {
     const pair = getPair()
-    if (!pair) return { action: 'snapshot', error: 'no local db' }
-    if (s.snapshotting) return { action: 'snapshot', result: 'already running' }
-    s.snapshotting = true
-    try {
-      const r = await snapshotServerToLocal(pair)
-      s.lastSnapshotAt = new Date().toISOString()
-      s.lastSnapshotRows = r.rows
-      return { action: 'snapshot', result: `${r.rows} rows` }
-    } catch (e) {
-      return { action: 'snapshot', error: String((e as Error)?.message || e) }
-    } finally {
-      s.snapshotting = false
+    if (!pair) return { action: 'tick', error: 'no local db' }
+    const r = await syncTick(pair)
+    return {
+      action: 'tick',
+      result: r.ok
+        ? `↑${r.pushed} ↓${r.pulled} ✕${r.deleted} (${r.ms}ms)`
+        : `error: ${r.error ?? 'unknown'}`,
+      error: r.ok ? undefined : r.error,
     }
   }
   return { action: 'none', error: 'حالت محلی — هاستی تنظیم نشده است' }
@@ -372,20 +464,33 @@ export async function triggerSnapshotNow(): Promise<{ ok: boolean; rows?: number
 
 /* ------------------------------- وضعیت ------------------------------- */
 
-export async function getFullStatus(): Promise<ConnectionStatus & { pendingPush: number | null }> {
+export interface TickInfo {
+  ok: boolean
+  pushed: number
+  pulled: number
+  deleted: number
+  ms: number
+  at: string | null
+  error?: string
+}
+
+export async function getFullStatus(): Promise<ConnectionStatus & { pendingPush: number | null; lastTick: TickInfo | null }> {
   const s = st()
   const base = getState()
   let pendingPush: number | null = null
   const pair = getPair()
-  if (pair && dbInternal.getMode() === 'host-offline' && s.offlineSince) {
+  if (pair && dbInternal.getMode() === 'host-mysql') {
     try {
-      const since = new Date(s.offlineSince)
-      if (!Number.isNaN(since.getTime())) pendingPush = await pendingPushCount(pair, since)
+      pendingPush = await pendingPushCount(pair)
     } catch {
       /* ignore */
     }
   }
-  return { ...base, pendingPush }
+  const t = getLastTickResult()
+  const lastTick: TickInfo | null = t
+    ? { ok: t.ok, pushed: t.pushed, pulled: t.pulled, deleted: t.deleted, ms: t.ms, at: new Date().toISOString(), error: t.error }
+    : null
+  return { ...base, pendingPush, lastTick }
 }
 
 export function getState(): ConnectionStatus {

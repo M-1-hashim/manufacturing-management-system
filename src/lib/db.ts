@@ -3,21 +3,25 @@ import path from 'path'
 import { PrismaClient } from '@prisma/client'
 
 /*
- * پشتیبانی دوگانه از دیتابیس + تعویض خودکار آنلاین/آفلاین — قلب نسخهٔ دسکتاپ:
+ * پشتیبانی دوگانه از دیتابیس + معماری «محلی‌محور» (Local-First) — قلب نسخهٔ دسکتاپ:
  *
  * ۱) کلاینت Prisma در زمان build به یک provider قفل می‌شود (sqlite یا mysql).
  *    اسکریپت دسکتاپ (electron/build-desktop.sh) دو کلاینت می‌سازد:
  *      - SQLite  → node_modules/.prisma/client  (پیش‌فرض)
  *      - MySQL   → node_modules/prisma-mysql-client
- * ۲) این ماژول هر دو کلاینت را در زمان اجرا می‌سازد و «db» یک Proxy است که
- *    همهٔ کوئری‌ها را به «کلاینت فعال» می‌فرستد:
- *      - mode=host-mysql   → همه‌چیز روی هاست (آنلاین)
- *      - mode=host-offline → هاست در دسترس نیست؛ همه‌چیز روی SQLite محلی
- *        (آخرین کپی دیتای سرور) — حذف‌ها هم ژورنال می‌شوند تا بعد از وصل شدن
- *        روی هاست تکرار شوند
- *      - mode=local        → بدون هاست؛ فقط SQLite محلی
- * ۳) تصمیم سوییچ را connection-manager.ts می‌گیرد (پینگ هر ۱۵ ثانیه) و
- *    همگام‌سازی دوسویه را sync-engine.ts انجام می‌دهد.
+ * ۲) معماری v1.0.10 (همگام‌سازی لحظه‌ای):
+ *      - همهٔ خواندن/نوشتن‌های برنامه همیشه روی دیتابیس محلی (SQLite) انجام
+ *        می‌شود → پاسخ فوری، بدون تأخیر شبکه، بدون کندی حالت آنلاین
+ *      - موتور همگام‌سازی (sync-engine.ts) به‌صورت لحظه‌ای (هر چند ثانیه)
+ *        تغییرات را دوطرفه با هاست (MySQL) جابه‌جا می‌کند
+ *      - mode فقط «وضعیت دسترسی به هاست» را توصیف می‌کند:
+ *          local        → بدون هاست
+ *          host-mysql   → هاست در دسترس؛ همگام‌سازی لحظه‌ای فعال
+ *          host-offline → هاست در دسترس نیست؛ کار ادامه دارد و تغییرات
+ *                         صف می‌شوند تا بعد از وصل شدن ارسال شوند
+ *      - استثنا: استقرار وب روی هاست (بدون دیتابیس محلی) — db مستقیم MySQL
+ * ۳) حذف‌ها (delete/deleteMany) همیشه ژورنال می‌شوند تا روی هاست تکرار
+ *    شوند (حتی در حالت آنلاین — چون نوشتن روی محلی است)
  */
 
 type AnyPrismaCtor = new (options?: Record<string, unknown>) => PrismaClient
@@ -25,7 +29,7 @@ type AnyPrismaCtor = new (options?: Record<string, unknown>) => PrismaClient
 export type DbMode = 'local' | 'host-mysql' | 'host-offline'
 export type ActiveClientName = 'sqlite' | 'mysql'
 
-/** نام‌های مدل‌ها (delegate) — فقط همین‌ها در حالت آفلاین رهگیری حذف می‌شوند */
+/** نام‌های مدل‌ها (delegate) — فقط همین‌ها ژورنال حذف می‌گیرند */
 const MODEL_DELEGATES = new Set([
   'user', 'auditLog', 'productCategory', 'product', 'supplier', 'rawMaterial',
   'formula', 'formulaItem', 'productionOrder', 'customer', 'sale', 'saleItem',
@@ -104,8 +108,9 @@ function buildCore(): DbCore {
     }
   }
 
-  // فعال اولیه: اگر هاست تنظیم شده → MySQL (خوش‌بینانه؛ manager سریع اصلاح می‌کند)
-  const activeName: ActiveClientName = mysql ? 'mysql' : 'sqlite'
+  // معماری محلی‌محور: اگر دیتابیس محلی موجود است → همه‌چیز روی آن.
+  // کلاینت MySQL فقط توسط sync-engine استفاده می‌شود (و استقرار وب).
+  const activeName: ActiveClientName = sqlite ? 'sqlite' : 'mysql'
   const active = (activeName === 'mysql' ? mysql : sqlite) as PrismaClient
   const mode: DbMode = mysql ? 'host-mysql' : 'local'
 
@@ -118,7 +123,7 @@ const core: DbCore = globalForDb.__mfgDbCore ?? buildCore()
 // حالت آنلاین/آفلاین فقط برای یکی اعمال می‌شد (باگ اتصال-استخر در بستهٔ واقعی)
 globalForDb.__mfgDbCore = core
 
-/* ------------------------- ژورنال حذف در حالت آفلاین ------------------------- */
+/* ------------------------- ژورنال حذف (همیشه فعال) ------------------------- */
 
 function wrapDelegateForJournal(table: string, delegate: object): object {
   return new Proxy(delegate, {
@@ -148,17 +153,41 @@ function wrapDelegateForJournal(table: string, delegate: object): object {
 
 /* ------------------------------ Proxy اصلی db ------------------------------ */
 
+/** کلاینت تراکنش را هم با ژورنال حذف می‌پیچد (tx.sale.delete و…) */
+function wrapTxForJournal(tx: object, hook: (table: string, where: unknown) => void): object {
+  return new Proxy(tx, {
+    get(target, prop) {
+      const v = Reflect.get(target, prop, target)
+      if (MODEL_DELEGATES.has(String(prop)) && v && typeof v === 'object') {
+        return wrapDelegateForJournal(String(prop), v as object)
+      }
+      return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v
+    },
+  })
+}
+
 export const db = new Proxy({} as PrismaClient, {
   get(_t, prop) {
     const active = core.active
     const raw: unknown = Reflect.get(active as unknown as object, prop, active)
     if (typeof raw === 'function') {
+      // $transaction: کلاینت tx پاس‌داده‌شده به callback هم باید ژورنال حذف بگیرد
+      if (prop === '$transaction' && core.journalHook && core.sqlite) {
+        const hook = core.journalHook
+        return (fnOrOps: unknown, ...rest: unknown[]) => {
+          if (typeof fnOrOps === 'function') {
+            return (raw as (...a: unknown[]) => unknown).call(active, (tx: object) =>
+              (fnOrOps as (tx: object) => unknown)(wrapTxForJournal(tx, hook) as object)
+            )
+          }
+          return (raw as (...a: unknown[]) => unknown).apply(active, [fnOrOps, ...rest])
+        }
+      }
       return (raw as (...a: unknown[]) => unknown).bind(active)
     }
     if (
       raw &&
       typeof raw === 'object' &&
-      core.mode === 'host-offline' &&
       core.journalHook &&
       MODEL_DELEGATES.has(String(prop))
     ) {
@@ -175,7 +204,7 @@ export interface DbInternals {
   getClients(): { sqlite: PrismaClient | null; mysql: PrismaClient | null }
   /** کلاینت فعال فعلی */
   getActive(): { name: ActiveClientName; client: PrismaClient }
-  /** تغییر کلاینت فعال (اگر کلاینت موجود باشد) */
+  /** تغییر کلاینت فعال (فقط برای استقرار وب معنا دارد) */
   setActive(name: ActiveClientName): boolean
   /** حالت فعلی: local | host-mysql | host-offline */
   getMode(): DbMode
@@ -194,6 +223,9 @@ export const dbInternal: DbInternals = {
   getClients: () => ({ sqlite: core.sqlite, mysql: core.mysql }),
   getActive: () => ({ name: core.activeName, client: core.active }),
   setActive(name) {
+    // در معماری محلی‌محور کلاینت فعال ثابت است (sqlite روی دسکتاپ)؛
+    // این تابع فقط برای استقرار وب (بدون دیتابیس محلی) کار می‌کند
+    if (core.sqlite) return name === 'sqlite'
     const target = name === 'mysql' ? core.mysql : core.sqlite
     if (!target) return false
     core.activeName = name

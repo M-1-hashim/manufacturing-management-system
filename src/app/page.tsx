@@ -456,8 +456,20 @@ function Shell() {
       return {
         cls: 'text-emerald-600 border-emerald-300',
         icon: <Cloud className="h-3.5 w-3.5" />,
-        label: t('متصل به سرور', 'سرور نښلی', 'Server'),
-        title: `${t('دیتا روی هاست ذخیره می‌شود', 'ډاټا په هوسټ کې خوندي کېږي', 'Data is stored on the host')}${dbStatus.host ? `: ${dbStatus.host}` : ''}`,
+        label:
+          dbStatus.pendingPush && dbStatus.pendingPush > 0
+            ? t('همگام لحظه‌ای', 'لحظه‌يي همغه کول', 'Live sync')
+            : t('متصل به سرور', 'سرور نښلی', 'Server'),
+        title:
+          t(
+            'همگام‌سازی لحظه‌ای فعال است — هر تغییر در چند ثانیه با سرور جابه‌جا می‌شود',
+            'همغه کولو لحظه‌يي سیستم فعال دی — هر بدلون په څو ثانیو کې سره تبادله کېږي',
+            'Live sync active — every change reaches the server within seconds'
+          ) +
+          (dbStatus.host ? `: ${dbStatus.host}` : '') +
+          (dbStatus.pendingPush && dbStatus.pendingPush > 0
+            ? ` — ${dbStatus.pendingPush} ` + t('در صف ارسال', 'په لیبل کې', 'queued')
+            : ''),
       }
     if (dbStatus?.mode === 'local')
       return {

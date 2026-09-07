@@ -62,8 +62,10 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`entityId\` VARCHAR(191) NULL,\n` +
       `  \`details\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`AuditLog_createdAt_idx\`(\`createdAt\`),\n` +
       `  INDEX \`AuditLog_action_idx\`(\`action\`),\n` +
+      `  INDEX \`AuditLog_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -74,6 +76,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`id\` VARCHAR(191) NOT NULL,\n` +
       `  \`name\` VARCHAR(191) NOT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  UNIQUE INDEX \`ProductCategory_name_key\`(\`name\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
@@ -100,6 +103,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`updatedAt\` DATETIME(3) NOT NULL,\n` +
       `  UNIQUE INDEX \`Product_code_key\`(\`code\`),\n` +
       `  INDEX \`Product_categoryId_idx\`(\`categoryId\`),\n` +
+      `  INDEX \`Product_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('Product', 'categoryId', 'ProductCategory', 'SET NULL')}\n` +
       `) ${CHARSET}`,
@@ -114,6 +118,8 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`address\` TEXT NULL,\n` +
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  INDEX \`Supplier_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -136,6 +142,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`updatedAt\` DATETIME(3) NOT NULL,\n` +
       `  UNIQUE INDEX \`RawMaterial_code_key\`(\`code\`),\n` +
       `  INDEX \`RawMaterial_supplierId_idx\`(\`supplierId\`),\n` +
+      `  INDEX \`RawMaterial_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('RawMaterial', 'supplierId', 'Supplier', 'SET NULL')}\n` +
       `) ${CHARSET}`,
@@ -156,6 +163,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  \`updatedAt\` DATETIME(3) NOT NULL,\n` +
       `  INDEX \`Formula_productId_idx\`(\`productId\`),\n` +
+      `  INDEX \`Formula_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('Formula', 'productId', 'Product', 'RESTRICT')}\n` +
       `) ${CHARSET}`,
@@ -169,8 +177,11 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`rawMaterialId\` VARCHAR(191) NOT NULL,\n` +
       `  \`quantity\` DOUBLE NOT NULL,\n` +
       `  \`percentage\` DOUBLE NULL,\n` +
+      `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`FormulaItem_formulaId_idx\`(\`formulaId\`),\n` +
       `  INDEX \`FormulaItem_rawMaterialId_idx\`(\`rawMaterialId\`),\n` +
+      `  INDEX \`FormulaItem_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('FormulaItem', 'formulaId', 'Formula', 'CASCADE')},\n` +
       `  ${fk('FormulaItem', 'rawMaterialId', 'RawMaterial', 'RESTRICT')}\n` +
@@ -203,6 +214,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  INDEX \`ProductionOrder_formulaId_idx\`(\`formulaId\`),\n` +
       `  INDEX \`ProductionOrder_productId_idx\`(\`productId\`),\n` +
       `  INDEX \`ProductionOrder_status_idx\`(\`status\`),\n` +
+      `  INDEX \`ProductionOrder_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('ProductionOrder', 'formulaId', 'Formula', 'RESTRICT')},\n` +
       `  ${fk('ProductionOrder', 'productId', 'Product', 'RESTRICT')}\n` +
@@ -221,6 +233,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  \`updatedAt\` DATETIME(3) NOT NULL,\n` +
+      `  INDEX \`Customer_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -249,6 +262,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  UNIQUE INDEX \`Sale_invoiceNumber_key\`(\`invoiceNumber\`),\n` +
       `  INDEX \`Sale_customerId_idx\`(\`customerId\`),\n` +
       `  INDEX \`Sale_date_idx\`(\`date\`),\n` +
+      `  INDEX \`Sale_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('Sale', 'customerId', 'Customer', 'SET NULL')}\n` +
       `) ${CHARSET}`,
@@ -264,8 +278,11 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`unitPrice\` DOUBLE NOT NULL,\n` +
       `  \`discount\` DOUBLE NOT NULL DEFAULT 0,\n` +
       `  \`total\` DOUBLE NOT NULL,\n` +
+      `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`SaleItem_saleId_idx\`(\`saleId\`),\n` +
       `  INDEX \`SaleItem_productId_idx\`(\`productId\`),\n` +
+      `  INDEX \`SaleItem_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('SaleItem', 'saleId', 'Sale', 'CASCADE')},\n` +
       `  ${fk('SaleItem', 'productId', 'Product', 'RESTRICT')}\n` +
@@ -279,6 +296,8 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`name\` VARCHAR(191) NOT NULL,\n` +
       `  \`location\` VARCHAR(191) NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  INDEX \`Warehouse_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -298,8 +317,10 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`reference\` VARCHAR(191) NULL,\n` +
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`InventoryTransaction_date_idx\`(\`date\`),\n` +
       `  INDEX \`InventoryTransaction_warehouseId_idx\`(\`warehouseId\`),\n` +
+      `  INDEX \`InventoryTransaction_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('InventoryTransaction', 'warehouseId', 'Warehouse', 'SET NULL')}\n` +
       `) ${CHARSET}`,
@@ -315,7 +336,9 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`amount\` DOUBLE NOT NULL,\n` +
       `  \`currency\` VARCHAR(191) NOT NULL DEFAULT 'AFN',\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`Expense_date_idx\`(\`date\`),\n` +
+      `  INDEX \`Expense_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -332,6 +355,7 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`active\` BOOLEAN NOT NULL DEFAULT true,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  \`updatedAt\` DATETIME(3) NOT NULL,\n` +
+      `  INDEX \`Employee_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
@@ -346,8 +370,10 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`shift\` VARCHAR(191) NULL,\n` +
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`Attendance_employeeId_idx\`(\`employeeId\`),\n` +
       `  INDEX \`Attendance_date_idx\`(\`date\`),\n` +
+      `  INDEX \`Attendance_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('Attendance', 'employeeId', 'Employee', 'CASCADE')}\n` +
       `) ${CHARSET}`,
@@ -363,7 +389,9 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`date\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  INDEX \`SalaryPayment_employeeId_idx\`(\`employeeId\`),\n` +
+      `  INDEX \`SalaryPayment_updatedAt_idx\`(\`updatedAt\`),\n` +
       `  PRIMARY KEY (\`id\`),\n` +
       `  ${fk('SalaryPayment', 'employeeId', 'Employee', 'CASCADE')}\n` +
       `) ${CHARSET}`,
@@ -374,7 +402,22 @@ export const MYSQL_TABLES: DdlTable[] = [
       `CREATE TABLE IF NOT EXISTS \`Setting\` (\n` +
       `  \`key\` VARCHAR(191) NOT NULL,\n` +
       `  \`value\` LONGTEXT NOT NULL,\n` +
+      `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
+      `  \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  PRIMARY KEY (\`key\`)\n` +
+      `) ${CHARSET}`,
+  },
+  {
+    name: '_SyncTombstones',
+    sql:
+      `CREATE TABLE IF NOT EXISTS \`_SyncTombstones\` (\n` +
+      `  \`id\` VARCHAR(191) NOT NULL,\n` +
+      `  \`tbl\` VARCHAR(191) NOT NULL,\n` +
+      `  \`recordId\` VARCHAR(191) NOT NULL,\n` +
+      `  \`deletedAt\` DATETIME(3) NOT NULL,\n` +
+      `  INDEX \`_SyncTombstones_deletedAt_idx\`(\`deletedAt\`),\n` +
+      `  INDEX \`_SyncTombstones_tbl_recordId_idx\`(\`tbl\`, \`recordId\`),\n` +
+      `  PRIMARY KEY (\`id\`)\n` +
       `) ${CHARSET}`,
   },
 ]

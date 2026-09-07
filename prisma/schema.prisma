@@ -37,6 +37,9 @@ model AuditLog {
   entityId  String?
   details   String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 // ------------------- Products -------------------
@@ -44,7 +47,10 @@ model ProductCategory {
   id        String    @id @default(cuid())
   name      String    @unique
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@index([updatedAt])
 }
 
 model Product {
@@ -68,6 +74,8 @@ model Product {
   formulas         Formula[]
   saleItems        SaleItem[]
   productionOrders ProductionOrder[]
+
+  @@index([updatedAt])
 }
 
 // ------------------- Raw Materials -------------------
@@ -78,7 +86,10 @@ model Supplier {
   address   String?
   notes     String?
   createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   materials RawMaterial[]
+
+  @@index([updatedAt])
 }
 
 model RawMaterial {
@@ -125,6 +136,11 @@ model FormulaItem {
   rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
   quantity      Float // مقدار ماده اولیه برای outputQty
   percentage    Float?      // درصد ترکیب
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([formulaId])
+  @@index([updatedAt])
 }
 
 // ------------------- Production -------------------
@@ -150,6 +166,8 @@ model ProductionOrder {
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 // ------------------- Sales & Customers -------------------
@@ -199,6 +217,11 @@ model SaleItem {
   unitPrice Float
   discount  Float    @default(0)
   total     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([saleId])
+  @@index([updatedAt])
 }
 
 // ------------------- Inventory -------------------
@@ -207,7 +230,10 @@ model Warehouse {
   name         String
   location     String?
   createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
   transactions InventoryTransaction[]
+
+  @@index([updatedAt])
 }
 
 model InventoryTransaction {
@@ -224,6 +250,9 @@ model InventoryTransaction {
   reference     String? // شماره فاکتور / سفارش تولید
   notes         String?
   createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([updatedAt])
 }
 
 // ------------------- Finance -------------------
@@ -235,6 +264,9 @@ model Expense {
   amount      Float
   currency    String   @default("AFN")
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 // ------------------- HR -------------------
@@ -261,6 +293,9 @@ model Attendance {
   shift      String? // صبح | عصر | شب
   notes      String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 model SalaryPayment {
@@ -272,10 +307,15 @@ model SalaryPayment {
   date       DateTime @default(now())
   notes      String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 // ------------------- Settings -------------------
 model Setting {
-  key   String @id
-  value String
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

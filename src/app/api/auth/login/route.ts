@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, dbInternal } from '@/lib/db'
 import { verifyPassword, hashPassword, isHashed } from '@/lib/passwords'
 import { signSession, SESSION_COOKIE, SESSION_MAX_AGE_S } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { ensureInitialPull } from '@/lib/connection-manager'
 
 // قفل شدن حساب پس از ۵ ورود ناموفق به مدت ۱۵ دقیقه (حافظه محلی سرور)
 const MAX_FAILS = 5
@@ -32,8 +33,13 @@ export async function POST(req: Request) {
       )
     }
 
-    // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول کاربران خالی است
-    // (اولین اتصال به دیتابیس تازه هاست — برای امکان ورود و بازیابی بکاپ JSON)
+    // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول کاربران محلی خالی است.
+    // اگر هاست تنظیم شده باشد، اول دیتای هاست کشیده می‌شود (نصب تازه روی
+    // دستگاه جدید) تا ورود با کاربران واقعی سرور انجام شود — نه ادمین ساختگی.
+    const userCountBefore = await db.user.count()
+    if (userCountBefore === 0 && dbInternal.mysqlConfigured()) {
+      await ensureInitialPull()
+    }
     const userCount = await db.user.count()
     if (userCount === 0) {
       await db.user.create({
@@ -45,7 +51,7 @@ export async function POST(req: Request) {
           department: 'general',
         },
       })
-      await logAudit(null, 'bootstrap', 'auth', undefined, 'حساب ادمین پیش‌فرض در دیتابیس خالی ساخته شد — admin/admin123')
+      await logAudit(null, 'bootstrap', 'auth', undefined, 'حساب ادمین پیش‌فرض در دیتابیس محلی خالی ساخته شد — admin/admin123')
     }
 
     const user = await db.user.findUnique({ where: { username: uname } })

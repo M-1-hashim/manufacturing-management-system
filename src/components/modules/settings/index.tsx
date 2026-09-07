@@ -111,6 +111,7 @@ interface ConnStatusT {
   lastSnapshotAt: string | null
   lastSyncError: string | null
   pendingPush: number | null
+  lastTick?: { ok: boolean; pushed: number; pulled: number; deleted: number; ms: number; at: string | null; error?: string } | null
 }
 
 declare global {
@@ -1386,14 +1387,35 @@ export default function SettingsModule() {
               </div>
               <div className="mt-1.5 space-y-0.5">
                 {connStatus?.mode === 'host-mysql' && (
-                  <p>
-                    ✅ {t(
-                      'متصل به هاست — دیتا مستقیم روی سرور ذخیره می‌شود و هر ۱۵ دقیقه یک کپی امن روی همین دستگاه گرفته می‌شود تا در قطعی اینترنت هم موجود باشد.',
-                      'له هوسټ سره نښلی — ډاټا مستقیم په سرور خوندي کېږي او هر ۱۵ دقیقه یوه امنه کاپي په همدې دستگاه کې اخیستل کېږي.',
-                      'Connected to host — data is saved directly on the server and a safety copy is kept on this device every 15 minutes for offline use.'
+                  <>
+                    <p>
+                      ⚡ {t(
+                        'همگام‌سازی لحظه‌ای فعال است — برنامه با سرعت کامل روی دیتابیس همین دستگاه کار می‌کند و هر تغییر (ثبت، ویرایش، حذف) در چند ثانیه دوطرفه با سرور جابه‌جا می‌شود. دیتای سرور هم خودکار به دستگاه اضافه می‌شود.',
+                        'لحظه‌يي همغه کول فعال دي — پروګرام په بشپړه سرعت سره په ځایی ډاټابیس کار کوي او هر بدلون په څو ثانیو کې دوه اړخیزه له سرور سره تبادله کېږي.',
+                        'Live sync active — the app runs at full speed on this device\u2019s database and every change (create, edit, delete) reaches the server within seconds, while server changes flow back automatically.'
+                      )}
+                    </p>
+                    <p className="text-[11px] opacity-80">
+                      {t('آخرین همگام‌سازی خودکار:', 'وروستنی اتوماتیک همغه کول:', 'Last automatic sync:')}{' '}
+                      <span dir="ltr">
+                        {connStatus.lastTick?.at ? fmtDate(connStatus.lastTick.at) : '—'}
+                        {connStatus.lastTick && !connStatus.lastTick.ok && connStatus.lastTick.error ? ` (${connStatus.lastTick.error.slice(0, 80)})` : ''}
+                      </span>
+                      {connStatus.lastTick && connStatus.lastTick.ok && (connStatus.lastTick.pushed > 0 || connStatus.lastTick.pulled > 0 || connStatus.lastTick.deleted > 0)
+                        ? ` — ↑${connStatus.lastTick.pushed} ↓${connStatus.lastTick.pulled} ✕${connStatus.lastTick.deleted}`
+                        : ''}
+                    </p>
+                    {connStatus.pendingPush != null && connStatus.pendingPush > 0 && (
+                      <p className="font-semibold">
+                        {formatNumber(connStatus.pendingPush)} {t('تغییر در صف ارسال به سرور', 'بدلون په د لیږلو لیبل کې', 'changes queued for upload')}
+                      </p>
                     )}
-                    {connStatus.lastSnapshotAt ? ` (${t('آخرین کپی:', 'وروستۍ کاپي:', 'Last copy:')} ${fmtDate(connStatus.lastSnapshotAt)})` : ''}
-                  </p>
+                    {connStatus.lastSnapshotAt && (
+                      <p className="text-[11px] opacity-80">
+                        {t('آخرین کپی کامل سرور:', 'وروستنۍ بشپړه کاپي:', 'Last full server copy:')} <span dir="ltr">{fmtDate(connStatus.lastSnapshotAt)}</span>
+                      </p>
+                    )}
+                  </>
                 )}
                 {connStatus?.mode === 'host-offline' && (
                   <>
