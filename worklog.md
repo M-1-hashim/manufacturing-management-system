@@ -761,3 +761,13 @@ Work Log:
 - تست موتور (scripts/sync-engine.test.ts — دو SQLite مستقل): ۳۲/۳۲ پاس در ۳ اجرای پیاپی — push/pull دوسویه، حذف با ژورنال+سنگ‌قبر، LWW هر دو سو، فرمول با ویرایش آیتم‌ها، قطعی/برگشت (runReconnectSync)، تیک بی‌کار ~۴ms، دستهٔ ۲۰۰ سطری ~۳۵ms، Setting بدون sync.*
 - تست مرورگری: ورود؛ تولید کامل (سفارش ۲۰/ضایعات ۱ → خروج مواد ۲۱+۲۰+۲۰، ورود خالص ۱۹، هزینه ۹۰۸، QC قبول)؛ لغو سفارش؛ فروش (۲×۱۲۰=۲۴۰، کسر موجودی ۳۵→۳۳)؛ ۱۱ تم با سوییچ زنده (بنفش/oklch 300) + تیره؛ موبایل ۳۹۰px بدون overflow؛ فوتر چسبیده (gap=0)؛ صفر خطای کنسول
 - lint تمیز؛ commit f6ca9e6 push شد
+
+Work Log (Task 20 — ادامه: ریلیز):
+- pendingPush در حالت آفلاین هم شمرده می‌شود (باگ smoke بسته: None برمی‌گشت) — fix + commit 8ed60c4
+- بیلد مجدد کامل (Next standalone + دو کلاینت Prisma + win-unpacked 591MB)؛ smoke بستهٔ واقعی با URL مرده mysql: بوت → host-offline → login روی کپی محلی → نوشتن آفلاین → pendingPush: 265 ✓؛ فیکس داخل باندل تأیید شد
+- NSIS از debs تازه (3.11) به /tmp/nsis-root — Setup.exe 168MB (PE32، نسخهٔ 1.0.10.0 با strings -el) + Portable 265MB (نکته: دو makensis همزمان خروجی خراب می‌کند — foreground اجرا شد)
+- Release v1.0.10 (id 384155523): Setup.exe + Portable.zip + RELEASE-NOTES-v1.0.10.md — هر ۳ asset state=uploaded
+
+Stage Summary:
+- شش بند درخواست کاربر کامل شد: (۱) هر تغییر آفلاین بعد از وصل شدن به سرور می‌رسد (۲) دیتای سرور خودکار به محلی می‌آید (۳) همگام‌سازی لحظه‌ای پیوسته هر ۳ ثانیه فقط با دلتا (۴) قطعی بدون اختلال + برگشت خودکار (۵) سرعت آنلاین = سرعت محلی (دیتا از دیسک دستگاه) (۶) تولید با تست گسترده سالم
+- Release: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.10
