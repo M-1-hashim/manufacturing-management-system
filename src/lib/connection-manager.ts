@@ -479,7 +479,8 @@ export async function getFullStatus(): Promise<ConnectionStatus & { pendingPush:
   const base = getState()
   let pendingPush: number | null = null
   const pair = getPair()
-  if (pair && dbInternal.getMode() === 'host-mysql') {
+  // شمارش صف فقط روی دیتابیس محلی است — هم در آنلاین و هم در آفلاین معنا دارد
+  if (pair && (dbInternal.getMode() === 'host-mysql' || dbInternal.getMode() === 'host-offline')) {
     try {
       pendingPush = await pendingPushCount(pair)
     } catch {
