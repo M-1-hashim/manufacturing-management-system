@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { getSessionFromRequest } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 
-// GET /api/sales — لیست فاکتورها با فیلتر اختیاری ?status=&method=&customerId=
+// GET /api/sales — لیست بل‌ها با فیلتر اختیاری ?status=&method=&customerId=
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -24,11 +24,11 @@ export async function GET(req: Request) {
     return NextResponse.json(sales)
   } catch (e) {
     console.error('sales GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت فاکتورها' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت بل‌ها' }, { status: 500 })
   }
 }
 
-// POST /api/sales — ثبت فروش جدید (کسر موجودی + بدهی مشتری + تراکنش انبار، همه اتمیک)
+// POST /api/sales — ثبت فروش جدید (کسر موجودی + قرض مشتری + تراکنش انبار، همه اتمیک)
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
         })
       }
 
-      // افزایش بدهی مشتری در صورت پرداخت ناقص
+      // افزایش قرض مشتری در صورت پرداخت ناقص
       if (body.customerId && status !== 'paid') {
         await tx.customer.update({
           where: { id: String(body.customerId) },
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'create', 'sale', sale.id, `فاکتور ${sale.invoiceNumber} به مبلغ ${Math.round(sale.total * sale.exchangeRate)} افغانی`)
+    await logAudit(session, 'create', 'sale', sale.id, `بل ${sale.invoiceNumber} به مبلغ ${Math.round(sale.total * sale.exchangeRate)} افغانی`)
 
     return NextResponse.json(sale, { status: 201 })
   } catch (e) {

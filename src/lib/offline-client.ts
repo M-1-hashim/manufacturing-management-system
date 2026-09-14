@@ -174,7 +174,7 @@ export async function trySync(): Promise<{ done: number; failed: number } | null
   let networkLost = false
   try {
     for (const op of ops) {
-      // فقط اجراؤات همین استفاده‌کننده همگام می‌شود
+      // فقط اجراؤات همین کاربر همگام می‌شود
       if (op.user && op.user !== user.username) continue
       try {
         const res = await originalFetch!(op.url, {
@@ -235,7 +235,7 @@ export async function refreshPendingCount(): Promise<void> {
   useAppStore.getState().setPendingOps(n)
 }
 
-/** خروج/تغییر استفاده‌کننده — کش داده‌های استفاده‌کننده قبلی پاک می‌شود (صف اجراؤات باقی می‌ماند) */
+/** خروج/تغییر کاربر — کش داده‌های کاربر قبلی پاک می‌شود (صف اجراؤات باقی می‌ماند) */
 export async function clearOfflineCache(): Promise<void> {
   await cacheClear()
 }

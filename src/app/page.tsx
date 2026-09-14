@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * سامانه جامع مدیریت تولید — نسخه SPA تک‌صفحه‌ای
+ * سیستم مدیریتی جامع تولید — نسخه SPA تک‌صفحه‌ای
  * صنایع تولیدی افغانستان | دری / پشتو / انگلیسی | RTL
  * ادمین: دسترسی کامل | کارکنان بخش‌ها: دسترسی به ماژول‌های بخش خود
  */
@@ -51,10 +51,10 @@ const NAV = [
   { id: 'production', fa: 'تولید', ps: 'تولید', en: 'Production', icon: Factory },
   { id: 'sales', fa: 'فروش', ps: 'پلورنه', en: 'Sales', icon: ShoppingCart },
   { id: 'inventory', fa: 'انبار', ps: 'ګدام', en: 'Inventory', icon: Warehouse },
-  { id: 'finance', fa: 'مالی', ps: 'مالي', en: 'Finance', icon: Wallet },
+  { id: 'finance', fa: 'مدیریت مالی', ps: 'مالي', en: 'Finance', icon: Wallet },
   { id: 'hr', fa: 'کارکنان', ps: 'کارکوونکي', en: 'HR', icon: Users },
   { id: 'reports', fa: 'گزارشات', ps: 'راپورونه', en: 'Reports', icon: BarChart3 },
-  { id: 'users', fa: 'استفاده‌کنندگان', ps: 'کاروونکي', en: 'Users', icon: UserCog },
+  { id: 'users', fa: 'کاربران سیستم', ps: 'کاروونکي', en: 'Users', icon: UserCog },
   { id: 'audit', fa: 'فعالیت‌ها', ps: 'فعالیتونه', en: 'Activity Log', icon: History },
   { id: 'settings', fa: 'تنظیمات', ps: 'امستنې', en: 'Settings', icon: Settings },
 ] as const
@@ -81,7 +81,7 @@ const COLOR_THEMES = [
   { id: 'graphite', fa: 'گرافیتی', ps: 'ګرافیتي', en: 'Graphite', dot: '#5c6470' },
 ] as const
 
-// ---------------- تغییر پاسورد (پروفایل) ----------------
+// ---------------- تغییر پسورد (پروفایل) ----------------
 function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n()
   const user = useAppStore((s) => s.user)
@@ -102,21 +102,21 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
     e.preventDefault()
     setError(null)
     if (next.length < 6) {
-      setError(t('پاسورد جدید باید حداقل ۶ کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه ۶ توري وي', 'New password must be at least 6 characters'))
+      setError(t('پسورد جدید باید حداقل ۶ کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه ۶ توري وي', 'New password must be at least 6 characters'))
       return
     }
     if (next !== confirm) {
-      setError(t('تکرار پاسورد جدید مطابقت ندارد', 'د نوي پټ نوم تکرار سم نه دی', 'Password confirmation does not match'))
+      setError(t('تکرار پسورد جدید مطابقت ندارد', 'د نوي پټ نوم تکرار سم نه دی', 'Password confirmation does not match'))
       return
     }
     setLoading(true)
     try {
       await apiPost('/api/auth/change-password', { currentPassword: current, newPassword: next })
-      toast.success(t('پاسورد با کامیابی تغییر کرد', 'پټ نوم په بریالیتوب بدل شو', 'Password changed successfully'))
+      toast.success(t('پسورد با کامیابی تغییر کرد', 'پټ نوم په بریالیتوب بدل شو', 'Password changed successfully'))
       reset()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('خطا در تغییر پاسورد', 'د پټ نوم بدلون کې ستونزه', 'Failed to change password'))
+      setError(err instanceof Error ? err.message : t('خطا در تغییر پسورد', 'د پټ نوم بدلون کې ستونزه', 'Failed to change password'))
     } finally {
       setLoading(false)
     }
@@ -128,21 +128,21 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-primary" />
-            {t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
+            {t('تغییر پسورد', 'پټ نوم بدلول', 'Change password')}
           </DialogTitle>
-          <p className="text-xs text-muted-foreground">{user?.username ? `${t('استفاده‌کننده', 'کارن', 'User')}: ${user.username}` : ''}</p>
+          <p className="text-xs text-muted-foreground">{user?.username ? `${t('کاربر', 'کارن', 'User')}: ${user.username}` : ''}</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="cur-pw">{t('پاسورد فعلی', 'اوسنی پټ نوم', 'Current password')}</Label>
+            <Label htmlFor="cur-pw">{t('پسورد فعلی', 'اوسنی پټ نوم', 'Current password')}</Label>
             <Input id="cur-pw" dir="ltr" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="new-pw">{t('پاسورد جدید', 'نوی پټ نوم', 'New password')}</Label>
+            <Label htmlFor="new-pw">{t('پسورد جدید', 'نوی پټ نوم', 'New password')}</Label>
             <Input id="new-pw" dir="ltr" type="password" value={next} onChange={(e) => setNext(e.target.value)} required autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="conf-pw">{t('تکرار پاسورد جدید', 'د نوي پټ نوم تکرار', 'Confirm new password')}</Label>
+            <Label htmlFor="conf-pw">{t('تکرار پسورد جدید', 'د نوي پټ نوم تکرار', 'Confirm new password')}</Label>
             <Input id="conf-pw" dir="ltr" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
           </div>
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
@@ -151,7 +151,7 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
               {t('انصراف', 'لغوه', 'Cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? t('در حال ذخیره...', 'ثبتول...', 'Saving...') : t('تغییر پاسورد', 'پټ نوم بدلول', 'Change')}
+              {loading ? t('در حال ذخیره...', 'ثبتول...', 'Saving...') : t('تغییر پسورد', 'پټ نوم بدلول', 'Change')}
             </Button>
           </DialogFooter>
         </form>
@@ -215,7 +215,7 @@ function LoginView() {
               <Factory className="h-7 w-7" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight mt-6 leading-snug">
-              {t('سامانه جامع مدیریت تولید', 'د تولید جامع مدیریت سیسټم', 'Comprehensive Manufacturing ERP')}
+              {t('سیستم مدیریتی جامع تولید', 'د تولید جامع مدیریت سیسټم', 'Comprehensive Manufacturing ERP')}
             </h1>
             <p className="text-[13.5px] text-muted-foreground mt-3 leading-7 max-w-sm">
               {t(
@@ -250,7 +250,7 @@ function LoginView() {
             <div className="mx-auto h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md mb-3">
               <Factory className="h-6 w-6" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight">{t('سامانه مدیریت تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
+            <h1 className="text-lg font-bold tracking-tight">{t('سیستم مدیریتی تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
           </div>
 
           <div className="flex items-center justify-between mb-6">
@@ -263,12 +263,12 @@ function LoginView() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">{t('نام استفاده‌کننده', 'کارن نوم', 'Username')}</Label>
+              <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
               <Input id="username" dir="ltr" value={username} onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin" autoComplete="username" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('پاسورد', 'پټ نوم', 'Password')}</Label>
+              <Label htmlFor="password">{t('پسورد', 'پټ نوم', 'Password')}</Label>
               <Input id="password" dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" autoComplete="current-password" required />
             </div>
@@ -388,7 +388,7 @@ function Shell() {
     setProfileOpen(false)
     setUser(null)
     setActiveTab('dashboard')
-    // کش داده‌های استفاده‌کننده قبلی حذف می‌شود تا در صفحه ورود آفلاین قابل مشاهده نباشد
+    // کش داده‌های کاربر قبلی حذف می‌شود تا در صفحه ورود آفلاین قابل مشاهده نباشد
     void clearOfflineCache().then(() => refreshPendingCount())
   }
 
@@ -501,7 +501,7 @@ function Shell() {
         {/* سایدبار */}
         <aside
           className={cn(
-            'fixed lg:sticky top-0 z-50 lg:z-auto h-screen w-64 shrink-0 border-e bg-sidebar text-sidebar-foreground flex flex-col no-print transition-transform duration-300',
+            'sidebar-tint fixed lg:sticky top-0 z-50 lg:z-auto h-screen w-64 shrink-0 border-e bg-sidebar text-sidebar-foreground flex flex-col no-print transition-transform duration-300',
             sidebarOpen ? 'translate-x-0' : 'max-lg:rtl:translate-x-full max-lg:ltr:-translate-x-full'
           )}
         >
@@ -510,7 +510,7 @@ function Shell() {
               <Factory className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm tracking-tight truncate">{t('سامانه تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
+              <p className="font-semibold text-sm tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
               <p className="text-[11px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
             </div>
             <button className="ms-auto lg:hidden p-1" onClick={() => setSidebarOpen(false)} aria-label="بستن منو">
@@ -569,8 +569,8 @@ function Shell() {
               <button
                 onClick={() => setProfileOpen(true)}
                 className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                aria-label={t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
-                title={t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
+                aria-label={t('تغییر پسورد', 'پټ نوم بدلول', 'Change password')}
+                title={t('تغییر پسورد', 'پټ نوم بدلول', 'Change password')}
               >
                 <KeyRound className="h-4 w-4" />
               </button>
@@ -665,7 +665,7 @@ function Shell() {
           <footer className="mt-auto border-t py-3 px-4 text-center text-[11px] text-muted-foreground bg-background no-print">
             <p>
               {t(
-                'سامانه جامع مدیریت تولید — ساخته‌شده برای صنایع افغانستان',
+                'سیستم مدیریتی جامع تولید — ساخته‌شده برای صنایع افغانستان',
                 'د تولید جامع مدیریت سیسټم — د افغانستان صنعتونو لپاره',
                 'Comprehensive Manufacturing ERP — Built for Afghan Industry'
               )}
@@ -687,7 +687,7 @@ function Shell() {
  * اولین باز شدن برنامه بعد از نصب → ویزارد تنظیمات (زبان/تم + هاست).
  * تشخیص «بار اول»:
  *   - فلگ localStorage (mfg-setup-completed) نباشد
- *   - و استفاده‌کننده ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
+ *   - و کاربر ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
  *   - و در نسخهٔ دسکتاپ، اتصال هاست از قبل فعال نباشد
  * در نسخهٔ وب (مرورگر) ویزارد نمایش داده نمی‌شود — اتصال هاست از env هاست می‌آید.
  */
@@ -705,7 +705,7 @@ function FirstRunGate() {
         if (alive) setState('app')
         return
       }
-      // استفاده‌کننده ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
+      // کاربر ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
       if (useAppStore.getState().user) {
         localStorage.setItem(SETUP_FLAG, '1')
         if (alive) setState('app')

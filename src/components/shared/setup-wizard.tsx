@@ -10,7 +10,7 @@
  *   گام ۴  ذخیره شد → راه‌اندازی مجدد برنامه (تا اتصال جدید اعمال شود)
  *
  * بعد از ری‌استارت، هاست به‌صورت خودکار جدول‌های گمشده را روی هاست می‌سازد
- * و اگر هاست خالی باشد استفاده‌کنندگان/تنظیمات محلی را کپی می‌کند (host-setup).
+ * و اگر هاست خالی باشد کاربران سیستم/تنظیمات محلی را کپی می‌کند (host-setup).
  * در مرورگر (نسخهٔ وب) گام هاست غیرفعال است — اتصال هاست مخصوص نسخهٔ ویندوز.
  */
 
@@ -85,7 +85,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
     if (code === 'MISSING_FIELDS')
       return t('همهٔ فیلدهای الزامی را پر کنید', 'ټول لازم فیلډونه ډک کړئ', 'Please fill all required fields')
     if (code === 'MISSING_SSH_PASSWORD')
-      return t('پاسورد SSH را وارد کنید', 'د SSH پټ نوم ولیکئ', 'SSH password is required')
+      return t('پسورد SSH را وارد کنید', 'د SSH پټ نوم ولیکئ', 'SSH password is required')
     return code || ''
   }
 
@@ -93,7 +93,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
     setFormError(null)
     if (!conn) return
     if (!sshHost.trim() || !sshUser.trim()) {
-      setFormError(t('آدرس هاست و نام استفاده‌کننده SSH الزامی است', 'د هوسټ پته او د SSH کارن نوم لازم دي', 'SSH server and username are required'))
+      setFormError(t('آدرس هاست و نام کاربری SSH الزامی است', 'د هوسټ پته او د SSH کارن نوم لازم دي', 'SSH server and username are required'))
       return
     }
     setTesting(true)
@@ -102,7 +102,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
       if (r.ok) {
         toast.success(t('اتصال SSH وصل شد ✓', 'د SSH نښلون برقرار دی ✓', 'SSH connection OK ✓'))
       } else if (r.kind === 'AUTH') {
-        toast.error(t('نام استفاده‌کننده یا پاسورد SSH اشتباه است', 'د SSH کارن نوم یا پټ نوم غلط دی', 'SSH username or password is wrong'))
+        toast.error(t('نام کاربری یا پسورد SSH اشتباه است', 'د SSH کارن نوم یا پټ نوم غلط دی', 'SSH username or password is wrong'))
       } else {
         toast.error(t('هاست SSH در دسترس نیست — آدرس/پورت یا انترنت را بررسی کنید', 'د SSH هاست نه لرېږي — پته/پورت یا انترنت وګورئ', 'SSH server unreachable — check address/port or internet'))
       }
@@ -162,7 +162,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
             <Factory className="h-8 w-8" />
           </div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-            {t('به سامانه مدیریت تولید خوش آمدید', 'د تولید مدیریت سیسټم ته ښه راغلاست', 'Welcome to the Manufacturing ERP')}
+            {t('به سیستم مدیریتی تولید خوش آمدید', 'د تولید مدیریت سیسټم ته ښه راغلاست', 'Welcome to the Manufacturing ERP')}
           </h1>
           <p className="text-[13px] text-muted-foreground mt-1.5">
             {t('چند قدم کوتاه تا راه‌اندازی کامل — با هم تنظیمش می‌کنیم', 'څو لنډ ګامه تر بشپړې راه‌اندازې — یوځای یې تنظیموو', 'A few quick steps to get you fully set up')}
@@ -333,7 +333,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                 </p>
                 <ol className="list-decimal ms-5 text-muted-foreground space-y-0.5">
                   <li>
-                    {t('«Manage My Databases» → ساخت دیتابیس + استفاده‌کننده + اتصال استفاده‌کننده با ALL PRIVILEGES', '«Manage My Databases» → ډاټابیس + کارن جوړول + ټولې واکونو سره نښلول', 'Manage My Databases → create DB + user, link with ALL PRIVILEGES')}
+                    {t('«Manage My Databases» → ساخت دیتابیس + کاربر + اتصال کاربر با ALL PRIVILEGES', '«Manage My Databases» → ډاټابیس + کارن جوړول + ټولې واکونو سره نښلول', 'Manage My Databases → create DB + user, link with ALL PRIVILEGES')}
                   </li>
                   <li>
                     {t('هاست اشتراکی: در «Manage Shell» دسترسی SSH را روشن کنید', 'شریک هوسټ: په «Manage Shell» کې SSH فعال کړئ', 'Shared hosting: enable SSH access under Manage Shell')}
@@ -397,11 +397,11 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                       <Input id="w-ssh-port" dir="ltr" placeholder="21098" value={sshPort} onChange={(e) => setSshPort(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="w-ssh-user">{t('استفاده‌کننده SSH (cPanel)', 'د SSH کارن (cPanel)', 'SSH user (cPanel)')} *</Label>
+                      <Label htmlFor="w-ssh-user">{t('کاربر SSH (cPanel)', 'د SSH کارن (cPanel)', 'SSH user (cPanel)')} *</Label>
                       <Input id="w-ssh-user" dir="ltr" autoComplete="off" value={sshUser} onChange={(e) => setSshUser(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="w-ssh-pass">{t('پاسورد SSH', 'د SSH پټ نوم', 'SSH password')} *</Label>
+                      <Label htmlFor="w-ssh-pass">{t('پسورد SSH', 'د SSH پټ نوم', 'SSH password')} *</Label>
                       <Input id="w-ssh-pass" dir="ltr" type="password" autoComplete="new-password" value={sshPassword} onChange={(e) => setSshPassword(e.target.value)} />
                     </div>
                   </div>
@@ -413,7 +413,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                     <Database className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                     <span>
                       {t(
-                        'مشخصات MySQL (نه SSH): نام دیتابیس، استفاده‌کننده MySQL و پاسورد آن — آدرس MySQL همیشه از داخل هاست (127.0.0.1) خوانده می‌شود.',
+                        'مشخصات MySQL (نه SSH): نام دیتابیس، کاربر MySQL و پسورد آن — آدرس MySQL همیشه از داخل هاست (127.0.0.1) خوانده می‌شود.',
                         'د MySQL مشخصات (نه SSH): د ډاټابیس نوم، د MySQL کارن او پټ نوم — د MySQL پته تل له دننه هاست (127.0.0.1) لوستل کېږي.',
                         'MySQL credentials (not SSH): database name, MySQL user and its password — MySQL host is always read from inside the server (127.0.0.1).'
                       )}
@@ -425,11 +425,11 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                       <Input id="w-db-name" dir="ltr" placeholder="myuser_mfg" value={dbName} onChange={(e) => setDbName(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="w-db-user">{t('استفاده‌کننده MySQL', 'د MySQL کارن', 'MySQL user')} *</Label>
+                      <Label htmlFor="w-db-user">{t('کاربر MySQL', 'د MySQL کارن', 'MySQL user')} *</Label>
                       <Input id="w-db-user" dir="ltr" autoComplete="off" value={dbUser} onChange={(e) => setDbUser(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="w-db-pass">{t('پاسورد MySQL', 'د MySQL پټ نوم', 'MySQL password')}</Label>
+                      <Label htmlFor="w-db-pass">{t('پسورد MySQL', 'د MySQL پټ نوم', 'MySQL password')}</Label>
                       <Input id="w-db-pass" dir="ltr" type="password" autoComplete="new-password" value={dbPassword} onChange={(e) => setDbPassword(e.target.value)} />
                     </div>
                   </div>
@@ -449,11 +449,11 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                     <Input id="w-dbname" dir="ltr" value={dbName} onChange={(e) => setDbName(e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="w-dbuser">{t('استفاده‌کننده MySQL', 'د MySQL کارن', 'MySQL user')} *</Label>
+                    <Label htmlFor="w-dbuser">{t('کاربر MySQL', 'د MySQL کارن', 'MySQL user')} *</Label>
                     <Input id="w-dbuser" dir="ltr" autoComplete="off" value={dbUser} onChange={(e) => setDbUser(e.target.value)} />
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label htmlFor="w-dbpass">{t('پاسورد MySQL', 'د MySQL پټ نوم', 'MySQL password')}</Label>
+                    <Label htmlFor="w-dbpass">{t('پسورد MySQL', 'د MySQL پټ نوم', 'MySQL password')}</Label>
                     <Input id="w-dbpass" dir="ltr" type="password" autoComplete="new-password" value={dbPassword} onChange={(e) => setDbPassword(e.target.value)} />
                   </div>
                 </div>

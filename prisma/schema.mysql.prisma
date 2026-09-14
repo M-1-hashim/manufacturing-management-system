@@ -210,7 +210,7 @@ model Customer {
   phone     String?
   address   String?   @db.Text
   type      String    @default("retail") // retail | wholesale
-  balance   Float     @default(0) // مانده بدهی (بابت)
+  balance   Float     @default(0) // مانده قرض (بابت)
   notes     String?   @db.Text
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -287,7 +287,7 @@ model InventoryTransaction {
   quantity      Float
   warehouseId   String?
   warehouse     Warehouse? @relation(fields: [warehouseId], references: [id])
-  reference     String? // شماره فاکتور / سفارش تولید
+  reference     String? // شماره بل / سفارش تولید
   notes         String?    @db.Text
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

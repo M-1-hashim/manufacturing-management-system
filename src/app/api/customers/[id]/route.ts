@@ -33,7 +33,7 @@ export async function PUT(req: Request, { params }: Ctx) {
   }
 }
 
-// DELETE /api/customers/[id] — حذف مشتری (اگر فاکتور داشته باشد ممنوع)
+// DELETE /api/customers/[id] — حذف مشتری (اگر بل داشته باشد ممنوع)
 export async function DELETE(_req: Request, { params }: Ctx) {
   try {
     const { id } = await params
@@ -44,7 +44,7 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     if (!existing) return NextResponse.json({ error: 'مشتری یافت نشد' }, { status: 404 })
     if (existing._count.sales > 0) {
       return NextResponse.json(
-        { error: 'این مشتری فاکتور فروش دارد و قابل حذف نیست' },
+        { error: 'این مشتری بل فروش دارد و قابل حذف نیست' },
         { status: 400 }
       )
     }

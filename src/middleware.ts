@@ -37,12 +37,12 @@ export async function middleware(req: NextRequest) {
     )
   }
 
-  // PUT تنظیمات فقط ادمین/مدیر (GET برای همه استفاده‌کنندگان واردشده آزاد است)
+  // PUT تنظیمات فقط ادمین/مدیر (GET برای همه کاربران سیستم واردشده آزاد است)
   if (pathname === '/api/settings' && req.method === 'PUT' && !['admin', 'manager'].includes(session.role)) {
     return NextResponse.json({ error: 'تغییر تنظیمات فقط توسط مدیر مجاز است' }, { status: 403 })
   }
 
-  // تغییر وضعیت (نوشتن) فقط برای غیرناظر — ناظر فقط خواندن (به‌جز مسیرهای auth مانند تغییر پاسورد خود)
+  // تغییر وضعیت (نوشتن) فقط برای غیرناظر — ناظر فقط خواندن (به‌جز مسیرهای auth مانند تغییر پسورد خود)
   const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)
   if (isWrite && session.role === 'viewer' && !pathname.startsWith('/api/auth/')) {
     return NextResponse.json({ error: 'حساب شما فقط دسترسی خواندن دارد' }, { status: 403 })

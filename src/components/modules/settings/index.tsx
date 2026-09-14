@@ -248,7 +248,7 @@ export default function SettingsModule() {
         if (r.bootstrapped)
           parts.push(
             t(
-              `${r.copiedUsers ?? 0} استفاده‌کننده و ${r.copiedSettings ?? 0} تنظیم از دستگاه به هاست کپی شد`,
+              `${r.copiedUsers ?? 0} کاربر و ${r.copiedSettings ?? 0} تنظیم از دستگاه به هاست کپی شد`,
               `${r.copiedUsers ?? 0} کارن او ${r.copiedSettings ?? 0} امستنې هوسټ ته کاپي شوې`,
               `${r.copiedUsers ?? 0} users and ${r.copiedSettings ?? 0} settings copied to host`
             )
@@ -368,7 +368,7 @@ export default function SettingsModule() {
   async function testSshConnection() {
     if (!connApi) return
     if (!connForm.sshHost.trim() || !connForm.sshUser.trim()) {
-      toast.error(t('آدرس هاست و نام استفاده‌کننده SSH الزامی است', 'د SSH پته او کاروونکی نوم اړین دي', 'SSH server address and username are required'))
+      toast.error(t('آدرس هاست و نام کاربری SSH الزامی است', 'د SSH پته او کاروونکی نوم اړین دي', 'SSH server address and username are required'))
       return
     }
     setConnTesting(true)
@@ -382,7 +382,7 @@ export default function SettingsModule() {
       if (res.ok) {
         toast.success(t('✅ اتصال SSH موفق بود — مقادیر درست است، حالا ذخیره کنید', '✅ د SSH نښلول بریالی شو — اوس خوندي کړئ', '✅ SSH connection OK — now save'))
       } else if (res.kind === 'AUTH') {
-        toast.error(t('🔑 پاسورد یا نام استفاده‌کننده SSH (همان cPanel) غلط است', '🔑 د SSH (cPanel) پاسورد یا کاروونکی غلط دی', 'Wrong SSH (cPanel) username or password'))
+        toast.error(t('🔑 پسورد یا نام کاربری SSH (همان cPanel) غلط است', '🔑 د SSH (cPanel) پسورد یا کاروونکی غلط دی', 'Wrong SSH (cPanel) username or password'))
       } else if (res.kind === 'TIMEOUT') {
         toast.error(t('⏳ از هاست پاسخی نیامد — انترنت یا فایروال را چک کنید', '⏳ له هاست ځواب نه شو — انترنت یا فایروال وګورئ', 'No response from server — check internet/firewall'))
       } else {
@@ -400,15 +400,15 @@ export default function SettingsModule() {
     const ssh = connForm.mode === 'ssh'
     if (ssh) {
       if (!connForm.sshHost.trim() || !connForm.sshUser.trim() || !connForm.database.trim() || !connForm.user.trim()) {
-        toast.error(t('آدرس SSH، نام استفاده‌کننده SSH، نام دیتابیس و نام استفاده‌کننده دیتابیس الزامی است', 'د SSH پته، د SSH کاروونکی، د ډاټابیس نوم او کاروونکی اړین دي', 'SSH address, SSH user, database name and username are required'))
+        toast.error(t('آدرس SSH، نام کاربری SSH، نام دیتابیس و نام کاربری دیتابیس الزامی است', 'د SSH پته، د SSH کاروونکی، د ډاټابیس نوم او کاروونکی اړین دي', 'SSH address, SSH user, database name and username are required'))
         return
       }
       if (!connForm.sshPassword) {
-        toast.error(t('پاسورد SSH (همان پاسورد cPanel) الزامی است', 'د SSH پاسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required'))
+        toast.error(t('پسورد SSH (همان پسورد cPanel) الزامی است', 'د SSH پسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required'))
         return
       }
     } else if (!connForm.host.trim() || !connForm.database.trim() || !connForm.user.trim()) {
-      toast.error(t('آدرس هاست، نام دیتابیس و نام استفاده‌کننده الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
+      toast.error(t('آدرس هاست، نام دیتابیس و نام کاربری الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
       return
     }
     setConnSaving(true)
@@ -720,7 +720,7 @@ export default function SettingsModule() {
               <Input id="companyPhone" dir="ltr" className="text-end" value={form.companyPhone ?? ''} onChange={(e) => set('companyPhone', e.target.value)} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {t('این معلومات در سرلوحه فاکتورهای فروش نمایش داده می‌شود.', 'دا معلومات د پلورنې فاکتورونو سربرګ کې ښکاري.', 'Shown on sales invoice headers.')}
+              {t('این معلومات در سرلوحه بل‌های فروش نمایش داده می‌شود.', 'دا معلومات د پلورنې بلونو سربرګ کې ښکاري.', 'Shown on sales invoice headers.')}
             </p>
           </CardContent>
         </Card>
@@ -849,7 +849,7 @@ export default function SettingsModule() {
           <Separator />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            {t('تقویم سیستم شمسی (هجری شمسی) است و در همه گزارش‌ها و فاکتورها استفاده می‌شود؛ تاریخ میلادی نیز در دسترس است.', 'د سیسټم تقویم هجري شمسي دی او په ټولو راپورونو کې کارول کیږي؛ میلادي نېټه هم شتون لري.', 'System uses the Shamsi (Jalali) calendar everywhere; Gregorian is also available.')}
+            {t('تقویم سیستم شمسی (هجری شمسی) است و در همه گزارش‌ها و بل‌ها استفاده می‌شود؛ تاریخ میلادی نیز در دسترس است.', 'د سیسټم تقویم هجري شمسي دی او په ټولو راپورونو کې کارول کیږي؛ میلادي نېټه هم شتون لري.', 'System uses the Shamsi (Jalali) calendar everywhere; Gregorian is also available.')}
           </div>
         </CardContent>
       </Card>
@@ -1223,15 +1223,15 @@ export default function SettingsModule() {
                         </p>
                         <p className="mt-1">
                           {dbInfo.errorKind === 'AUTH'
-                            ? t('🔑 پاسورد یا نام استفاده‌کننده دیتابیس غلط است — در cPanel → MySQL Databases دوباره چک کنید.', '🔑 پاسورد یا د کاروونکی نوم غلط دی — په cPanel کې بیا وګورئ.', 'Wrong database password or username — recheck in cPanel → MySQL Databases.')
+                            ? t('🔑 پسورد یا نام کاربری دیتابیس غلط است — در cPanel → MySQL Databases دوباره چک کنید.', '🔑 پسورد یا د کاروونکی نوم غلط دی — په cPanel کې بیا وګورئ.', 'Wrong database password or username — recheck in cPanel → MySQL Databases.')
                             : dbInfo.errorKind === 'NO_DATABASE'
                               ? t('🗄 دیتابیس با این نام پیدا نشد — نام را دقیقاً مثل cPanel بنویسید (مثل username_dbname).', '🗄 ډاټابیس د دې نوم سره نه موندل کېږي — نوم دقیقاً لکه cPanel ولیکئ.', 'Database not found — write the name exactly as in cPanel.')
                               : dbInfo.errorKind === 'NO_TABLES'
                                 ? t('📋 وصل شد ولی جدول‌ها ساخته نشده‌اند — فایل SQL هاست را در phpMyAdmin ایمپورت کنید.', '📋 ونښلول خو جدولونه نه دي جوړ شوي — د SQL هوسټ فایل په phpMyAdmin وارد کړئ.', 'Connected but tables are missing — import the host SQL file in phpMyAdmin.')
                                 : dbInfo.host === '127.0.0.1'
                                   ? t(
-                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) انترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس هاست SSH، پورت (معمولاً 21098) و نام استفاده‌کننده/پاسورد cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
-                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH هاست پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پاسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
+                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) انترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس هاست SSH، پورت (معمولاً 21098) و نام کاربری/پسورد cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
+                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH هاست پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
                                       '🔗 SSH tunnel cannot connect. Check: (1) internet is on; (2) SSH access enabled in cPanel → Manage Shell; (3) SSH server address, port (usually 21098) and cPanel credentials are correct — the "Test SSH connection" button gives an exact answer. Until the tunnel connects, the app works on the local database.'
                                     )
                                   : t(
@@ -1301,7 +1301,7 @@ export default function SettingsModule() {
                 {hostSetupResult && <p className="text-[11px] text-muted-foreground leading-5">{hostSetupResult}</p>}
                 <p className="text-[11px] text-muted-foreground leading-5">
                   {t(
-                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی استفاده‌کنندگان محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
+                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی کاربران سیستم محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
                     '«جوړول» نوی/تش هوسټ چمتو کوي (۱۹ جدول + کاپي کارنانو). «انتقال» ټول د دې دستگاه ډاټا هوسټ ته اچي — کله چې مخکې بې هوسټه کارېدئ او اوس هوسټ ته ځئ.',
                     '"Create tables" prepares a fresh/empty host (19 tables + copies local users). "Migrate" pushes all data from this device to the host — for when you worked locally before and now want to move to the host.'
                   )}
@@ -1320,8 +1320,8 @@ export default function SettingsModule() {
                   <AlertDialogDescription className="space-y-2 text-sm">
                     <span className="block">
                       {t(
-                        'همهٔ دیتای این دستگاه (محصولات، مشتریان، فاکتورها، تولید و…) به هاست کپی و سطرهای موجود تجدید می‌شوند. دیتای هاست حذف نمی‌شود.',
-                        'ټول د دې دستگاه ډاټا (محصولات، پیرودونکي، فاکتورونه، تولید او…) هوسټ ته کاپي او موجودې کرښې تازه کېږي. د هوسټ ډاټا نه حذفېږي.',
+                        'همهٔ دیتای این دستگاه (محصولات، مشتریان، بل‌ها، تولید و…) به هاست کپی و سطرهای موجود تجدید می‌شوند. دیتای هاست حذف نمی‌شود.',
+                        'ټول د دې دستگاه ډاټا (محصولات، پیرودونکي، بلونه، تولید او…) هوسټ ته کاپي او موجودې کرښې تازه کېږي. د هوسټ ډاټا نه حذفېږي.',
                         'All data from this device (products, customers, invoices, production…) is copied to the host and existing rows are updated. Nothing on the host is deleted.'
                       )}
                     </span>
@@ -1521,13 +1521,13 @@ export default function SettingsModule() {
                         {t('تنظیم در cPanel (یک‌بار):', 'په cPanel کې امستنه (یو ځل):', 'Setup in cPanel (once):')}
                       </p>
                       <p>
-                        ۱) {t('«Manage My Databases» → دیتابیس و استفاده‌کننده بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
+                        ۱) {t('«Manage My Databases» → دیتابیس و کاربر بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
                         {'  '}۲) {t('«Manage Shell» → دسترسی SSH را Enable کنید.', '«Manage Shell» → د SSH لاسرسی فعاله کړئ.', '«Manage Shell» → enable SSH access.')}
                       </p>
                       <p>
                         {t(
-                          'آدرس هاست SSH در ایمیل خوش‌آمد هاست است (مثل server370.web-hosting.com)، پورت آن معمولاً 21098، و نام استفاده‌کننده/پاسورد SSH همان است که با آن به cPanel داخل می‌شوید.',
-                          'د SSH هاست پته په د هوسټ د هرکلي بریښنالیک کې ده (لکه server370.web-hosting.com)، بورډ یې معمولاً 21098 دی، او د SSH کاروونکی/پاسورد هماغه د cPanel ننوتل دی.',
+                          'آدرس هاست SSH در ایمیل خوش‌آمد هاست است (مثل server370.web-hosting.com)، پورت آن معمولاً 21098، و نام کاربری/پسورد SSH همان است که با آن به cPanel داخل می‌شوید.',
+                          'د SSH هاست پته په د هوسټ د هرکلي بریښنالیک کې ده (لکه server370.web-hosting.com)، بورډ یې معمولاً 21098 دی، او د SSH کاروونکی/پسورد هماغه د cPanel ننوتل دی.',
                           'The SSH server address is in your hosting welcome email (e.g. server370.web-hosting.com), port is usually 21098, and SSH user/password are your cPanel login.'
                         )}
                       </p>
@@ -1542,11 +1542,11 @@ export default function SettingsModule() {
                         <Input id="sPort" dir="ltr" inputMode="numeric" placeholder="21098" value={connForm.sshPort} onChange={(e) => setConnForm({ ...connForm, sshPort: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="sUser">{t('نام استفاده‌کننده SSH (همان cPanel)', 'د SSH کاروونکی (همان cPanel)', 'SSH username (same as cPanel)')}</Label>
+                        <Label htmlFor="sUser">{t('نام کاربری SSH (همان cPanel)', 'د SSH کاروونکی (همان cPanel)', 'SSH username (same as cPanel)')}</Label>
                         <Input id="sUser" dir="ltr" placeholder="cpuser" autoComplete="off" value={connForm.sshUser} onChange={(e) => setConnForm({ ...connForm, sshUser: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="sPass">{t('پاسورد SSH (همان پاسورد cPanel)', 'د SSH پاسورد (همان د cPanel)', 'SSH password (same as cPanel)')}</Label>
+                        <Label htmlFor="sPass">{t('پسورد SSH (همان پسورد cPanel)', 'د SSH پسورد (همان د cPanel)', 'SSH password (same as cPanel)')}</Label>
                         <Input id="sPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.sshPassword} onChange={(e) => setConnForm({ ...connForm, sshPassword: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
@@ -1554,11 +1554,11 @@ export default function SettingsModule() {
                         <Input id="hDb" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="hUser">{t('نام استفاده‌کننده دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                        <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
                         <Input id="hUser" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
-                        <Label htmlFor="hPass">{t('پاسورد دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                        <Label htmlFor="hPass">{t('پسورد دیتابیس', 'د ډاټابیس پسورد', 'Database password')}</Label>
                         <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
                       </div>
                     </div>
@@ -1578,11 +1578,11 @@ export default function SettingsModule() {
                       <Input id="hDb" dir="ltr" placeholder="erp_db" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="hUser">{t('نام استفاده‌کننده دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                      <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
                       <Input id="hUser" dir="ltr" placeholder="erp_user" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <Label htmlFor="hPass">{t('پاسورد دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                      <Label htmlFor="hPass">{t('پسورد دیتابیس', 'د ډاټابیس پسورد', 'Database password')}</Label>
                       <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
                     </div>
                   </div>

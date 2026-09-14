@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionFromRequest, signSession, SESSION_COOKIE, SESSION_MAX_AGE_S } from '@/lib/session'
 
-// GET /api/auth/me — بازیابی معلومات استفاده‌کننده جاری از کوکی نشست
+// GET /api/auth/me — بازیابی معلومات کاربر جاری از کوکی نشست
 export async function GET(req: Request) {
   try {
     const session = await getSessionFromRequest(req)
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     if (!user || !user.active) {
       return NextResponse.json({ error: 'حساب یافت نشد یا غیرفعال است' }, { status: 401 })
     }
-    // تمدید خودکار نشست فعال (sliding session) — استفاده‌کننده فعال هرگز وسط کار خارج نمی‌شود
+    // تمدید خودکار نشست فعال (sliding session) — کاربر فعال هرگز وسط کار خارج نمی‌شود
     const token = await signSession(user)
     const res = NextResponse.json({
       id: user.id,

@@ -213,7 +213,7 @@ export interface DbInternals {
   mysqlConfigured(): boolean
   /** آیا دیتابیس محلی (SQLite) موجود است؟ */
   hasLocal(): boolean
-  /** آدرس هاست (بدون پاسورد) برای نمایش */
+  /** آدرس هاست (بدون پسورد) برای نمایش */
   mysqlInfo(): { host: string; port: string; database: string } | null
   /** ثبت قلاب ژورنال حذف (sync-engine) */
   registerDeleteJournal(fn: (table: string, where: unknown) => void): void

@@ -1,5 +1,5 @@
-// هش پاسورد با scrypt (بدون وابستگی خارجی)
-// سازگار با استفاده‌کنندگان قدیمی (پاسورد ساده در seed) — در ورود، پاسورد به‌صورت شفاف به هش ارتقا می‌یابد
+// هش پسورد با scrypt (بدون وابستگی خارجی)
+// سازگار با کاربران قدیمی (پسورد ساده در seed) — در ورود، پسورد به‌صورت شفاف به هش ارتقا می‌یابد
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
 export function hashPassword(password: string): string {
@@ -16,7 +16,7 @@ export function verifyPassword(password: string, stored: string): boolean {
       const expected = Buffer.from(hash, 'hex')
       return expected.length === test.length && timingSafeEqual(expected, test)
     }
-    // سازگاری با داده‌های قدیمی (پاسورد ساده)
+    // سازگاری با داده‌های قدیمی (پسورد ساده)
     return password === stored
   } catch {
     return false

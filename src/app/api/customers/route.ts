@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/customers — لیست مشتریان با تعداد فاکتورها
+// GET /api/customers — لیست مشتریان با تعداد بل‌ها
 export async function GET() {
   try {
     const customers = await db.customer.findMany({

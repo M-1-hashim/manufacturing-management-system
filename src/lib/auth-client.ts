@@ -1,7 +1,7 @@
 'use client'
 
 // مدیریت متمرکز ختم نشست در سمت کلاینت
-// هر جای برنامه که پاسخ 401 برسد: وضعیت استفاده‌کننده پاک و پیام مناسب نمایش داده می‌شود
+// هر جای برنامه که پاسخ 401 برسد: وضعیت کاربر پاک و پیام مناسب نمایش داده می‌شود
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import type { Lang } from '@/lib/i18n'
@@ -14,11 +14,11 @@ const MESSAGES: Record<Lang, string> = {
 
 let lastNotify = 0
 
-/** پاک‌سازی استفاده‌کننده جاری و نمایش پیام ختم نشست (حداکثر یک‌بار در ۳ ثانیه) */
+/** پاک‌سازی کاربر جاری و نمایش پیام ختم نشست (حداکثر یک‌بار در ۳ ثانیه) */
 export function notifyAuthFailure(): void {
   const before = useAppStore.getState().user
   useAppStore.getState().setUser(null)
-  // اگر استفاده‌کننده‌ای وارد نبود، پیام ختم بی‌معنی است (مثلاً صفحه ورود)
+  // اگر کاربر‌ای وارد نبود، پیام ختم بی‌معنی است (مثلاً صفحه ورود)
   if (!before) return
   const now = Date.now()
   if (now - lastNotify < 3000) return

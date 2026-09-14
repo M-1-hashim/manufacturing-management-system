@@ -172,7 +172,7 @@ export async function GET() {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5)
 
-    // ---- آخرین فروش‌ها (۸ فاکتور) ----
+    // ---- آخرین فروش‌ها (۸ بل) ----
     const recentSales = recentSaleRows.map((s) => ({
       invoiceNumber: s.invoiceNumber,
       customerName: s.customer?.name ?? s.customerName ?? '—',

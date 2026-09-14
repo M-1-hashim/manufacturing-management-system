@@ -211,7 +211,7 @@ export default function ReportsModule() {
                         t('تاریخ میلادی', 'میلادي نېټه', 'Gregorian date'),
                         t('تاریخ شمسی', 'شمسي نېټه', 'Jalali date'),
                         t('فروش (افغانی)', 'پلورنه (افغانی)', 'Sales (AFN)'),
-                        t('تعداد فاکتور', 'د فاکتورونو شمېر', 'Invoice count'),
+                        t('تعداد بل', 'د بلونو شمېر', 'Invoice count'),
                       ],
                       ...data.salesByDay.map((d) => [
                         d.date.slice(0, 10),
@@ -349,7 +349,7 @@ export default function ReportsModule() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm text-muted-foreground">{p.method}</p>
                       <Badge variant="outline" className={STATUS_COLORS[p.method] ?? ''}>
-                        {formatNumber(p.count)} {t('فاکتور', 'فاکتورونه', 'invoices')}
+                        {formatNumber(p.count)} {t('بل', 'بلونه', 'invoices')}
                       </Badge>
                     </div>
                     <p className="text-xl font-bold mt-1">{formatMoney(p.total)}</p>
@@ -583,14 +583,14 @@ export default function ReportsModule() {
                 <StatCard
                   title={t('مالیات ۲٪', '۲٪ مالیه', '2% tax')}
                   value={formatMoney(taxReport.tax2Amount)}
-                  hint={`${t('فاکتور', 'فاکتورونه', 'Invoices')}: ${formatNumber(taxReport.tax2Count)}`}
+                  hint={`${t('بل', 'بلونه', 'Invoices')}: ${formatNumber(taxReport.tax2Count)}`}
                   icon={Wallet}
                   tone="blue"
                 />
                 <StatCard
                   title={t('مالیات ۱۰٪', '۱۰٪ مالیه', '10% tax')}
                   value={formatMoney(taxReport.tax10Amount)}
-                  hint={`${t('فاکتور', 'فاکتورونه', 'Invoices')}: ${formatNumber(taxReport.tax10Count)}`}
+                  hint={`${t('بل', 'بلونه', 'Invoices')}: ${formatNumber(taxReport.tax10Count)}`}
                   icon={Wallet}
                   tone="amber"
                 />
@@ -605,8 +605,8 @@ export default function ReportsModule() {
                 <CardContent className="p-4">
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {t(
-                      'مجموع مالیات از فاکتورهای فروش در بازه انتخابی محاسبه شده است. نرخ‌های ۲٪ و ۱۰٪ طبق قانون مالیات فروش افغانستان درج می‌گردد.',
-                      'د پلورنې فاکتورونو ټوله مالیه په ټاکلې موده کې محاسبه شوې ده.',
+                      'مجموع مالیات از بل‌های فروش در بازه انتخابی محاسبه شده است. نرخ‌های ۲٪ و ۱۰٪ طبق قانون مالیات فروش افغانستان درج می‌گردد.',
+                      'د پلورنې بلونو ټوله مالیه په ټاکلې موده کې محاسبه شوې ده.',
                       'Total sales tax from invoices in the selected range. 2% and 10% rates per Afghan sales tax law.'
                     )}
                   </p>

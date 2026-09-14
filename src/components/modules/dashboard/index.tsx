@@ -190,9 +190,9 @@ export default function DashboardModule() {
           tone="green"
         />
         <StatCard
-          title={t('مطالبات وصول‌نشده', 'ناوړې شوې پیسې', 'Receivables')}
+          title={t('قرض ها', 'ناوړې شوې پیسې', 'Receivables')}
           value={formatMoney(stats.receivables)}
-          hint={t('بدهی مشتریان', 'د پیرودونکو بدهی', 'Customer debts')}
+          hint={t('قرض مشتریان', 'د پیرودونکو پور', 'Customer debts')}
           icon={Wallet}
           tone="amber"
         />
@@ -459,7 +459,7 @@ export default function DashboardModule() {
               <Table>
                 <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                   <TableRow>
-                    <TableHead>{t('فاکتور', 'فاکتورونه', 'Invoice')}</TableHead>
+                    <TableHead>{t('بل', 'بلونه', 'Invoice')}</TableHead>
                     <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
                     <TableHead>{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>

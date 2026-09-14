@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول مالی — صورت سود و زیان، بدهی مشتریان، مصارف، خلاصه مالیات
+// ماژول مالی — صورت سود و زیان، قرض مشتریان، مصارف، خلاصه مالیات
 import { useMemo, useState } from 'react'
 import { toJalaali } from 'jalaali-js'
 import { toast } from 'sonner'
@@ -174,8 +174,8 @@ export default function FinanceModule() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('مالی', 'مالي', 'Finance')}
-        subtitle={t('سود و زیان، بدهی‌ها، مصارف و مالیات', 'ګټه او زیان، پورونه، لګښتونه او مالیه', 'P&L, receivables, expenses & tax')}
+        title={t('مدیریت مالی', 'مالي', 'Finance')}
+        subtitle={t('سود و زیان، قرض ها، مصارف و مالیات', 'ګټه او زیان، پورونه، لګښتونه او مالیه', 'P&L, receivables, expenses & tax')}
         icon={Wallet}
       />
 
@@ -228,7 +228,7 @@ export default function FinanceModule() {
           </CardContent>
         </Card>
 
-        {/* خلاصه مالیات + بدهی کلی */}
+        {/* خلاصه مالیات + قرض کلی */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -243,15 +243,15 @@ export default function FinanceModule() {
             <Row label={t('جمع مالیات', 'ټوله مالیه', 'Total tax')} value={formatMoney(fin.tax2 + fin.tax10)} bold />
             <Separator />
             <Row
-              label={t('مطالبات وصول‌ناشده', 'ناکړل شوې مطالبات', 'Unpaid receivables')}
+              label={t('قرض ها', 'ناکړل شوې مطالبات', 'Unpaid receivables')}
               value={formatMoney(fin.receivable)}
               tone="text-amber-600"
               bold
             />
             <p className="text-xs text-muted-foreground">
               {t(
-                'مبالغ به افغانی با نرخ ثبت‌شده هر فاکتور تبدیل شده است.',
-              'مبالغ افغانۍ ته د هر فاکتور په ثبت شوې نرخ بدل شوي دي.',
+                'مبالغ به افغانی با نرخ ثبت‌شده هر بل تبدیل شده است.',
+              'مبالغ افغانۍ ته د هر بل په ثبت شوې نرخ بدل شوي دي.',
                 'Amounts converted to AFN using each invoice rate.'
               )}
             </p>
@@ -260,23 +260,23 @@ export default function FinanceModule() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* بدهی مشتریان */}
+        {/* قرض مشتریان */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Banknote className="h-4 w-4 text-amber-600" />
-              {t('بدهی مشتریان', 'د پیرودونکو پورونه', 'Customer receivables')}
+              {t('قرض مشتریان', 'د پیرودونکو پورونه', 'Customer receivables')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="max-h-72 overflow-y-auto rounded-lg border">
               {receivableSales.length === 0 ? (
-                <EmptyState label={t('فاکتور پرداخت‌نشده وجود ندارد', 'پرداخت شوی فاکتور نشته', 'No unpaid invoices')} />
+                <EmptyState label={t('بل پرداخت‌نشده وجود ندارد', 'پرداخت شوی بل نشته', 'No unpaid invoices')} />
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('فاکتور', 'فاکتور', 'Invoice')}</TableHead>
+                      <TableHead>{t('بل', 'بل', 'Invoice')}</TableHead>
                       <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
                       <TableHead>{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
                       <TableHead>{t('باقیات', 'پاتې', 'Remaining')}</TableHead>
@@ -306,7 +306,7 @@ export default function FinanceModule() {
             <Separator />
             <div>
               <p className="text-sm font-medium mb-2">
-                {t('باقیات بدهی مشتریان (دفتر)', 'د پیرودونکو پور (دفتر)', 'Customer book balances')}
+                {t('باقیات قرض مشتریان (دفتر)', 'د پیرودونکو پور (دفتر)', 'Customer book balances')}
               </p>
               {debtCustomers.length === 0 ? (
                 <p className="text-xs text-muted-foreground">

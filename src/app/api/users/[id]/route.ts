@@ -21,16 +21,16 @@ function sanitize(u: { id: string; username: string; fullName: string; role: str
 async function requireAdmin(req: Request) {
   const session = await getSessionFromRequest(req)
   if (!session) return { error: 'ابتدا وارد سیستم شوید', status: 401 as const }
-  if (session.role !== 'admin') return { error: 'فقط مدیر سیستم به مدیریت استفاده‌کنندگان دسترسی دارد', status: 403 as const }
+  if (session.role !== 'admin') return { error: 'فقط مدیر سیستم به مدیریت کاربران سیستم دسترسی دارد', status: 403 as const }
   return { session }
 }
 
-/** تعداد ادمین‌های فعال به‌جز این استفاده‌کننده */
+/** تعداد ادمین‌های فعال به‌جز این کاربر */
 async function otherActiveAdmins(userId: string): Promise<number> {
   return db.user.count({ where: { role: 'admin', active: true, NOT: { id: userId } } })
 }
 
-// PUT /api/users/[id] — تصحیح حساب (نقش، بخش، فعال/غیرفعال، پاسورد جدید)
+// PUT /api/users/[id] — تصحیح حساب (نقش، بخش، فعال/غیرفعال، پسورد جدید)
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const guard = await requireAdmin(req)
@@ -38,7 +38,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const { id } = await ctx.params
 
     const user = await db.user.findUnique({ where: { id } })
-    if (!user) return NextResponse.json({ error: 'استفاده‌کننده یافت نشد' }, { status: 404 })
+    if (!user) return NextResponse.json({ error: 'کاربر یافت نشد' }, { status: 404 })
 
     const body = await req.json()
     const data: Record<string, unknown> = {}
@@ -75,7 +75,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     if (body.password) {
       const password = String(body.password)
       if (password.length < 6) {
-        return NextResponse.json({ error: 'پاسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+        return NextResponse.json({ error: 'پسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
       }
       data.password = hashPassword(password)
     }
@@ -100,7 +100,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
       return NextResponse.json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, { status: 403 })
     }
     const user = await db.user.findUnique({ where: { id } })
-    if (!user) return NextResponse.json({ error: 'استفاده‌کننده یافت نشد' }, { status: 404 })
+    if (!user) return NextResponse.json({ error: 'کاربر یافت نشد' }, { status: 404 })
     if (user.role === 'admin' && (await otherActiveAdmins(id)) === 0) {
       return NextResponse.json({ error: 'حداقل یک ادمین فعال باید باقی بماند' }, { status: 403 })
     }

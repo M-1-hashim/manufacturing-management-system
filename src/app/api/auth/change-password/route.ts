@@ -4,7 +4,7 @@ import { getSessionFromRequest } from '@/lib/session'
 import { hashPassword, verifyPassword } from '@/lib/passwords'
 import { logAudit } from '@/lib/audit'
 
-// POST /api/auth/change-password — تغییر پاسورد توسط خود استفاده‌کننده
+// POST /api/auth/change-password — تغییر پسورد توسط خود کاربر
 export async function POST(req: Request) {
   try {
     const session = await getSessionFromRequest(req)
@@ -13,15 +13,15 @@ export async function POST(req: Request) {
     }
     const { currentPassword, newPassword } = await req.json()
     if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: 'پاسورد فعلی و پاسورد جدید الزامی است' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد فعلی و پسورد جدید الزامی است' }, { status: 400 })
     }
     if (String(newPassword).length < 6) {
-      return NextResponse.json({ error: 'پاسورد جدید باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد جدید باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
     }
 
     const user = await db.user.findUnique({ where: { id: session.uid } })
     if (!user || !verifyPassword(String(currentPassword), user.password)) {
-      return NextResponse.json({ error: 'پاسورد فعلی اشتباه است' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد فعلی اشتباه است' }, { status: 400 })
     }
 
     await db.user.update({

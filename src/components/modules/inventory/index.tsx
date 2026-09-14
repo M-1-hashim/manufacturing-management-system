@@ -780,7 +780,7 @@ export default function InventoryModule() {
                 dir="ltr"
                 value={mRef}
                 onChange={(e) => setMRef(e.target.value)}
-                placeholder={t('نمبر فاکتور / سفارش', 'د بل شمېره', 'Invoice / order no.')}
+                placeholder={t('نمبر بل / سفارش', 'د بل شمېره', 'Invoice / order no.')}
               />
             </div>
             <div className="space-y-1.5">

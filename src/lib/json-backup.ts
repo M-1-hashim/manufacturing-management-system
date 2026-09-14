@@ -74,7 +74,7 @@ export function validateJsonBackup(data: unknown): FullJsonBackup {
   }
   const d = data as Partial<FullJsonBackup>
   if (d.app !== 'manufacturing-management-system' || d.version !== 1 || !d.tables) {
-    throw new Error('این فایل یک کاپی احتیاطی معتبر سامانه نیست')
+    throw new Error('این فایل یک کاپی احتیاطی معتبر سیستم مدیریتی نیست')
   }
   for (const t of TABLES) {
     if (!Array.isArray(d.tables[t.name])) {

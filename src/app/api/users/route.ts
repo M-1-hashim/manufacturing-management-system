@@ -21,11 +21,11 @@ function sanitize(u: { id: string; username: string; fullName: string; role: str
 async function requireAdmin(req: Request) {
   const session = await getSessionFromRequest(req)
   if (!session) return { error: 'ابتدا وارد سیستم شوید', status: 401 as const }
-  if (session.role !== 'admin') return { error: 'فقط مدیر سیستم به مدیریت استفاده‌کنندگان دسترسی دارد', status: 403 as const }
+  if (session.role !== 'admin') return { error: 'فقط مدیر سیستم به مدیریت کاربران سیستم دسترسی دارد', status: 403 as const }
   return { session }
 }
 
-// GET /api/users — لیست استفاده‌کنندگان (فقط ادمین)
+// GET /api/users — لیست کاربران سیستم (فقط ادمین)
 export async function GET(req: Request) {
   try {
     const guard = await requireAdmin(req)
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json(users.map(sanitize))
   } catch (e) {
     console.error('users GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت استفاده‌کنندگان' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت کاربران سیستم' }, { status: 500 })
   }
 }
 
@@ -53,16 +53,16 @@ export async function POST(req: Request) {
     const department = body.department === undefined || body.department === '' ? 'general' : body.department
 
     if (username.length < 3) {
-      return NextResponse.json({ error: 'نام استفاده‌کننده باید حداقل ۳ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کاربری باید حداقل ۳ کاراکتر باشد' }, { status: 400 })
     }
     if (!fullName) {
       return NextResponse.json({ error: 'نام کامل الزامی است' }, { status: 400 })
     }
     if (password.length < 6) {
-      return NextResponse.json({ error: 'پاسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
     }
     if (!role) {
-      return NextResponse.json({ error: 'نقش استفاده‌کننده نامعتبر است' }, { status: 400 })
+      return NextResponse.json({ error: 'نقش کاربر نامعتبر است' }, { status: 400 })
     }
     if (!isDepartment(department)) {
       return NextResponse.json({ error: 'بخش سازمانی نامعتبر است' }, { status: 400 })
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     const exists = await db.user.findUnique({ where: { username } })
     if (exists) {
-      return NextResponse.json({ error: 'این نام استفاده‌کننده قبلاً استفاده شده است' }, { status: 400 })
+      return NextResponse.json({ error: 'این نام کاربری قبلاً استفاده شده است' }, { status: 400 })
     }
 
     const user = await db.user.create({

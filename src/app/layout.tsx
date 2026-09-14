@@ -7,7 +7,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "سامانه مدیریت تولید | Afghan Manufacturing ERP",
+  title: "سیستم مدیریتی تولید | Afghan Manufacturing ERP",
   description:
     "سیستم جامع مدیریت چرخه تولید از مواد خام تا محصول نهایی و فروش — طراحی‌شده برای کارخانه‌های افغانستان",
   keywords: ["مدیریت تولید", "ERP", "افغانستان", "تولید", "انبار", "فروش"],

@@ -5,7 +5,7 @@ import { logAudit } from '@/lib/audit'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-// GET /api/sales/[id] — فاکتور کامل برای چاپ / مشاهده مجدد
+// GET /api/sales/[id] — بل کامل برای چاپ / مشاهده مجدد
 export async function GET(_req: Request, { params }: Ctx) {
   try {
     const { id } = await params
@@ -13,11 +13,11 @@ export async function GET(_req: Request, { params }: Ctx) {
       where: { id },
       include: { customer: true, items: { include: { product: true } } },
     })
-    if (!sale) return NextResponse.json({ error: 'فاکتور یافت نشد' }, { status: 404 })
+    if (!sale) return NextResponse.json({ error: 'بل یافت نشد' }, { status: 404 })
     return NextResponse.json(sale)
   } catch (e) {
     console.error('sale GET [id]', e)
-    return NextResponse.json({ error: 'خطا در دریافت فاکتور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت بل' }, { status: 500 })
   }
 }
 
@@ -32,13 +32,13 @@ export async function PUT(req: Request, { params }: Ctx) {
     }
 
     const sale = await db.sale.findUnique({ where: { id } })
-    if (!sale) return NextResponse.json({ error: 'فاکتور یافت نشد' }, { status: 404 })
+    if (!sale) return NextResponse.json({ error: 'بل یافت نشد' }, { status: 404 })
 
     const updated = await db.$transaction(async (tx) => {
       const newStatus =
         sale.total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
 
-      // تعدیل بدهی مشتری: کاهش مانده به اندازه اختلاف باقیات قدیم و جدید
+      // تعدیل قرض مشتری: کاهش مانده به اندازه اختلاف باقیات قدیم و جدید
       if (sale.customerId) {
         const oldRemaining = Math.max(0, sale.total - sale.paidAmount)
         const newRemaining = Math.max(0, sale.total - paidAmount)
@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'payment', 'sale', id, `دریافت برای فاکتور ${sale.invoiceNumber} — باقیات جدید ${Math.max(0, sale.total - paidAmount)}`)
+    await logAudit(session, 'payment', 'sale', id, `دریافت برای بل ${sale.invoiceNumber} — باقیات جدید ${Math.max(0, sale.total - paidAmount)}`)
 
     return NextResponse.json(updated)
   } catch (e) {
@@ -71,7 +71,7 @@ export async function PUT(req: Request, { params }: Ctx) {
   }
 }
 
-// DELETE /api/sales/[id] — حذف فاکتور: برگشت موجودی، تعدیل بدهی مشتری، حذف اتمیک
+// DELETE /api/sales/[id] — حذف بل: برگشت موجودی، تعدیل قرض مشتری، حذف اتمیک
 export async function DELETE(req: Request, { params }: Ctx) {
   try {
     const { id } = await params
@@ -79,7 +79,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
       where: { id },
       include: { items: { include: { product: true } } },
     })
-    if (!sale) return NextResponse.json({ error: 'فاکتور یافت نشد' }, { status: 404 })
+    if (!sale) return NextResponse.json({ error: 'بل یافت نشد' }, { status: 404 })
 
     await db.$transaction(async (tx) => {
       // برگشت موجودی انبار برای هر قلم
@@ -90,7 +90,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
         })
       }
 
-      // کاهش بدهی مشتری اگر فاکتور پرداخت‌نشده یا ناقص بود
+      // کاهش قرض مشتری اگر بل پرداخت‌نشده یا ناقص بود
       if (sale.customerId && sale.status !== 'paid') {
         const remaining = Math.max(0, sale.total - sale.paidAmount)
         const customer = await tx.customer.findUnique({ where: { id: sale.customerId } })
@@ -102,7 +102,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
         }
       }
 
-      // حذف تراکنش‌های انبار مرتبط با این فاکتور
+      // حذف تراکنش‌های انبار مرتبط با این بل
       await tx.inventoryTransaction.deleteMany({
         where: { reference: sale.invoiceNumber, type: 'out', itemType: 'product' },
       })
@@ -111,11 +111,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'delete', 'sale', id, `حذف فاکتور ${sale.invoiceNumber}`)
+    await logAudit(session, 'delete', 'sale', id, `حذف بل ${sale.invoiceNumber}`)
 
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('sale DELETE [id]', e)
-    return NextResponse.json({ error: 'خطا در حذف فاکتور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در حذف بل' }, { status: 500 })
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول فروش — فاکتورها، مشتریان، چاپ فاکتور، ثبت پرداخت
+// ماژول فروش — بل‌ها، مشتریان، چاپ بل، ثبت پرداخت
 import { useMemo, useState } from 'react'
 import { toJalaali } from 'jalaali-js'
 import { toast } from 'sonner'
@@ -241,12 +241,12 @@ export default function SalesModule() {
     sales.refetch()
     customers.refetch()
     products.refetch()
-    // پاسخ ترکیبی حالت آفلاین — فاکتور در صف همگام‌سازی است و نمایش ندارد
+    // پاسخ ترکیبی حالت آفلاین — بل در صف همگام‌سازی است و نمایش ندارد
     if ((sale as unknown as { offlineQueued?: boolean }).offlineQueued) {
       toast.success(
         t(
-          'فاکتور به‌صورت آفلاین ذخیره شد و پس از اتصال همگام می‌شود',
-          'فاکتور افلاین خوندي شو او له نښلېدو وروسته همغه کیږي',
+          'بل به‌صورت آفلاین ذخیره شد و پس از اتصال همگام می‌شود',
+          'بل افلاین خوندي شو او له نښلېدو وروسته همغه کیږي',
           'Invoice saved offline — syncs when back online'
         )
       )
@@ -254,7 +254,7 @@ export default function SalesModule() {
     }
     setInvoiceSale(sale)
     toast.success(
-      t('فاکتور ثبت شد: ', 'فاکتور ثبت شو: ', 'Invoice created: ') + sale.invoiceNumber
+      t('بل ثبت شد: ', 'بل ثبت شو: ', 'Invoice created: ') + sale.invoiceNumber
     )
   }
 
@@ -264,10 +264,10 @@ export default function SalesModule() {
     const res = await callApi<{ ok: boolean }>(`/api/sales/${delSale.id}`, 'DELETE')
     setDeleting(false)
     if (!res.ok) {
-      toast.error(res.error || t('خطا در حذف فاکتور', 'د فاکتور په ړنګولو کې ستونزه', 'Delete failed'))
+      toast.error(res.error || t('خطا در حذف بل', 'د بل په ړنګولو کې ستونزه', 'Delete failed'))
       return
     }
-    toast.success(t('فاکتور حذف شد و موجودی برگشت داده شد', 'فاکتور ړنګ او موجودي بیرته ورکړل شو', 'Invoice deleted, stock restored'))
+    toast.success(t('بل حذف شد و موجودی برگشت داده شد', 'بل ړنګ او موجودي بیرته ورکړل شو', 'Invoice deleted, stock restored'))
     setDelSale(null)
     sales.refetch()
     customers.refetch()
@@ -278,7 +278,7 @@ export default function SalesModule() {
     <div className="space-y-6">
       <PageHeader
         title={t('فروشات', 'پلورنه', 'Sales')}
-        subtitle={t('مدیریت فاکتورهای فروش و مشتریان', 'د پلورنې فاکتورونو او پیرودونکو مدیریت', 'Sales invoices & customers')}
+        subtitle={t('مدیریت بل‌های فروش و مشتریان', 'د پلورنې بلونو او پیرودونکو مدیریت', 'Sales invoices & customers')}
         icon={ShoppingCart}
         actions={
           <>
@@ -309,13 +309,13 @@ export default function SalesModule() {
           tone="blue"
         />
         <StatCard
-          title={t('مطالبات وصول‌ناشده', 'ناکړل شوې مطالبات', 'Unpaid receivables')}
+          title={t('قرض ها', 'ناکړل شوې مطالبات', 'Unpaid receivables')}
           value={formatMoney(stats.receivable)}
           icon={Banknote}
           tone="amber"
         />
         <StatCard
-          title={t('تعداد فاکتورها', 'د فاکتورونو شمېر', 'Invoices count')}
+          title={t('تعداد بل‌ها', 'د بلونو شمېر', 'Invoices count')}
           value={formatNumber(stats.count)}
           icon={Users}
           tone="slate"
@@ -329,7 +329,7 @@ export default function SalesModule() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('جستجوی نمبر فاکتور یا مشتری...', 'د فاکتور یا پیرودونکي لټون...', 'Search invoice / customer...')}
+            placeholder={t('جستجوی نمبر بل یا مشتری...', 'د بل یا پیرودونکي لټون...', 'Search invoice / customer...')}
             className="ps-8"
           />
         </div>
@@ -357,7 +357,7 @@ export default function SalesModule() {
         </Select>
       </div>
 
-      {/* جدول فاکتورها */}
+      {/* جدول بل‌ها */}
       <div className="rounded-xl border bg-card">
         {sales.loading ? (
           <div className="p-4">
@@ -366,13 +366,13 @@ export default function SalesModule() {
         ) : sales.error ? (
           <LoadingBlock label={sales.error} />
         ) : filtered.length === 0 ? (
-          <EmptyState label={t('فاکتوری ثبت نشده است', 'فاکتور نه دی ثبت شوی', 'No invoices yet')} />
+          <EmptyState label={t('هیچ بلی ثبت نشده است', 'بل نه دی ثبت شوی', 'No invoices yet')} />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('فاکتور', 'فاکتور', 'Invoice')}</TableHead>
+                  <TableHead>{t('بل', 'بل', 'Invoice')}</TableHead>
                   <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
                   <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
                   <TableHead>{t('اقلام', 'توکي', 'Items')}</TableHead>
@@ -491,22 +491,22 @@ export default function SalesModule() {
         />
       )}
 
-      {/* تصدیق حذف فاکتور */}
+      {/* تصدیق حذف بل */}
       <AlertDialog open={!!delSale} onOpenChange={(o) => !o && setDelSale(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('حذف فاکتور', 'د فاکتور ړنګول', 'Delete invoice')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('حذف بل', 'د بل ړنګول', 'Delete invoice')}</AlertDialogTitle>
             <AlertDialogDescription>
               {delSale && (
                 <>
                   {t(
-                    'فاکتور ',
-                    'فاکتور ',
+                    'بل ',
+                    'بل ',
                     'Invoice '
                   )}
                   <span className="font-mono">{delSale.invoiceNumber}</span>
                   {t(
-                    ' حذف شود؟ موجودی انبار برگشت داده شده و بدهی مشتری تعدیل می‌گردد.',
+                    ' حذف شود؟ موجودی انبار برگشت داده شده و قرض مشتری تعدیل می‌گردد.',
                     ' ړنګ شي؟ موجودي بیرته ورکړل کیږي او د پیرودونکي پور تعدیل کیږي.',
                     ' will be deleted. Stock will be restored and customer balance adjusted.'
                   )}
@@ -623,7 +623,7 @@ function NewSaleDialog({
     else setExchangeRate(String(live.data?.pkr || Number(settings?.pkrRate) || 0.25))
   }
 
-  // وقتی نرخ لحظه‌ای رسید → اگر استفاده‌کننده هنوز نرخ دستی وارد نکرده، فیلد با نرخ زنده همگام می‌شود
+  // وقتی نرخ لحظه‌ای رسید → اگر کاربر هنوز نرخ دستی وارد نکرده، فیلد با نرخ زنده همگام می‌شود
   // (الگوی رسمی React: تنظیم state هنگام رندر هنگام تغییر داده بیرونی — بدون useEffect)
   const [syncedLive, setSyncedLive] = useState<LiveRatesT | null>(null)
   if (live.data !== syncedLive) {
@@ -690,7 +690,7 @@ function NewSaleDialog({
         <DialogHeader>
           <DialogTitle>{t('فروش جدید', 'نوی پلورنه', 'New sale')}</DialogTitle>
           <DialogDescription>
-            {t('فاکتور فروش جدید ثبت کنید', 'نوی پلورنې فاکتور ثبت کړئ', 'Create a new sales invoice')}
+            {t('بل فروش جدید ثبت کنید', 'نوی پلورنې بل ثبت کړئ', 'Create a new sales invoice')}
           </DialogDescription>
         </DialogHeader>
 
@@ -983,7 +983,7 @@ function NewSaleDialog({
           </Button>
           <Button onClick={submit} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t('ثبت فاکتور', 'فاکتور ثبت', 'Save invoice')}
+            {t('ثبت بل', 'بل ثبت', 'Save invoice')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1088,7 +1088,7 @@ function amountToWords(amount: number, currency: Currency, lang: NumLang): strin
   return amount < 0 ? `${lang === 'en' ? 'minus ' : 'منفی '}${s}` : s
 }
 
-// ================= دیالوگ فاکتور (پیش‌نمایش و چاپ حرفه‌ای) =================
+// ================= دیالوگ بل (پیش‌نمایش و چاپ حرفه‌ای) =================
 function InvoiceDialog({
   sale,
   settings,
@@ -1153,13 +1153,13 @@ function InvoiceDialog({
         className="sm:max-w-3xl flex flex-col gap-0 p-0 max-h-[94vh] overflow-hidden rounded-xl border-0 bg-transparent shadow-none [&_[data-slot=dialog-close]]:no-print print:static print:translate-x-0 print:translate-y-0 print:max-h-none print:overflow-visible print:rounded-none print:border-0 print:bg-transparent print:p-0 print:shadow-none print:max-w-none"
       >
         {/* عنوان برای دسترسی‌پذیری صفحه‌خوان‌ها (در چاپ دیده نمی‌شود) */}
-        <DialogTitle className="sr-only">{t('پیش‌نمایش فاکتور', 'د فاکتور مخکتنه', 'Invoice preview')}</DialogTitle>
+        <DialogTitle className="sr-only">{t('پیش‌نمایش بل', 'د بل مخکتنه', 'Invoice preview')}</DialogTitle>
 
         {/* ناحیه اسکرول */}
         <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6 print:overflow-visible print:p-0">
-          {/* برگه فاکتور — همیشه سفید مثل کاغذ واقعی */}
+          {/* برگه بل — همیشه سفید مثل کاغذ واقعی */}
           <div className="print-area mx-auto w-full overflow-hidden rounded-xl border border-neutral-200 bg-white text-neutral-900 shadow-xl [print-color-adjust:exact] [-webkit-print-color-adjust:exact] print:rounded-none print:border-0 print:shadow-none">
-            {/* نوار رنگی بالای فاکتور */}
+            {/* نوار رنگی بالای بل */}
             <div className="h-2 w-full bg-gradient-to-l from-emerald-700 via-emerald-500 to-teal-500" />
 
             <div className="space-y-5 p-4 sm:p-8">
@@ -1187,7 +1187,7 @@ function InvoiceDialog({
                 </div>
                 <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-center">
                   <p className="text-base font-extrabold text-emerald-700 sm:text-lg">
-                    {t('فاکتور فروش', 'د پلورنې فاکتور', 'Sales Invoice')}
+                    {t('بل فروش', 'د پلورنې بل', 'Sales Invoice')}
                   </p>
                   <p className="text-[9px] font-bold tracking-[0.35em] text-emerald-600/70">SALES INVOICE</p>
                   <p className="mt-1.5 inline-block rounded-md bg-white px-2.5 py-1 font-mono text-sm font-bold text-neutral-800 shadow-sm" dir="ltr">
@@ -1196,7 +1196,7 @@ function InvoiceDialog({
                 </div>
               </div>
 
-              {/* ---------- معلومات مشتری و فاکتور ---------- */}
+              {/* ---------- معلومات مشتری و بل ---------- */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-neutral-200 p-3.5">
                   <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
@@ -1213,7 +1213,7 @@ function InvoiceDialog({
                 </div>
                 <div className="rounded-lg border border-neutral-200 p-3.5 text-sm">
                   <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
-                    {t('مشخصات فاکتور', 'د فاکتور معلومات', 'INVOICE DETAILS')}
+                    {t('مشخصات بل', 'د بل معلومات', 'INVOICE DETAILS')}
                   </p>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                     <span className="text-neutral-500">{t('تاریخ شمسی', 'نېټه (شمسي)', 'Date (Jalali)')}</span>
@@ -1383,7 +1383,7 @@ function PayDialog({
   onSaved: () => void
 }) {
   const { t } = useI18n()
-  // مقدار اولیه = کل باقیات (دیالوگ با هر فاکتور از نو مونت می‌شود)
+  // مقدار اولیه = کل باقیات (دیالوگ با هر بل از نو مونت می‌شود)
   const [amount, setAmount] = useState(() =>
     sale ? String(Math.max(0, Number((sale.total - sale.paidAmount).toFixed(2)))) : ''
   )
@@ -1534,7 +1534,7 @@ function CustomersDialog({
         <DialogHeader>
           <DialogTitle>{t('مشتریان', 'پیرودونکي', 'Customers')}</DialogTitle>
           <DialogDescription>
-            {t('مدیریت مشتریان و باقیات بدهی‌ها', 'د پیرودونکو او پورونو مدیریت', 'Manage customers & balances')}
+            {t('مدیریت مشتریان و باقیات قرض ها', 'د پیرودونکو او پورونو مدیریت', 'Manage customers & balances')}
           </DialogDescription>
         </DialogHeader>
 
@@ -1587,8 +1587,8 @@ function CustomersDialog({
                   <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
                   <TableHead>{t('نوع', 'ډول', 'Type')}</TableHead>
                   <TableHead>{t('تیلیفون', 'تیلیفون', 'Phone')}</TableHead>
-                  <TableHead>{t('باقیات بدهی', 'پور', 'Balance')}</TableHead>
-                  <TableHead>{t('فاکتورها', 'فاکتورونه', 'Sales')}</TableHead>
+                  <TableHead>{t('باقیات قرض', 'پور', 'Balance')}</TableHead>
+                  <TableHead>{t('بل‌ها', 'بلونه', 'Sales')}</TableHead>
                   <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>

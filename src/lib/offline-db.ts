@@ -11,7 +11,7 @@ const MAX_CACHE_ENTRIES = 300
 
 export interface QueuedOp {
   id: string
-  user: string // نام استفاده‌کننده سازنده — برای همگام‌سازی فقط توسط همان استفاده‌کننده
+  user: string // نام کاربری سازنده — برای همگام‌سازی فقط توسط همان کاربر
   url: string
   method: string
   body: string // متن خام (JSON)

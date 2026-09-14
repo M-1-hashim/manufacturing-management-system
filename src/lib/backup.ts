@@ -218,7 +218,7 @@ export async function restoreFromBuffer(
   }
 
   if (!validateSqliteDbBuffer(dbBytes)) {
-    throw new Error('فایل ارسالی یک دیتابیس معتبر سامانه نیست')
+    throw new Error('فایل ارسالی یک دیتابیس معتبر سیستم مدیریتی نیست')
   }
 
   // ۱) کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)

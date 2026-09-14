@@ -55,13 +55,13 @@ const ACTION_LABELS: Record<string, [string, string, string]> = {
   complete: ['تکمیل تولید', 'د تولید بشپړول', 'Production complete'],
   payment: ['دریافت پرداخت', 'د پیسو ترلاسه کول', 'Payment received'],
   adjust: ['حرکت انبار', 'د ګدام حرکت', 'Stock adjustment'],
-  change_password: ['تغییر پاسورد', 'د پټ نوم بدلون', 'Password change'],
+  change_password: ['تغییر پسورد', 'د پټ نوم بدلون', 'Password change'],
 }
 
 // برچسب بخش‌ها (entity): [دری، پشتو، انگلیسی]
 const ENTITY_LABELS: Record<string, [string, string, string]> = {
   auth: ['تصدیق هویت', 'تصدیق هویت', 'Auth'],
-  user: ['استفاده‌کنندگان', 'کاروونکي', 'Users'],
+  user: ['کاربران سیستم', 'کاروونکي', 'Users'],
   sale: ['فروش', 'پلورنه', 'Sales'],
   production: ['تولید', 'تولید', 'Production'],
   inventory: ['انبار', 'ګدام', 'Inventory'],
@@ -146,7 +146,7 @@ export default function AuditModule() {
     downloadCSV('audit-log.csv', [
       [
         t('زمان', 'وخت', 'Time'),
-        t('استفاده‌کننده', 'کاروونکی', 'User'),
+        t('کاربر', 'کاروونکی', 'User'),
         t('رخداد', 'پیښه', 'Action'),
         t('بخش', 'برخه', 'Entity'),
         t('تفصیلات', 'تفصیلات', 'Details'),
@@ -283,7 +283,7 @@ export default function AuditModule() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('زمان', 'وخت', 'Time')}</TableHead>
-                    <TableHead>{t('استفاده‌کننده', 'کاروونکی', 'User')}</TableHead>
+                    <TableHead>{t('کاربر', 'کاروونکی', 'User')}</TableHead>
                     <TableHead>{t('رخداد', 'پیښه', 'Action')}</TableHead>
                     <TableHead>{t('بخش', 'برخه', 'Entity')}</TableHead>
                     <TableHead>{t('تفصیلات', 'تفصیلات', 'Details')}</TableHead>

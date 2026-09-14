@@ -323,7 +323,7 @@ export async function ensureJournalTable(pair: ClientPair): Promise<void> {
   journalReady = true
 }
 
-/** قلاب را روی db.ts نصب می‌کند — همهٔ حذف‌های استفاده‌کننده ژورنال می‌شوند (آنلاین و آفلاین) */
+/** قلاب را روی db.ts نصب می‌کند — همهٔ حذف‌های کاربر ژورنال می‌شوند (آنلاین و آفلاین) */
 export function installOfflineJournaling(): void {
   const { sqlite } = dbInternal.getClients()
   if (!sqlite) return
@@ -882,7 +882,7 @@ export interface MigrateResult {
 }
 
 /**
- * انتقال کامل دیتای دستگاه محلی به هاست — برای استفاده‌کننده‌ای که مدت‌ها محلی
+ * انتقال کامل دیتای دستگاه محلی به هاست — برای کاربر‌ای که مدت‌ها محلی
  * کار کرده و بعداً به هاست مهاجرت می‌کند. همهٔ ۱۹ جدول به‌ترتیبِ وابستگی
  * روی هاست upsert می‌شوند (سطر جدید → create، سطر موجود → update).
  * بعد از موفقیت، نشان‌های ارسال تنظیم می‌شوند تا دلتای تکراری نرود.
