@@ -1,13 +1,25 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* فونت اصلي سیسټم — بی نازنین (B Nazanin)
+   فونټ رسمي او دودیز اسنادو لپاره په افغانستان کې؛
+   د پښتو ځانګړو تورو (ټ ډ ړ ږ ښ ګ ې ۍ) او لاتین لپاره
+   Vazirmatn د فال بیک په توګه کارېږي */
+@font-face {
+  font-family: "B Nazanin";
+  src: url("/fonts/B-Nazanin.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
-  --font-mono: "Vazirmatn", ui-monospace, monospace;
+  --font-sans: "B Nazanin", "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-mono: "B Nazanin", "Vazirmatn", ui-monospace, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -135,7 +147,16 @@
     @apply border-border outline-ring/50;
   }
   html {
-    font-family: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
+    font-family: "B Nazanin", "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
+  }
+  /* بی نازنین په ورته اندازه د وزیرمتن څخه کوچنی ښکاري —
+     د دری/پښتو حالت کې د بنسټیز فونټ اندازه لویږي (ټول remونه په متناسب ډول لویږي) */
+  html[lang='fa'],
+  html[lang='ps'] {
+    font-size: 112%;
+  }
+  html[lang='en'] {
+    font-size: 100%;
   }
   body {
     @apply bg-background text-foreground antialiased;

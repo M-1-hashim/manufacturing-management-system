@@ -29,6 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
+      <link rel="preload" href="/fonts/B-Nazanin.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
       <body className="antialiased bg-background text-foreground">
         {children}
         <Toaster richColors closeButton />
