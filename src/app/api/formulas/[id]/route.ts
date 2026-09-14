@@ -32,7 +32,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (rawItems) {
       for (const it of rawItems) {
         if (!it?.rawMaterialId || !(Number(it.quantity) > 0)) {
-          return NextResponse.json({ error: 'مقدار هر ماده باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+          return NextResponse.json({ error: 'مقدار هر ماده باید زیادتر از صفر باشد' }, { status: 400 })
         }
       }
     }

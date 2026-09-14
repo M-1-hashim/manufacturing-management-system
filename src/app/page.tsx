@@ -699,7 +699,7 @@ function FirstRunGate() {
   useEffect(() => {
     let alive = true
     async function decide() {
-      // درگاه کاپی احتیاطیی: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
+      // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
       const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
       if (!forceSetup && localStorage.getItem(SETUP_FLAG) === '1') {
         if (alive) setState('app')
@@ -725,7 +725,7 @@ function FirstRunGate() {
         return
       }
       if (forceSetup) {
-        // درگاه کاپی احتیاطیی در مرورگر هم ویزارد را نشان می‌دهد
+        // درگاه اضطراری در مرورگر هم ویزارد را نشان می‌دهد
         if (alive) setState('wizard')
         return
       }

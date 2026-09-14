@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     let categoryId: string | null = null
     if (body.categoryId) {
       const cat = await db.productCategory.findUnique({ where: { id: String(body.categoryId) } })
-      if (!cat) return NextResponse.json({ error: 'دسته‌بندی یافت نشد' }, { status: 400 })
+      if (!cat) return NextResponse.json({ error: 'کتگوری یافت نشد' }, { status: 400 })
       categoryId = cat.id
     }
 

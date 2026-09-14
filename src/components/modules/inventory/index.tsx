@@ -209,7 +209,7 @@ export default function InventoryModule() {
     }
     const q = Number(mQty)
     if (!q || isNaN(q) || q <= 0) {
-      toast.error(t('مقدار باید بزرگ‌تر از صفر باشد', 'اندازه باید له صفر لوی وي', 'Quantity must be greater than zero'))
+      toast.error(t('مقدار باید زیادتر از صفر باشد', 'اندازه باید له صفر لوی وي', 'Quantity must be greater than zero'))
       return
     }
     setSaving(true)
@@ -420,7 +420,7 @@ export default function InventoryModule() {
                         <TableHead>{t('قلم', 'قلم', 'Item')}</TableHead>
                         <TableHead>{t('مقدار', 'اندازه', 'Qty')}</TableHead>
                         <TableHead>{t('انبار', 'انبار', 'Warehouse')}</TableHead>
-                        <TableHead>{t('مرجع', 'حواله', 'Reference')}</TableHead>
+                        <TableHead>{t('حواله', 'حواله', 'Reference')}</TableHead>
                         <TableHead>{t('یادداشت', 'یادښت', 'Notes')}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -775,7 +775,7 @@ export default function InventoryModule() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>{t('مرجع (اختیاری)', 'حواله (اختیاري)', 'Reference (optional)')}</Label>
+              <Label>{t('حواله (اختیاری)', 'حواله (اختیاري)', 'Reference (optional)')}</Label>
               <Input
                 dir="ltr"
                 value={mRef}

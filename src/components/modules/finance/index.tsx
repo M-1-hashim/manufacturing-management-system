@@ -203,7 +203,7 @@ export default function FinanceModule() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Row label={t('درآمد فروش', 'د پلورنې عاید', 'Sales revenue')} value={formatMoney(fin.revenue)} tone="text-emerald-600" />
-            <Row label={t('مصارفی تولید (سفارش‌های تکمیل‌شده)', 'د تولید لګښتونه', 'Production costs (completed)')} value={`− ${formatMoney(fin.productionCosts)}`} tone="text-red-600" icon={<Factory className="h-3.5 w-3.5" />} />
+            <Row label={t('مصارف تولید (سفارش‌های تکمیل‌شده)', 'د تولید لګښتونه', 'Production costs (completed)')} value={`− ${formatMoney(fin.productionCosts)}`} tone="text-red-600" icon={<Factory className="h-3.5 w-3.5" />} />
             <Separator />
             <Row label={t('سود ناخالص تقریبی', 'تقریبي ناټوله ګټه', 'Gross profit (approx.)')} value={formatMoney(fin.grossProfit)} bold tone={fin.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} />
             <Row label={t('مصارف عملیاتی', 'عملیاتي لګښتونه', 'Operating expenses')} value={`− ${formatMoney(fin.opex)}`} tone="text-red-600" icon={<ReceiptText className="h-3.5 w-3.5" />} />
@@ -222,7 +222,7 @@ export default function FinanceModule() {
             ) : (
               <p className="flex items-center gap-1.5 text-xs text-red-600">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {t('مصارف از درآمد بیشتر است', 'لګښتونه له عاید ډېر دي', 'Expenses exceed revenue')}
+                {t('مصارف از درآمد زیادتر است', 'لګښتونه له عاید ډېر دي', 'Expenses exceed revenue')}
               </p>
             )}
           </CardContent>
@@ -398,12 +398,12 @@ function ExpensesCard({
       return
     }
     if (!val || val <= 0) {
-      toast.error(t('مقدار باید بزرگ‌تر از صفر باشد', 'مقدار باید له صفر ډېر وي', 'Amount must be > 0'))
+      toast.error(t('مقدار باید زیادتر از صفر باشد', 'مقدار باید له صفر ډېر وي', 'Amount must be > 0'))
       return
     }
     const finalCategory = category === OTHER ? customCategory.trim() : category
     if (!finalCategory) {
-      toast.error(t('نام دسته را بنویسید', 'د کټګورۍ نوم ولیکه', 'Enter category name'))
+      toast.error(t('نام کتگوری را بنویسید', 'د کټګورۍ نوم ولیکه', 'Enter category name'))
       return
     }
     setSaving(true)
@@ -455,7 +455,7 @@ function ExpensesCard({
         <div className="rounded-lg border p-3 space-y-2">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-xs">{t('دسته', 'کټګوري', 'Category')}</Label>
+              <Label className="text-xs">{t('کتگوری', 'کټګوري', 'Category')}</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger size="sm" className="w-full">
                   <SelectValue />
@@ -491,7 +491,7 @@ function ExpensesCard({
             </div>
             {category === OTHER && (
               <div className="space-y-1">
-                <Label className="text-xs">{t('نام دسته', 'د کټګورۍ نوم', 'Category name')}</Label>
+                <Label className="text-xs">{t('نام کتگوری', 'د کټګورۍ نوم', 'Category name')}</Label>
                 <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} className="h-8" />
               </div>
             )}
@@ -516,7 +516,7 @@ function ExpensesCard({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>{t('همه دسته‌ها', 'ټولې کټګورۍ', 'All categories')}</SelectItem>
+            <SelectItem value={ALL}>{t('همه کتگوری‌ها', 'ټولې کټګورۍ', 'All categories')}</SelectItem>
             {usedCategories.map((c) => (
               <SelectItem key={c} value={c}>
                 {c}
@@ -536,7 +536,7 @@ function ExpensesCard({
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
-                  <TableHead>{t('دسته', 'کټګوري', 'Category')}</TableHead>
+                  <TableHead>{t('کتگوری', 'کټګوري', 'Category')}</TableHead>
                   <TableHead>{t('توضیح', 'تشریح', 'Description')}</TableHead>
                   <TableHead>{t('مقدار', 'مقدار', 'Amount')}</TableHead>
                   <TableHead />

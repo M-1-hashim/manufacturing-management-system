@@ -104,7 +104,7 @@ async function pruneBackups(): Promise<void> {
 }
 
 /**
- * ایجاد یک نسخه کاپی احتیاطی
+ * ایجاد یک کاپی احتیاطی
  * SQLite: VACUUM INTO (در برابر نوشتن همزمان امن است)
  * MySQL: اسنپ‌شات JSON از همه جداول
  * format: تحمیل نوع فایل — «json» حتی روی SQLite هم برای مهاجرت دیتا به هاست کاربرد دارد
@@ -173,7 +173,7 @@ export interface RestoreResult {
 /**
  * بازیابی از بایت‌های فایل کاپی احتیاطی — نوع فایل خودکار تشخیص داده می‌شود:
  *  — JSON (کاپی احتیاطی جدید): روی SQLite و MySQL هر دو کار می‌کند (تراکنش اتمیک)
- *  — باینری SQLite (.db): فقط در حالت SQLite — تعویض فایل با کاپی احتیاطی امنیتی و رول‌بک خودکار
+ *  — باینری SQLite (.db): فقط در حالت SQLite — تعویض فایل با کاپی احتیاطی و رول‌بک خودکار
  */
 export async function restoreFromBuffer(
   dbBytes: Buffer,
@@ -192,7 +192,7 @@ export async function restoreFromBuffer(
     }
     const validated = validateJsonBackup(data)
 
-    // کاپی احتیاطی امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+    // کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)
     const safety = await createBackup('manual', actor)
     try {
       const res = await restoreFromJson(validated)
@@ -221,7 +221,7 @@ export async function restoreFromBuffer(
     throw new Error('فایل ارسالی یک دیتابیس معتبر سامانه نیست')
   }
 
-  // ۱) کاپی احتیاطی امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+  // ۱) کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)
   const safety = await createBackup('manual', actor)
 
   // ۲) قطع اتصال‌ها و تعویض فایل
@@ -239,7 +239,7 @@ export async function restoreFromBuffer(
     throw e
   }
 
-  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، کاپی احتیاطی امنیتی برمی‌گردد
+  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، کاپی احتیاطی برمی‌گردد
   try {
     await db.$queryRaw`SELECT COUNT(*) FROM "User"`
     await logAudit(actor ?? null, 'backup_restore', 'system', undefined, `${sourceLabel} — safety: ${safety.name}`)

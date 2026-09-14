@@ -51,7 +51,7 @@ export async function PUT(
       const cid = body.categoryId ? String(body.categoryId) : ''
       if (cid) {
         const cat = await db.productCategory.findUnique({ where: { id: cid } })
-        if (!cat) return NextResponse.json({ error: 'دسته‌بندی یافت نشد' }, { status: 400 })
+        if (!cat) return NextResponse.json({ error: 'کتگوری یافت نشد' }, { status: 400 })
         data.categoryId = cat.id
       } else {
         data.categoryId = null

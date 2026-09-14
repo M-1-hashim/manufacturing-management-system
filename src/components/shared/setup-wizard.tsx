@@ -100,7 +100,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
     try {
       const r = await conn.test({ sshHost, sshPort, sshUser, sshPassword })
       if (r.ok) {
-        toast.success(t('اتصال SSH برقرار است ✓', 'د SSH نښلون برقرار دی ✓', 'SSH connection OK ✓'))
+        toast.success(t('اتصال SSH وصل شد ✓', 'د SSH نښلون برقرار دی ✓', 'SSH connection OK ✓'))
       } else if (r.kind === 'AUTH') {
         toast.error(t('نام استفاده‌کننده یا پاسورد SSH اشتباه است', 'د SSH کارن نوم یا پټ نوم غلط دی', 'SSH username or password is wrong'))
       } else {
@@ -148,7 +148,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
 
   const steps = [
     t('خوش آمدید', 'ښه راغلاست', 'Welcome'),
-    t('ذخیره‌سازی', 'ذخیره', 'Storage'),
+    t('ذخیره', 'ذخیره', 'Storage'),
     t('اتصال هاست', 'هوسټ نښلول', 'Host'),
     t('پایان', 'پای', 'Done'),
   ]
@@ -248,7 +248,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
             </div>
           )}
 
-          {/* ================= گام ۲: محل ذخیره‌سازی ================= */}
+          {/* ================= گام ۲: محل ذخیره ================= */}
           {step === 2 && (
             <div className="space-y-5">
               <div>
@@ -339,7 +339,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                     {t('هاست اشتراکی: در «Manage Shell» دسترسی SSH را روشن کنید', 'شریک هوسټ: په «Manage Shell» کې SSH فعال کړئ', 'Shared hosting: enable SSH access under Manage Shell')}
                   </li>
                   <li>
-                    {t('آدرس هاست (مثل server370.web-hosting.com) در ایمیل خوش‌آمدگویی هست', 'د هوسټ پته (لکه server370.web-hosting.com) په خوش راغلاست بریښنا لیک کې ده', 'Server address (like server370.web-hosting.com) is in your welcome email')}
+                    {t('آدرس هاست (مثل server370.web-hosting.com) در ایمیل خوش‌آمد هاست هست', 'د هوسټ پته (لکه server370.web-hosting.com) په خوش راغلاست بریښنا لیک کې ده', 'Server address (like server370.web-hosting.com) is in your welcome email')}
                   </li>
                 </ol>
                 <p className="mt-1.5 text-muted-foreground">

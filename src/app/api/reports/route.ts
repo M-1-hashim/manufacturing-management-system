@@ -135,10 +135,10 @@ export async function GET(req: Request) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10)
 
-    // ---- فروش به تفکیک طریق پرداخت ----
+    // ---- فروش به تفکیک روش پرداخت ----
     const METHOD_NAMES: Record<string, string> = {
-      cash: 'نقدی',
-      credit: 'عهدی',
+      cash: 'نقد',
+      credit: 'نسیه',
       transfer: 'حواله',
     }
     const payAgg = new Map<string, { total: number; count: number }>()

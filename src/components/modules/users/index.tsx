@@ -477,7 +477,7 @@ export default function UsersModule() {
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
                                     {t(
-                                      'آیا از حذف استفاده‌کننده',
+                                      'آیا از حذف استفاده‌کنندهٔ',
                                       'له کاروونکي ړنګولو څخه ډاډه یاست',
                                       'Are you sure you want to delete'
                                     )}{' '}

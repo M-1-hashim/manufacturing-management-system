@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json(rows)
   } catch (e) {
     console.error('categories GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت دسته‌بندی‌ها' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت کتگوری‌ها' }, { status: 500 })
   }
 }
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Record<string, unknown>
     const name = String(body.name ?? '').trim()
     if (!name) {
-      return NextResponse.json({ error: 'نام دسته‌بندی الزامی است' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کتگوری الزامی است' }, { status: 400 })
     }
     const created = await db.productCategory.create({
       data: { name },
@@ -30,9 +30,9 @@ export async function POST(req: Request) {
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     if ((e as { code?: string })?.code === 'P2002') {
-      return NextResponse.json({ error: 'نام دسته‌بندی تکراری است' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کتگوری تکراری است' }, { status: 400 })
     }
     console.error('categories POST', e)
-    return NextResponse.json({ error: 'خطا در ثبت دسته‌بندی' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ثبت کتگوری' }, { status: 500 })
   }
 }

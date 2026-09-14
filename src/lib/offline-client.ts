@@ -31,8 +31,8 @@ const MSG = {
   ps: {
     queued: 'افلاین خوندي شو — له نښلېدو وروسته اتوماتیک همغه کیږي',
     cached: 'د خوندي شویو معلوماتو نمایش (افلاین)',
-    synced: (n: number) => `${n} افلاین اجراؤات سره همغه شول`,
-    failed: (n: number) => `${n} اجراؤات همغه نه شو`,
+    synced: (n: number) => `${n} افلاین عملیې سره همغه شول`,
+    failed: (n: number) => `${n} عملیې همغه نه شوې`,
   },
   en: {
     queued: 'Saved offline — will sync automatically once back online',

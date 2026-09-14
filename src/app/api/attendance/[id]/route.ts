@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// PUT /api/attendance/[id] — تصحیح رکورد حضور
+// PUT /api/attendance/[id] — تصحیح رکورد حاضری
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -38,11 +38,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(row)
   } catch (e) {
     console.error('attendance PUT', e)
-    return NextResponse.json({ error: 'خطا در تصحیح رکورد حضور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح رکورد حاضری' }, { status: 500 })
   }
 }
 
-// DELETE /api/attendance/[id] — حذف رکورد حضور
+// DELETE /api/attendance/[id] — حذف رکورد حاضری
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -52,6 +52,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('attendance DELETE', e)
-    return NextResponse.json({ error: 'خطا در حذف رکورد حضور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در حذف رکورد حاضری' }, { status: 500 })
   }
 }

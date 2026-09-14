@@ -8,11 +8,11 @@ export interface LiveRates {
   usd: number // 1 USD = ? AFN
   pkr: number // 1 PKR = ? AFN
   source: string // منبع نرخ
-  updatedAt: string // آخرین بروزرسانی نرخ از سوی منبع (ISO)
+  updatedAt: string // آخرین تجدید نرخ از سوی منبع (ISO)
   fetchedAt: string // زمان دریافت روی هاست (ISO)
   cached: boolean // از کش حافظه هاست
   stale: boolean // true → انترنت در دسترس نبود؛ آخرین نرخ ذخیره‌شده در دیتابیس
-  nextUpdate?: string // بروزرسانی بعدی منبع (ISO)
+  nextUpdate?: string // تجدید بعدی منبع (ISO)
 }
 
 const TTL_MS = 60 * 60 * 1000 // کش حافظه هاست: ۱ ساعت
@@ -142,7 +142,7 @@ async function persistRates(live: ProviderResult): Promise<void> {
 
 /**
  * نرخ‌های لحظه‌ای را برمی‌گرداند.
- * force=true → کش حافظه نادیده گرفته می‌شود (بروزرسانی دستی از تنظیمات)
+ * force=true → کش حافظه نادیده گرفته می‌شود (تجدید دستی از تنظیمات)
  */
 export async function getLiveRates(force = false): Promise<LiveRates> {
   if (!force && mem && Date.now() - memAt < TTL_MS) return { ...mem, cached: true }

@@ -350,9 +350,9 @@ export default function SalesModule() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>{t('همه روش‌ها', 'ټولې لارې', 'All methods')}</SelectItem>
-            <SelectItem value="cash">{t('نقدی', 'نغدي', 'Cash')}</SelectItem>
-            <SelectItem value="credit">{t('قرضی', 'پور', 'Credit')}</SelectItem>
-            <SelectItem value="transfer">{t('بانکی', 'بانکي', 'Transfer')}</SelectItem>
+            <SelectItem value="cash">{t('نقد', 'نغدي', 'Cash')}</SelectItem>
+            <SelectItem value="credit">{t('نسیه', 'پور', 'Credit')}</SelectItem>
+            <SelectItem value="transfer">{t('حواله', 'بانکي', 'Transfer')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -399,10 +399,10 @@ export default function SalesModule() {
                     <TableCell>
                       <Badge className={STATUS_COLORS[s.paymentMethod] ?? ''}>
                         {s.paymentMethod === 'cash'
-                          ? t('نقدی', 'نغدي', 'Cash')
+                          ? t('نقد', 'نغدي', 'Cash')
                           : s.paymentMethod === 'credit'
-                            ? t('قرضی', 'پور', 'Credit')
-                            : t('بانکی', 'بانکي', 'Transfer')}
+                            ? t('نسیه', 'پور', 'Credit')
+                            : t('حواله', 'بانکي', 'Transfer')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -660,7 +660,7 @@ function NewSaleDialog({
         discount: Number(r.discount) || 0,
       }))
     if (items.length === 0) {
-      toast.error(t('حداقل یک کالا با مقدار معتبر اضافه کنید', 'لږ تر لږه یو توک اضافه کړئ', 'Add at least one valid item'))
+      toast.error(t('حداقل یک کالا با مقدار معتبر علاوه کنید', 'لږ تر لږه یو توک اضافه کړئ', 'Add at least one valid item'))
       return
     }
     setSaving(true)
@@ -728,7 +728,7 @@ function NewSaleDialog({
               ) : (
                 selectedCustomer && (
                   <div className="space-y-1.5">
-                    <Label>{t('باقیات بدهی فعلی', 'اوسنی پور', 'Current balance')}</Label>
+                    <Label>{t('باقیات فعلی', 'اوسنی پور', 'Current balance')}</Label>
                     <div className="h-9 flex items-center text-sm text-amber-600 font-medium">
                       {formatMoney(selectedCustomer.balance)}
                     </div>
@@ -882,7 +882,7 @@ function NewSaleDialog({
                       type="button"
                       onClick={() => live.refetch()}
                       className="ms-auto shrink-0 rounded p-0.5 hover:bg-accent"
-                      aria-label={t('بروزرسانی نرخ', 'نرخ بروز کړئ', 'Refresh rate')}
+                      aria-label={t('تجدید نرخ', 'نرخ بروز کړئ', 'Refresh rate')}
                     >
                       <RefreshCw className={`h-3 w-3 ${live.loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -953,9 +953,9 @@ function NewSaleDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">{t('نقدی', 'نغدي', 'Cash')}</SelectItem>
-                    <SelectItem value="credit">{t('قرضی', 'پور', 'Credit')}</SelectItem>
-                    <SelectItem value="transfer">{t('بانکی', 'بانکي', 'Transfer')}</SelectItem>
+                    <SelectItem value="cash">{t('نقد', 'نغدي', 'Cash')}</SelectItem>
+                    <SelectItem value="credit">{t('نسیه', 'پور', 'Credit')}</SelectItem>
+                    <SelectItem value="transfer">{t('حواله', 'بانکي', 'Transfer')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1114,10 +1114,10 @@ function InvoiceDialog({
 
   const methodLabel =
     sale.paymentMethod === 'cash'
-      ? t('نقدی', 'نغدي', 'Cash')
+      ? t('نقد', 'نغدي', 'Cash')
       : sale.paymentMethod === 'credit'
-        ? t('قرضی', 'پور', 'Credit')
-        : t('بانکی', 'بانکي', 'Transfer')
+        ? t('نسیه', 'پور', 'Credit')
+        : t('حواله', 'بانکي', 'Transfer')
   const methodCls =
     sale.paymentMethod === 'cash'
       ? 'bg-emerald-100 text-emerald-800'
@@ -1200,7 +1200,7 @@ function InvoiceDialog({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-neutral-200 p-3.5">
                   <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
-                    {t('صورتحساب به', 'پیرودونکي ته', 'BILL TO')}
+                    {t('به نام', 'پیرودونکي ته', 'BILL TO')}
                   </p>
                   <p className="font-bold">{customerName}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
@@ -1439,7 +1439,7 @@ function PayDialog({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>{t('مبلغ پرداخت جدید (کل)', 'نې تادیه (ټوله)', 'New total paid')}</Label>
+              <Label>{t('مبلغ پرداخت جدید (کل)', 'نوې تادیه (ټوله)', 'New total paid')}</Label>
               <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
           </div>

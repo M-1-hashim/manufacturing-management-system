@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     if (!amount || isNaN(amount) || amount <= 0)
-      return NextResponse.json({ error: 'مبلغ باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مبلغ باید زیادتر از صفر باشد' }, { status: 400 })
 
     const employee = await db.employee.findUnique({ where: { id: employeeId } })
     if (!employee) return NextResponse.json({ error: 'کارمند یافت نشد' }, { status: 404 })

@@ -211,7 +211,7 @@ export default function ReportsModule() {
                         t('تاریخ میلادی', 'میلادي نېټه', 'Gregorian date'),
                         t('تاریخ شمسی', 'شمسي نېټه', 'Jalali date'),
                         t('فروش (افغانی)', 'پلورنه (افغانی)', 'Sales (AFN)'),
-                        t('تعداد فاکتور', 'د فالأټونو شمېر', 'Invoice count'),
+                        t('تعداد فاکتور', 'د فاکتورونو شمېر', 'Invoice count'),
                       ],
                       ...data.salesByDay.map((d) => [
                         d.date.slice(0, 10),
@@ -338,7 +338,7 @@ export default function ReportsModule() {
 
           <div>
             <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-              {t('فروش به تفکیک طریق پرداخت', 'د پرداخت له لارې پلورنه', 'Sales by payment method')}
+              {t('فروش به تفکیک روش پرداخت', 'د پرداخت له لارې پلورنه', 'Sales by payment method')}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {data.salesByPayment.length === 0 ? (
@@ -349,7 +349,7 @@ export default function ReportsModule() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm text-muted-foreground">{p.method}</p>
                       <Badge variant="outline" className={STATUS_COLORS[p.method] ?? ''}>
-                        {formatNumber(p.count)} {t('فاکتور', 'فالأټونه', 'invoices')}
+                        {formatNumber(p.count)} {t('فاکتور', 'فاکتورونه', 'invoices')}
                       </Badge>
                     </div>
                     <p className="text-xl font-bold mt-1">{formatMoney(p.total)}</p>
@@ -510,14 +510,14 @@ export default function ReportsModule() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <PieChartIcon className="h-4 w-4 text-amber-600" />
-                    {t('مصارف به تفکیک دسته', 'لگښتونه په کټګوریو', 'Expenses by category')}
+                    {t('مصارف به تفکیک کتگوری', 'لگښتونه په کټګوریو', 'Expenses by category')}
                   </CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() =>
                       downloadCSV('finance-report.csv', [
-                        [t('دسته', 'کټګوری', 'Category'), t('مبلغ (افغانی)', 'مبلغ (افغانی)', 'Amount (AFN)')],
+                        [t('کتگوری', 'کټګوری', 'Category'), t('مبلغ (افغانی)', 'مبلغ (افغانی)', 'Amount (AFN)')],
                         ...data.expensesByCategory.map((e) => [e.category, e.total]),
                       ])
                     }
@@ -583,14 +583,14 @@ export default function ReportsModule() {
                 <StatCard
                   title={t('مالیات ۲٪', '۲٪ مالیه', '2% tax')}
                   value={formatMoney(taxReport.tax2Amount)}
-                  hint={`${t('فاکتور', 'فالأټونه', 'Invoices')}: ${formatNumber(taxReport.tax2Count)}`}
+                  hint={`${t('فاکتور', 'فاکتورونه', 'Invoices')}: ${formatNumber(taxReport.tax2Count)}`}
                   icon={Wallet}
                   tone="blue"
                 />
                 <StatCard
                   title={t('مالیات ۱۰٪', '۱۰٪ مالیه', '10% tax')}
                   value={formatMoney(taxReport.tax10Amount)}
-                  hint={`${t('فاکتور', 'فالأټونه', 'Invoices')}: ${formatNumber(taxReport.tax10Count)}`}
+                  hint={`${t('فاکتور', 'فاکتورونه', 'Invoices')}: ${formatNumber(taxReport.tax10Count)}`}
                   icon={Wallet}
                   tone="amber"
                 />
@@ -606,7 +606,7 @@ export default function ReportsModule() {
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {t(
                       'مجموع مالیات از فاکتورهای فروش در بازه انتخابی محاسبه شده است. نرخ‌های ۲٪ و ۱۰٪ طبق قانون مالیات فروش افغانستان درج می‌گردد.',
-                      'د پلورنې فالأټونو ټوله مالیه په ټاکلې موده کې محاسبه شوې ده.',
+                      'د پلورنې فاکتورونو ټوله مالیه په ټاکلې موده کې محاسبه شوې ده.',
                       'Total sales tax from invoices in the selected range. 2% and 10% rates per Afghan sales tax law.'
                     )}
                   </p>
@@ -645,7 +645,7 @@ export default function ReportsModule() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Boxes className="h-4 w-4 text-emerald-600" />
-                    {t('بیشترین ارزش — محصولات', 'ډېر ارزښت — محصولات', 'Highest value — products')}
+                    {t('زیادترین ارزش — محصولات', 'ډېر ارزښت — محصولات', 'Highest value — products')}
                   </CardTitle>
                   <Button
                     variant="outline"
@@ -719,7 +719,7 @@ export default function ReportsModule() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Boxes className="h-4 w-4 text-sky-600" />
-                  {t('بیشترین ارزش — مواد خام', 'ډېر ارزښت — خام مواد', 'Highest value — materials')}
+                  {t('زیادترین ارزش — مواد خام', 'ډېر ارزښت — خام مواد', 'Highest value — materials')}
                 </CardTitle>
               </CardHeader>
               <CardContent>

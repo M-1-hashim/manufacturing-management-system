@@ -21,7 +21,7 @@ import { ensureLocalSchema } from '@/lib/local-schema'
 /*
  * مدیریت اتصال + زمان‌بند همگام‌سازی لحظه‌ای — معماری محلی‌محور:
  *
- * - برنامه همیشه روی دیتابیس محلی (SQLite) کار می‌کند → سرعت maksimum
+ * - برنامه همیشه روی دیتابیس محلی (SQLite) کار می‌کند → سرعت حداکثر
  * - هر ۳ ثانیه یک «تیک» همگام‌سازی دوسویه اجرا می‌شود (فقط دلتاها؛
  *   تیک بی‌کار فقط ۲ رفت‌وبرگشت شبکه دارد)
  * - هر ۱۵ ثانیه پینگ هاست (SELECT 1) — برای تشخیص قطعی/وصل شدن
@@ -440,7 +440,7 @@ export async function triggerSyncNow(): Promise<{ action: string; result?: strin
       error: r.ok ? undefined : r.error,
     }
   }
-  return { action: 'none', error: 'حالت محلی — هاستی تنظیم نشده است' }
+  return { action: 'none', error: 'حالت محلی — هاست تنظیم نشده است' }
 }
 
 export async function triggerSnapshotNow(): Promise<{ ok: boolean; rows?: number; error?: string }> {

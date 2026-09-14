@@ -18,7 +18,7 @@ let lastNotify = 0
 export function notifyAuthFailure(): void {
   const before = useAppStore.getState().user
   useAppStore.getState().setUser(null)
-  // اگر کاربری وارد نبود، پیام ختم بی‌معنی است (مثلاً صفحه ورود)
+  // اگر استفاده‌کننده‌ای وارد نبود، پیام ختم بی‌معنی است (مثلاً صفحه ورود)
   if (!before) return
   const now = Date.now()
   if (now - lastNotify < 3000) return
@@ -27,7 +27,7 @@ export function notifyAuthFailure(): void {
   toast.error(MESSAGES[lang] ?? MESSAGES.fa)
 }
 
-/** مسیرهای احراز هویت که نباید خروج خودکار ایجاد کنند */
+/** مسیرهای تصدیق هویت که نباید خروج خودکار ایجاد کنند */
 function isAuthExempt(url: string): boolean {
   return url.includes('/api/auth/')
 }

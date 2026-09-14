@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'انتخاب فورمولا الزامی است' }, { status: 400 })
     }
     if (!(quantity > 0)) {
-      return NextResponse.json({ error: 'مقدار تولید باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مقدار تولید باید زیادتر از صفر باشد' }, { status: 400 })
     }
 
     const formula = await db.formula.findUnique({

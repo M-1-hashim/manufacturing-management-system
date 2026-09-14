@@ -261,7 +261,7 @@ export default function FormulasModule() {
     <div className="space-y-4">
       <PageHeader
         title={t('فورمولا‌نویسی (BOM)', 'فورمول جوړونه (BOM)', 'Formulation (BOM)')}
-        subtitle={t('تعریف ترکیب مواد اولیه و مصارفی هر محصول', 'د هر محصول خامو موادو ترکیب او لګښتونه', 'Define material composition and costs per product')}
+        subtitle={t('تعریف ترکیب مواد اولیه و مصارف هر محصول', 'د هر محصول خامو موادو ترکیب او لګښتونه', 'Define material composition and costs per product')}
         icon={FlaskConical}
         actions={
           <Button onClick={openCreate} className="gap-1.5">
@@ -287,7 +287,7 @@ export default function FormulasModule() {
       ) : !products || products.length === 0 ? (
         <EmptyState label={t('ابتدا محصولات را در ماژول محصولات ثبت کنید', 'لومړی په محصولاتو ماډل کې محصولات ثبت کړئ', 'Register products first in the Products module')} />
       ) : !formulas || formulas.length === 0 ? (
-        <EmptyState label={t('فرمولی ثبت نشده است', 'هیڅ فورمول ثبت شوی نه دی', 'No formulas yet')} />
+        <EmptyState label={t('فورمولایی ثبت نشده است', 'هیڅ فورمول ثبت شوی نه دی', 'No formulas yet')} />
       ) : filtered.length === 0 ? (
         <EmptyState label={t('نتیجه‌ای یافت نشد', 'نتیجه و نه موندل شو', 'No results found')} />
       ) : (
@@ -350,7 +350,7 @@ export default function FormulasModule() {
                       <span className="font-medium">{formatMoney(matCost)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">{t('دستمزد', 'مزد', 'Labor')}</span>
+                      <span className="text-muted-foreground">{t('اجرت', 'مزد', 'Labor')}</span>
                       <span className="font-medium">{formatMoney(f.laborCost)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -442,7 +442,7 @@ export default function FormulasModule() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>{t('دستمزد (؋)', 'مزد (؋)', 'Labor (؋)')}</Label>
+                    <Label>{t('اجرت (؋)', 'مزد (؋)', 'Labor (؋)')}</Label>
                     <Input type="number" min={0} step="any" value={form.laborCost} onChange={(e) => setForm({ ...form, laborCost: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
@@ -493,7 +493,7 @@ export default function FormulasModule() {
                   })}
                 </div>
                 {items.length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t('حداقل یک ماده اضافه کنید', 'لږ تر لږه یوه ماده زیاته کړئ', 'Add at least one material')}</p>
+                  <p className="text-xs text-muted-foreground">{t('حداقل یک ماده علاوه کنید', 'لږ تر لږه یوه ماده زیاته کړئ', 'Add at least one material')}</p>
                 )}
               </div>
 
@@ -516,7 +516,7 @@ export default function FormulasModule() {
                   <span className="font-medium">{formatMoney(draftMatCost)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">{t('دستمزد', 'مزد', 'Labor')}</span>
+                  <span className="text-muted-foreground">{t('اجرت', 'مزد', 'Labor')}</span>
                   <span className="font-medium">{formatMoney(Number(form.laborCost) || 0)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">

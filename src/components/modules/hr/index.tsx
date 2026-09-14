@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول منابع بشری — کارکنان، حاضری، معاش و دستمزد
+// ماژول منابع بشری — کارکنان، حاضری، معاش و اجرت
 import { useMemo, useState } from 'react'
 import {
   Banknote,
@@ -209,7 +209,7 @@ export default function HrModule() {
     }
     const salary = Number(eSalary)
     if (!salary || isNaN(salary) || salary <= 0) {
-      toast.error(t('معاش باید بزرگ‌تر از صفر باشد', 'معاش باید له صفر لوی وي', 'Salary must be greater than zero'))
+      toast.error(t('معاش باید زیادتر از صفر باشد', 'معاش باید له صفر لوی وي', 'Salary must be greater than zero'))
       return
     }
     setESaving(true)
@@ -260,7 +260,7 @@ export default function HrModule() {
     }
   }
 
-  // ---------- ثبت حضور ----------
+  // ---------- ثبت حاضری ----------
   async function submitAttendance() {
     if (!qEmp) {
       toast.error(t('کارمند را انتخاب کنید', 'کوونکی وټاکنئ', 'Select an employee'))
@@ -274,7 +274,7 @@ export default function HrModule() {
         shift: qShift === 'none' ? null : qShift,
         date: new Date().toISOString(),
       })
-      toast.success(t('حضور ثبت شد', 'حاضره ثبت شوه', 'Attendance recorded'))
+      toast.success(t('حاضری ثبت شد', 'حاضره ثبت شوه', 'Attendance recorded'))
       refetchAtt()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('خطا در ثبت', 'خطا په ثبت کې', 'Error saving'))
@@ -311,7 +311,7 @@ export default function HrModule() {
     }
     const amount = Number(pAmount)
     if (!amount || isNaN(amount) || amount <= 0) {
-      toast.error(t('مبلغ باید بزرگ‌تر از صفر باشد', 'مبلغ باید له صفر لوی وي', 'Amount must be greater than zero'))
+      toast.error(t('مبلغ باید زیادتر از صفر باشد', 'مبلغ باید له صفر لوی وي', 'Amount must be greater than zero'))
       return
     }
     setPSaving(true)
@@ -346,7 +346,7 @@ export default function HrModule() {
       <PageHeader
         title={t('منابع بشری', 'انساني سرچینې', 'Human Resources')}
         subtitle={t(
-          'مدیریت کارکنان، حاضری و معاش و دستمزد',
+          'مدیریت کارکنان، حاضری و معاش و اجرت',
           'د کارکوونکیو، حاضرو او معاشونو مدیریت',
           'Employees, attendance and payroll'
         )}
@@ -399,7 +399,7 @@ export default function HrModule() {
         <TabsList className="grid w-full grid-cols-3 sm:w-[440px]">
           <TabsTrigger value="employees">{t('کارکنان', 'کارکوونکي', 'Employees')}</TabsTrigger>
           <TabsTrigger value="attendance">{t('حاضری', 'حاضره او غیرحاضره', 'Attendance')}</TabsTrigger>
-          <TabsTrigger value="salaries">{t('معاش و دستمزد', 'معاشونه', 'Payroll')}</TabsTrigger>
+          <TabsTrigger value="salaries">{t('معاش و اجرت', 'معاشونه', 'Payroll')}</TabsTrigger>
         </TabsList>
 
         {/* ================= کارکنان ================= */}
@@ -514,7 +514,7 @@ export default function HrModule() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <CalendarCheck className="h-4 w-4 text-primary" />
-                {t('ثبت حضور امروز', 'د نن حاضره ثبت کړه', "Record Today's Attendance")}
+                {t('ثبت حاضری امروز', 'د نن حاضره ثبت کړه', "Record Today's Attendance")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -574,7 +574,7 @@ export default function HrModule() {
                 <Button onClick={submitAttendance} disabled={qSaving}>
                   {qSaving
                     ? t('در حال ثبت...', 'په ثبت کې...', 'Saving...')
-                    : t('ثبت حضور', 'حاضره ثبت کړه', 'Record Attendance')}
+                    : t('ثبت حاضری', 'حاضره ثبت کړه', 'Record Attendance')}
                 </Button>
               </div>
             </CardContent>
@@ -671,7 +671,7 @@ export default function HrModule() {
           </Card>
         </TabsContent>
 
-        {/* ================= معاش و دستمزد ================= */}
+        {/* ================= معاش و اجرت ================= */}
         <TabsContent value="salaries" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="lg:col-span-2">

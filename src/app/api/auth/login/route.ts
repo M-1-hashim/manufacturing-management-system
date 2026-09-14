@@ -16,7 +16,7 @@ function isLocked(entry: { count: number; lockedUntil: number } | undefined): nu
   return 0
 }
 
-// POST /api/auth/login — احراز هویت با نقش و بخش سازمانی + نشست کوکی امن
+// POST /api/auth/login — تصدیق هویت با نقش و بخش سازمانی + نشست کوکی امن
 export async function POST(req: Request) {
   try {
     const { username, password } = await req.json()

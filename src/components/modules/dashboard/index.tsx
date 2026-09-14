@@ -87,9 +87,9 @@ interface DashboardData {
 
 // برچسب وضعیت پرداخت
 const SALE_STATUS: Record<string, [string, string, string]> = {
-  paid: ['پرداخت‌شده', 'پراخت شوی', 'Paid'],
-  partial: ['نیمه‌پرداخت', 'نیمه پراخت', 'Partial'],
-  unpaid: ['پرداخت‌نشده', 'ناپراخت', 'Unpaid'],
+  paid: ['پرداخت‌شده', 'پرداخت شوی', 'Paid'],
+  partial: ['نیمه‌پرداخت', 'نیمه پرداخت', 'Partial'],
+  unpaid: ['پرداخت‌نشده', 'ناپرداخت', 'Unpaid'],
 }
 
 // برچسب وضعیت تولید
@@ -331,7 +331,7 @@ export default function DashboardModule() {
                     formatter={(value) => formatNumber(Number(value))}
                     contentStyle={{ borderRadius: 10, borderColor: '#0ea5e940', direction: 'rtl', fontSize: 12 }}
                   />
-                  <Bar dataKey="planned" name={t('برنامه‌ریزی', 'پلان', 'Planned')} fill="#64748b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="planned" name={t('پلان', 'پلان', 'Planned')} fill="#64748b" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="produced" name={t('تولیدشده', 'تولید شوی', 'Produced')} fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -459,7 +459,7 @@ export default function DashboardModule() {
               <Table>
                 <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                   <TableRow>
-                    <TableHead>{t('فاکتور', 'فالأټونه', 'Invoice')}</TableHead>
+                    <TableHead>{t('فاکتور', 'فاکتورونه', 'Invoice')}</TableHead>
                     <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
                     <TableHead>{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>

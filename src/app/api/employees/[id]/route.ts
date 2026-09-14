@@ -16,7 +16,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (body.salary !== undefined) {
       const salary = Number(body.salary)
       if (!salary || isNaN(salary) || salary <= 0)
-        return NextResponse.json({ error: 'معاش باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+        return NextResponse.json({ error: 'معاش باید زیادتر از صفر باشد' }, { status: 400 })
       data.salary = salary
     }
     if (body.hireDate !== undefined && body.hireDate !== null && body.hireDate !== '') {

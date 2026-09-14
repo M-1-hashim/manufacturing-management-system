@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'payment', 'sale', id, `دریافت برای فاکتور ${sale.invoiceNumber} — مانده جدید ${Math.max(0, sale.total - paidAmount)}`)
+    await logAudit(session, 'payment', 'sale', id, `دریافت برای فاکتور ${sale.invoiceNumber} — باقیات جدید ${Math.max(0, sale.total - paidAmount)}`)
 
     return NextResponse.json(updated)
   } catch (e) {

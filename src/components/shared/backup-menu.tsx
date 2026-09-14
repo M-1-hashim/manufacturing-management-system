@@ -52,10 +52,10 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
     try {
       const created = await apiPost<{ name: string }>('/api/admin/backup', {})
       toast.success(
-        t(`نسخه کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`)
+        t(`کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`)
       )
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
+      toast.error(e instanceof Error ? e.message : t('خطا در تهیه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
     } finally {
       setCreating(false)
     }
@@ -95,7 +95,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
         setPendingFile(null)
         toast.success(
           t(
-            `بازیابی انجام شد — کاپی احتیاطی امنیتی ${body.safetyBackup} گرفته شد`,
+            `بازیابی انجام شد — کاپی احتیاطی ${body.safetyBackup} گرفته شد`,
             `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
             `Restored — safety backup ${body.safetyBackup} created`
           ),
@@ -165,7 +165,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <RotateCcw className="h-4 w-4 text-destructive" />
-              {t('بازیابی نسخه کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
+              {t('بازیابی کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 text-sm">
               <span className="block">
@@ -181,7 +181,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
               </span>
               <span className="block text-muted-foreground">
                 {t(
-                  'قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی امنیتی گرفته می‌شود.',
+                  'قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی گرفته می‌شود.',
                   'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.',
                   'A safety backup of current data is created automatically first.'
                 )}

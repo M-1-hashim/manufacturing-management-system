@@ -400,7 +400,7 @@ export default function ProductsModule() {
     const headers = [
       t('کود', 'کوډ', 'Code'),
       t('نام', 'نوم', 'Name'),
-      t('دسته', 'کټګوري', 'Category'),
+      t('کتگوری', 'کټګوري', 'Category'),
       t('واحد', 'واحد', 'Unit'),
       t('موجودی', 'موجودي', 'Stock'),
       t('حداقل موجودی', 'لږترلږه موجودي', 'Min stock'),
@@ -455,7 +455,7 @@ export default function ProductsModule() {
           <>
             <Button variant="outline" onClick={() => setCatsOpen(true)}>
               <Tag className="h-4 w-4" />
-              {t('دسته‌بندی‌ها', 'کټګورۍ', 'Categories')}
+              {t('کتگوری‌ها', 'کټګورۍ', 'Categories')}
             </Button>
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
@@ -512,7 +512,7 @@ export default function ProductsModule() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('همه دسته‌ها', 'ټولې کټګورۍ', 'All categories')}</SelectItem>
+              <SelectItem value="all">{t('همه کتگوری‌ها', 'ټولې کټګورۍ', 'All categories')}</SelectItem>
               {catList.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -564,7 +564,7 @@ export default function ProductsModule() {
                   <TableRow>
                     <TableHead>{t('کود', 'کوډ', 'Code')}</TableHead>
                     <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
-                    <TableHead>{t('دسته', 'کټګوري', 'Category')}</TableHead>
+                    <TableHead>{t('کتگوری', 'کټګوري', 'Category')}</TableHead>
                     <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
                     <TableHead>{t('فروش / عمده', 'پلور / پرچون', 'Sale / Wholesale')}</TableHead>
                     <TableHead>{t('بارکد', 'بارکوډ', 'Barcode')}</TableHead>
@@ -693,13 +693,13 @@ export default function ProductsModule() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('دسته‌بندی', 'کټګوري', 'Category')}</Label>
+              <Label>{t('کتگوری', 'کټګوري', 'Category')}</Label>
               <Select value={form.categoryId} onValueChange={(v) => setF({ categoryId: v })}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">{t('بدون دسته', 'بې کټګورۍ', 'No category')}</SelectItem>
+                  <SelectItem value="none">{t('بدون کتگوری', 'بې کټګورۍ', 'No category')}</SelectItem>
                   {catList.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -838,9 +838,9 @@ export default function ProductsModule() {
       <Dialog open={catsOpen} onOpenChange={setCatsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('دسته‌بندی محصولات', 'د محصولاتو کټګورۍ', 'Product categories')}</DialogTitle>
+            <DialogTitle>{t('کتگوری محصولات', 'د محصولاتو کټګورۍ', 'Product categories')}</DialogTitle>
             <DialogDescription>
-              {t('علاوه کردن، تغییر نام و حذف دسته‌بندی‌ها', 'اضافه کول، نوم بدلول او پاکول', 'Add, rename and delete categories')}
+              {t('علاوه کردن، تغییر نام و حذف کتگوری‌ها', 'اضافه کول، نوم بدلول او پاکول', 'Add, rename and delete categories')}
             </DialogDescription>
           </DialogHeader>
 
@@ -848,7 +848,7 @@ export default function ProductsModule() {
             <Input
               value={newCat}
               onChange={(e) => setNewCat(e.target.value)}
-              placeholder={t('نام دسته‌بندی جدید', 'د نوي کټګورۍ نوم', 'New category name')}
+              placeholder={t('نام کتگوری جدید', 'د نوي کټګورۍ نوم', 'New category name')}
               onKeyDown={(e) => e.key === 'Enter' && addCategory()}
             />
             <Button onClick={addCategory} disabled={catBusy || !newCat.trim()}>
@@ -862,7 +862,7 @@ export default function ProductsModule() {
           <div className="max-h-96 space-y-2 overflow-y-auto pe-1">
             {catList.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                {t('دسته‌بندی ثبت نشده است', 'کټګوري نه ده ثبت شوې', 'No categories yet')}
+                {t('کتگوری ثبت نشده است', 'کټګوري نه ده ثبت شوې', 'No categories yet')}
               </p>
             )}
             {catList.map((c) => (
@@ -963,10 +963,10 @@ export default function ProductsModule() {
       <AlertDialog open={!!catToDelete} onOpenChange={(o) => !o && setCatToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('حذف دسته‌بندی', 'د کټګورۍ پاکول', 'Delete category')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('حذف کتگوری', 'د کټګورۍ پاکول', 'Delete category')}</AlertDialogTitle>
             <AlertDialogDescription>
               {t(
-                'اگر محصولات در این دسته ثبت شده باشد، حذف ممکن نیست.',
+                'اگر محصولات در این کتگوری ثبت شده باشند، حذف ممکن نیست.',
                 'که محصولات په دې کټګورۍ کې ثبت شوي وي، پاکول ناشونې ده.',
                 'Deletion is blocked if products exist in this category.'
               )}

@@ -11,11 +11,11 @@ export async function PUT(
     const body = (await req.json()) as Record<string, unknown>
     const name = String(body.name ?? '').trim()
     if (!name) {
-      return NextResponse.json({ error: 'نام دسته‌بندی الزامی است' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کتگوری الزامی است' }, { status: 400 })
     }
     const existing = await db.productCategory.findUnique({ where: { id } })
     if (!existing) {
-      return NextResponse.json({ error: 'دسته‌بندی یافت نشد' }, { status: 404 })
+      return NextResponse.json({ error: 'کتگوری یافت نشد' }, { status: 404 })
     }
     const updated = await db.productCategory.update({
       where: { id },
@@ -25,10 +25,10 @@ export async function PUT(
     return NextResponse.json(updated)
   } catch (e) {
     if ((e as { code?: string })?.code === 'P2002') {
-      return NextResponse.json({ error: 'نام دسته‌بندی تکراری است' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کتگوری تکراری است' }, { status: 400 })
     }
     console.error('category PUT', e)
-    return NextResponse.json({ error: 'خطا در تصحیح دسته‌بندی' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح کتگوری' }, { status: 500 })
   }
 }
 
@@ -44,11 +44,11 @@ export async function DELETE(
       include: { _count: { select: { products: true } } },
     })
     if (!existing) {
-      return NextResponse.json({ error: 'دسته‌بندی یافت نشد' }, { status: 404 })
+      return NextResponse.json({ error: 'کتگوری یافت نشد' }, { status: 404 })
     }
     if (existing._count.products > 0) {
       return NextResponse.json(
-        { error: 'قابل حذف نیست؛ محصولات در این دسته ثبت شده‌اند' },
+        { error: 'قابل حذف نیست؛ محصولات در این کتگوری ثبت شده‌اند' },
         { status: 400 }
       )
     }
@@ -56,6 +56,6 @@ export async function DELETE(
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('category DELETE', e)
-    return NextResponse.json({ error: 'خطا در حذف دسته‌بندی' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در حذف کتگوری' }, { status: 500 })
   }
 }

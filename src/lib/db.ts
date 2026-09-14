@@ -3,7 +3,7 @@ import path from 'path'
 import { PrismaClient } from '@prisma/client'
 
 /*
- * کاپی احتیاطیی دوگانه از دیتابیس + معماری «محلی‌محور» (Local-First) — قلب نسخهٔ دسکتاپ:
+ * پشتیبانی دوگانه از دیتابیس (کاپی احتیاطی + همگام‌سازی) + معماری «محلی‌محور» (Local-First) — قلب نسخهٔ دسکتاپ:
  *
  * ۱) کلاینت Prisma در زمان build به یک provider قفل می‌شود (sqlite یا mysql).
  *    اسکریپت دسکتاپ (electron/build-desktop.sh) دو کلاینت می‌سازد:

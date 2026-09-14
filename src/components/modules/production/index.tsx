@@ -220,11 +220,11 @@ export default function ProductionModule() {
     const produced = Number(cProduced)
     const waste = Number(cWaste) || 0
     if (!(produced > 0)) {
-      toast.error(t('مقدار تولیدشده باید بزرگ‌تر از صفر باشد', 'د تولید مقدار باید له صفر څخه زیات وي', 'Produced quantity must be greater than zero'))
+      toast.error(t('مقدار تولیدشده باید زیادتر از صفر باشد', 'د تولید مقدار باید له صفر څخه زیات وي', 'Produced quantity must be greater than zero'))
       return
     }
     if (waste > produced) {
-      toast.error(t('ضایعات نمی‌تواند بیشتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity'))
+      toast.error(t('ضایعات نمی‌تواند زیادتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity'))
       return
     }
     const goodQty = produced - waste
@@ -241,7 +241,7 @@ export default function ProductionModule() {
       }
       toast.success(
         t(
-          `تکمیل شد — مواد از انبار کسر و ${fmtQty(goodQty)} ${completeTarget.product.unit} خالص به انبار اضافه شد${waste > 0 ? ` (${fmtQty(waste)} ضایعات به انبار اضافه نشد)` : ''}`,
+          `تکمیل شد — مواد از انبار کسر و ${fmtQty(goodQty)} ${completeTarget.product.unit} خالص به انبار علاوه شد${waste > 0 ? ` (${fmtQty(waste)} ضایعات به انبار علاوه نشد)` : ''}`,
           `بشپړ شو — مواد کم شول او ${fmtQty(goodQty)} ${completeTarget.product.unit} خالص انبار ته زیات شو${waste > 0 ? ` (${fmtQty(waste)} ضایعات انبار ته نه زیاتېدل)` : ''}`,
           `Completed — materials deducted and net ${fmtQty(goodQty)} ${completeTarget.product.unit} added to stock${waste > 0 ? ` (${fmtQty(waste)} waste not added)` : ''}`,
         ),
@@ -319,7 +319,7 @@ export default function ProductionModule() {
                   <TableRow>
                     <TableHead>{t('نمبر', 'شمېره', 'Number')}</TableHead>
                     <TableHead>{t('محصول', 'محصول', 'Product')}</TableHead>
-                    <TableHead>{t('مقدار برنامه', 'پلان شوی مقدار', 'Planned qty')}</TableHead>
+                    <TableHead>{t('مقدار پلان‌شده', 'پلان شوی مقدار', 'Planned qty')}</TableHead>
                     <TableHead>{t('تولیدشده / ضایعات', 'تولید / ضایعات', 'Produced / waste')}</TableHead>
                     <TableHead>{t('مصرف کل', 'ټول لګښت', 'Total cost')}</TableHead>
                     <TableHead>{t('وضعیت', 'وضعیت', 'Status')}</TableHead>
@@ -461,7 +461,7 @@ export default function ProductionModule() {
                   </p>
                 ) : wProductFormulas.length === 0 ? (
                   <p className="text-sm text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg px-3 py-2.5 bg-amber-500/10">
-                    {t('برای این محصول فرمولی ثبت نشده است', 'د دې محصول لپاره فورمول نشته', 'No formula registered for this product')}
+                    {t('برای این محصول فورمولایی ثبت نشده است', 'د دې محصول لپاره فورمول نشته', 'No formula registered for this product')}
                   </p>
                 ) : (
                   <Select value={wFormulaId} onValueChange={setWFormulaId}>
@@ -493,7 +493,7 @@ export default function ProductionModule() {
             <div className="space-y-4">
               <div className="flex items-end gap-3 flex-wrap">
                 <div className="space-y-1.5">
-                  <Label>{t('مقدار تولید (برنامه)', 'د تولید مقدار (پلان)', 'Planned quantity')} *</Label>
+                  <Label>{t('مقدار تولید (پلان)', 'د تولید مقدار (پلان)', 'Planned quantity')} *</Label>
                   <Input
                     type="number" min={0} step="any" className="w-40"
                     value={wQty} onChange={(e) => setWQty(e.target.value)}
@@ -551,7 +551,7 @@ export default function ProductionModule() {
                       <span className="font-medium">{formatMoney(wMatCost)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">{t('دستمزد', 'مزد', 'Labor')}</span>
+                      <span className="text-muted-foreground">{t('اجرت', 'مزد', 'Labor')}</span>
                       <span className="font-medium">{formatMoney(wLabor)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -560,7 +560,7 @@ export default function ProductionModule() {
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total cost')}</span>
+                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف کل تخمینی', 'اټکلي ټول لګښت', 'Estimated total cost')}</span>
                       <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(wTotal)}</span>
                     </div>
                   </div>
@@ -591,11 +591,11 @@ export default function ProductionModule() {
                   <span>{formatMoney(wMatCost)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">{t('دستمزد + سربار', 'مزد + سربار', 'Labor + overhead')}</span>
+                  <span className="text-muted-foreground">{t('اجرت + سربار', 'مزد + سربار', 'Labor + overhead')}</span>
                   <span>{formatMoney(wLabor + wOverhead)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total')}</span>
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف کل تخمینی', 'اټکلي ټول لګښت', 'Estimated total')}</span>
                   <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(wTotal)}</span>
                 </div>
                 {wInsufficient.length > 0 && (
@@ -663,7 +663,7 @@ export default function ProductionModule() {
               <div className="flex items-center justify-between gap-2 text-sm rounded-lg border bg-muted/40 px-3 py-2">
                 <span>{completeTarget.product.name}</span>
                 <span className="text-muted-foreground">
-                  {t('برنامه:', 'پلان:', 'Planned:')} <b className="text-foreground">{fmtQty(completeTarget.quantity)}</b> {completeTarget.product.unit}
+                  {t('پلان:', 'پلان:', 'Planned:')} <b className="text-foreground">{fmtQty(completeTarget.quantity)}</b> {completeTarget.product.unit}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -679,7 +679,7 @@ export default function ProductionModule() {
               {/* پیش‌نمایش زنده مقدار خالص ورودی به گدام */}
               {Number(cProduced) > 0 && (
                 <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">{t('به گدام اضافه می‌شود:', 'ګدام ته زیاتېږي:', 'To be added to warehouse:')}</span>
+                  <span className="text-muted-foreground">{t('به گدام علاوه می‌شود:', 'ګدام ته زیاتېږي:', 'To be added to warehouse:')}</span>
                   <span className="font-bold text-primary" dir="ltr">
                     {fmtQty(Math.max(0, Number(cProduced) - (Number(cWaste) || 0)))} {completeTarget.product.unit}
                   </span>
@@ -687,12 +687,12 @@ export default function ProductionModule() {
               )}
               {(Number(cWaste) || 0) > Number(cProduced) && (
                 <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                  {t('ضایعات نمی‌تواند بیشتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity')}
+                  {t('ضایعات نمی‌تواند زیادتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity')}
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground">
                 {t(
-                  'مواد معادل مقدار تولید کل کسر و فقط مقدار خالص (منهای ضایعات) به گدام اضافه می‌شود. ضایعات فقط ثبت می‌گردد.',
+                  'مواد معادل مقدار تولید کل کسر و فقط مقدار خالص (منهای ضایعات) به گدام علاوه می‌شود. ضایعات فقط ثبت می‌گردد.',
                   'د ټول تولید سره سم مواد کمېږي او یوازې خالص مقدار (له ضایعاتو پرته) ګدام ته زیاتېږي. ضایعات یوازې ثبت کېږي.',
                   'Materials are deducted for the total produced; only the net quantity (excluding waste) is added to stock. Waste is recorded only.',
                 )}

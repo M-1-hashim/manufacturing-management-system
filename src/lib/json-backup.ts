@@ -1,4 +1,4 @@
-// کاپی احتیاطی JSON — مستقل از نوع دیتابیس (SQLite و MySQL هر دو کاپی احتیاطیی می‌شوند)
+// کاپی احتیاطی JSON — مستقل از نوع دیتابیس (SQLite و MySQL هر دو کاپی احتیاطی می‌شوند)
 // برای انتقال دیتا بین SQLite محلی و MySQL هاست اشتراکی استفاده می‌شود
 import { db } from '@/lib/db'
 import type { AuditActor } from '@/lib/audit'
@@ -106,7 +106,7 @@ export interface JsonRestoreResult {
 /**
  * بازیابی کامل از کاپی احتیاطی JSON — در یک تراکنش اتمیک:
  * اگر هر مرحله‌ای خطا بدهد، همه‌چیز به حالت قبل برمی‌گردد
- * (کاپی احتیاطی امنیتی قبل از فراخوانی این تابع باید گرفته شود)
+ * (کاپی احتیاطی قبل از فراخوانی این تابع باید گرفته شود)
  */
 export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult> {
   const backup = validateJsonBackup(data)

@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'نوع قلم نامعتبر است' }, { status: 400 })
     if (!itemId) return NextResponse.json({ error: 'قلم انتخاب نشده است' }, { status: 400 })
     if (!quantity || isNaN(quantity) || quantity <= 0)
-      return NextResponse.json({ error: 'مقدار باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مقدار باید زیادتر از صفر باشد' }, { status: 400 })
 
     const created = await db.$transaction(async (tx) => {
       const item =

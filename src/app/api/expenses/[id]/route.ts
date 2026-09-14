@@ -18,7 +18,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     }
     const amount = body.amount !== undefined ? Number(body.amount) : existing.amount
     if (isNaN(amount) || amount <= 0) {
-      return NextResponse.json({ error: 'مقدار مصرف باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مقدار مصرف باید زیادتر از صفر باشد' }, { status: 400 })
     }
     const currency = ['AFN', 'USD', 'PKR'].includes(body.currency) ? body.currency : existing.currency
     let date = existing.date

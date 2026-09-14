@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/attendance — ثبت حضور/غیاب
+// POST /api/attendance — ثبت حاضری
 export async function POST(req: Request) {
   try {
     const body = await req.json()

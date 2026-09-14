@@ -30,10 +30,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       ? Number(body.wasteQty)
       : 0
     if (!Number.isFinite(producedQty) || producedQty <= 0) {
-      return NextResponse.json({ error: 'مقدار تولیدشده باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مقدار تولیدشده باید زیادتر از صفر باشد' }, { status: 400 })
     }
     if (!Number.isFinite(wasteQty) || wasteQty > producedQty) {
-      return NextResponse.json({ error: 'مقدار ضایعات نمی‌تواند بیشتر از مقدار تولید باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'مقدار ضایعات نمی‌تواند زیادتر از مقدار تولید باشد' }, { status: 400 })
     }
     // مقدار خالص قابل ورود به گدام = تولید کل منهای ضایعات
     const goodQty = Math.round((producedQty - wasteQty) * 10000) / 10000

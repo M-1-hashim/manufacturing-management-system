@@ -427,7 +427,7 @@ export default function SettingsModule() {
       })
       if (!res.ok) {
         throw new Error(res.error === 'MISSING_FIELDS' || res.error === 'MISSING_SSH_PASSWORD'
-          ? t('فیلدهای الزامی را کامل کنید', 'فیلدهای الزامی را کامل کنید', 'Missing required fields')
+          ? t('اړینې برخې بشپړې کړئ', 'اړینې برخې بشپړې کړئ', 'Missing required fields')
           : res.error || t('خطای نامشخص', 'ناڅرګنده ستونزه', 'Unknown error'))
       }
       toast.success(t('اتصال به هاست ذخیره شد — برنامه دوباره باز می‌شود…', 'اتصال ذخیره شو — پروګرام بیا پرانیستل کېږي…', 'Host connection saved — the app will restart…'))
@@ -482,10 +482,10 @@ export default function SettingsModule() {
     setBCreating(true)
     try {
       const created = await apiPost<BackupFileT>('/api/admin/backup', {})
-      toast.success(t(`نسخه کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`))
+      toast.success(t(`کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`))
       backup.refetch()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
+      toast.error(e instanceof Error ? e.message : t('خطا در تهیه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
     } finally {
       setBCreating(false)
     }
@@ -574,7 +574,7 @@ export default function SettingsModule() {
       if (!res.ok) throw new Error(body.error || t('بازیابی ناموفق بود', 'بیا رغونه ناکامې شوه', 'Restore failed'))
       toast.success(
         t(
-          `بازیابی انجام شد — کاپی احتیاطی امنیتی ${body.safetyBackup} گرفته شد`,
+          `بازیابی انجام شد — کاپی احتیاطی ${body.safetyBackup} گرفته شد`,
           `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
           `Restored — safety backup ${body.safetyBackup} created`
         ),
@@ -645,8 +645,8 @@ export default function SettingsModule() {
       await apiPut('/api/settings', { ratesAutoSync: enabled ? '1' : '0' })
       toast.success(
         enabled
-          ? t('بروزرسانی خودکار نرخ فعال شد', 'اتوماتیک بروز رسانی فعال شو', 'Auto rate sync enabled')
-          : t('بروزرسانی خودکار نرخ غیرفعال شد — نرخ‌ها دستی مدیریت می‌شوند', 'اتوماتیک بروز رسانی بند شو — نرخونه لاسي اداره کیږي', 'Auto rate sync disabled — rates are managed manually')
+          ? t('تجدید خودکار نرخ فعال شد', 'اتوماتیک بروز رسانی فعال شو', 'Auto rate sync enabled')
+          : t('تجدید خودکار نرخ غیرفعال شد — نرخ‌ها دستی مدیریت می‌شوند', 'اتوماتیک بروز رسانی بند شو — نرخونه لاسي اداره کیږي', 'Auto rate sync disabled — rates are managed manually')
       )
     } catch {
       set('ratesAutoSync', enabled ? '0' : '1')
@@ -749,7 +749,7 @@ export default function SettingsModule() {
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     {form.ratesUpdatedAt
                       ? t(
-                          `آخرین بروزرسانی: ${fmtDate(form.ratesUpdatedAt)} — منبع: ${form.ratesSource || liveInfo?.source || '—'}`,
+                          `آخرین تجدید: ${fmtDate(form.ratesUpdatedAt)} — منبع: ${form.ratesSource || liveInfo?.source || '—'}`,
                           `وروستنی بروز رسانی: ${fmtDate(form.ratesUpdatedAt)} — سرچینه: ${form.ratesSource || liveInfo?.source || '—'}`,
                           `Last update: ${fmtDate(form.ratesUpdatedAt)} — source: ${form.ratesSource || liveInfo?.source || '—'}`
                         )
@@ -758,7 +758,7 @@ export default function SettingsModule() {
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchLiveRates} disabled={rateFetching} className="gap-1.5 shrink-0">
                   <RefreshCw className={`h-3.5 w-3.5 ${rateFetching ? 'animate-spin' : ''}`} />
-                  {rateFetching ? t('در حال دریافت...', 'اخیستل...', 'Fetching...') : t('بروزرسانی لحظه‌ای', 'لحظه يي بروز رسانی', 'Refresh live rates')}
+                  {rateFetching ? t('در حال دریافت...', 'اخیستل...', 'Fetching...') : t('تجدید لحظه‌ای', 'لحظه يي بروز رسانی', 'Refresh live rates')}
                 </Button>
               </div>
 
@@ -784,10 +784,10 @@ export default function SettingsModule() {
                 </div>
               )}
 
-              {/* بروزرسانی خودکار */}
+              {/* تجدید خودکار */}
               <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
                 <div className="min-w-0">
-                  <Label htmlFor="ratesAutoSync" className="cursor-pointer">{t('بروزرسانی خودکار نرخ‌ها', 'اتوماتیک بروز رسانی نرخونه', 'Auto-update rates')}</Label>
+                  <Label htmlFor="ratesAutoSync" className="cursor-pointer">{t('تجدید خودکار نرخ‌ها', 'اتوماتیک بروز رسانی نرخونه', 'Auto-update rates')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {t('نرخ‌ها هر ساعت از انترنت گرفته و ذخیره می‌شوند؛ در قطعی انترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له انټرنټ اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly and stored; last known rates are used when offline.')}
                   </p>
@@ -939,11 +939,11 @@ export default function SettingsModule() {
               <Badge variant="outline" className="ms-2">{t('مخصوص ادمین', 'ځانګړی ادمین', 'Admin only')}</Badge>
               {backup.data?.dbType === 'mysql' ? (
                 <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
-                  {t('ذخیره‌سازی: هاست MySQL', 'ساتنه: MySQL هوسټ', 'Storage: MySQL host')}
+                  {t('ذخیره: هاست MySQL', 'ساتنه: MySQL هوسټ', 'Storage: MySQL host')}
                 </Badge>
               ) : (
                 <Badge variant="secondary">
-                  {t('ذخیره‌سازی: SQLite محلی', 'ساتنه: ځایی SQLite', 'Storage: local SQLite')}
+                  {t('ذخیره: SQLite محلی', 'ساتنه: ځایی SQLite', 'Storage: local SQLite')}
                 </Badge>
               )}
             </CardTitle>
@@ -1002,7 +1002,7 @@ export default function SettingsModule() {
             </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                'سیستم به‌صورت خودکار در فواصل انتخابی از کل دیتابیس نسخه کاپی احتیاطی می‌گیرد و نسخه‌های قدیمی‌تر را خودکار حذف می‌کند. فایل‌ها کنار دیتابیس در پوشه backups نگهداری می‌شوند.',
+                'سیستم به‌صورت خودکار در فواصل انتخابی از کل دیتابیس کاپی احتیاطی می‌گیرد و نسخه‌های قدیمی‌تر را خودکار حذف می‌کند. فایل‌ها کنار دیتابیس در پوشه backups نگهداری می‌شوند.',
                 'سیسټم په ټاکل شوو فاصلو کې له ټولې ډاټابیس څخه اتوماتیک بیک اپ اخلي او زړې نسخې اتوماتیک حذفوي.',
                 'The system automatically backs up the whole database at the chosen interval and prunes old versions. Files are stored in the backups folder next to the database.'
               )}
@@ -1014,7 +1014,7 @@ export default function SettingsModule() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-muted-foreground flex-1">
                 {t(
-                  `${(backup.data?.files.length ?? 0)} نسخه کاپی احتیاطی ذخیره شده است. برای انتقال به کامپیوتر دیگر، فایل را دانلود کنید.`,
+                  `${(backup.data?.files.length ?? 0)} کاپی احتیاطی ذخیره شده است. برای انتقال به کامپیوتر دیگر، فایل را دانلود کنید.`,
                   `${(backup.data?.files.length ?? 0)} بیک اپ فایلونه ساتل شوي دي.`,
                   `${(backup.data?.files.length ?? 0)} backup files stored. Download to move to another computer.`
                 )}
@@ -1043,7 +1043,7 @@ export default function SettingsModule() {
                 <p className="p-4 text-sm text-muted-foreground text-center">{t('در حال بارگیری...', 'بارول...', 'Loading...')}</p>
               ) : (backup.data?.files.length ?? 0) === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
-                  {t('هنوز نسخه کاپی احتیاطیی وجود ندارد', 'تر اوسه بیک اپ نشته', 'No backups yet')}
+                  {t('هنوز کاپی احتیاطی وجود ندارد', 'تر اوسه بیک اپ نشته', 'No backups yet')}
                 </p>
               ) : (
                 <table className="w-full text-sm">
@@ -1096,7 +1096,7 @@ export default function SettingsModule() {
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
                     <RotateCcw className="h-4 w-4 text-destructive" />
-                    {t('بازیابی نسخه کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
+                    {t('بازیابی کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
                   </AlertDialogTitle>
                   <AlertDialogDescription className="space-y-2 text-sm">
                     <span className="block">
@@ -1116,7 +1116,7 @@ export default function SettingsModule() {
                       {t('تمام دیتای فعلی با محتوای این فایل جایگزین می‌شود!', 'ټول اوسني معلومات د دې فایل سره بدلېږي!', 'All current data will be replaced with this file!')}
                     </span>
                     <span className="block text-muted-foreground">
-                      {t('قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی امنیتی گرفته می‌شود.', 'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.', 'A safety backup of current data is created automatically first.')}
+                      {t('قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی گرفته می‌شود.', 'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.', 'A safety backup of current data is created automatically first.')}
                     </span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1200,7 +1200,7 @@ export default function SettingsModule() {
                       <div>
                         <p>
                           ⚠️ {t(
-                            `اتصال به هاست برقرار است ولی جدول‌ها کامل نیست (${dbInfo.tableCount ?? 0} از ${dbInfo.expectedCount ?? 19}) — تا زمانی که همهٔ جدول‌ها ساخته نشوند، ذخیرهٔ داده کار نمی‌کند.`,
+                            `به هاست وصل است ولی جدول‌ها کامل نیست (${dbInfo.tableCount ?? 0} از ${dbInfo.expectedCount ?? 19}) — تا زمانی که همهٔ جدول‌ها ساخته نشوند، ذخیرهٔ داده کار نمی‌کند.`,
                             `له هوسټ سره نښلون برقرار دی خو جدولونه بشپړ نه دي (${dbInfo.tableCount ?? 0} له ${dbInfo.expectedCount ?? 19}) — تر هغه چې ټول جدولونه جوړ نشي، خوندي کول کار نه کوي.`,
                             `Host reachable but tables are incomplete (${dbInfo.tableCount ?? 0} of ${dbInfo.expectedCount ?? 19}) — saving will not work until all tables exist.`
                           )}
@@ -1215,7 +1215,7 @@ export default function SettingsModule() {
                     ) : (
                       <div>
                         <p>
-                          ❌ {t('اتصال به هاست برقرار نمی‌شود:', 'له هوسټ سره نښلون نه کېږي:', 'Cannot reach the host:')}
+                          ❌ {t('به هاست وصل نمی‌شود:', 'له هوسټ سره نښلون نه کېږي:', 'Cannot reach the host:')}
                           {' '}<span dir="ltr" className="font-mono">{dbInfo.error || 'unknown error'}</span>
                         </p>
                         <p className="mt-1 font-mono" dir="ltr">

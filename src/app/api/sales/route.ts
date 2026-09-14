@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       const unitPrice = Number(it.unitPrice)
       const discount = Number(it.discount) || 0
       if (!quantity || quantity <= 0) {
-        return NextResponse.json({ error: 'مقدار کالا باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+        return NextResponse.json({ error: 'مقدار کالا باید زیادتر از صفر باشد' }, { status: 400 })
       }
       if (isNaN(unitPrice) || unitPrice < 0) {
         return NextResponse.json({ error: 'فی کالا نامعتبر است' }, { status: 400 })

@@ -60,7 +60,7 @@ const ACTION_LABELS: Record<string, [string, string, string]> = {
 
 // برچسب بخش‌ها (entity): [دری، پشتو، انگلیسی]
 const ENTITY_LABELS: Record<string, [string, string, string]> = {
-  auth: ['احراز هویت', 'تصدیق هویت', 'Auth'],
+  auth: ['تصدیق هویت', 'تصدیق هویت', 'Auth'],
   user: ['استفاده‌کنندگان', 'کاروونکي', 'Users'],
   sale: ['فروش', 'پلورنه', 'Sales'],
   production: ['تولید', 'تولید', 'Production'],
@@ -87,7 +87,7 @@ const ACTION_BADGES: Record<string, string> = {
   change_password: SLATE,
 }
 
-// خروجی CSV با BOM برای نمایش درست فارسی در اکسل
+// خروجی CSV با BOM برای نمایش درست متن دری در اکسل
 function downloadCSV(filename: string, rows: (string | number)[][]) {
   const esc = (v: string | number) => {
     const s = String(v ?? '')
