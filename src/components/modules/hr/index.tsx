@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول منابع انسانی — کارکنان، حضور و غیاب، حقوق و دستمزد
+// ماژول منابع بشری — کارکنان، حاضری، معاش و دستمزد
 import { useMemo, useState } from 'react'
 import {
   Banknote,
@@ -95,7 +95,7 @@ async function jsonReq(url: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   })
   const json = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(json?.error || `خطا در عملیات (${res.status})`)
+  if (!res.ok) throw new Error(json?.error || `خطا در اجراؤات (${res.status})`)
   return json
 }
 
@@ -135,7 +135,7 @@ export default function HrModule() {
   const [qShift, setQShift] = useState('none')
   const [qSaving, setQSaving] = useState(false)
 
-  // ---------- حقوق ----------
+  // ---------- معاش ----------
   const { data: salData, refetch: refetchSal } = useFetch<Sal[]>('/api/salaries')
   const salaries = useMemo(() => (Array.isArray(salData) ? salData : []), [salData])
   const [payOpen, setPayOpen] = useState(false)
@@ -181,7 +181,7 @@ export default function HrModule() {
   }, [salaries])
   const totalPaid = salaries.reduce((s, x) => s + x.amount, 0)
 
-  // ---------- عملیات کارکنان ----------
+  // ---------- اجراؤات کارکنان ----------
   function openNewEmp() {
     setEmpEditing(null)
     setEName('')
@@ -209,7 +209,7 @@ export default function HrModule() {
     }
     const salary = Number(eSalary)
     if (!salary || isNaN(salary) || salary <= 0) {
-      toast.error(t('حقوق باید بزرگ‌تر از صفر باشد', 'معاش باید له صفر لوی وي', 'Salary must be greater than zero'))
+      toast.error(t('معاش باید بزرگ‌تر از صفر باشد', 'معاش باید له صفر لوی وي', 'Salary must be greater than zero'))
       return
     }
     setESaving(true)
@@ -224,7 +224,7 @@ export default function HrModule() {
       }
       if (empEditing) {
         await jsonReq(`/api/employees/${empEditing.id}`, 'PUT', body)
-        toast.success(t('کارمند ویرایش شد', 'کوونکی سمون وخوړ', 'Employee updated'))
+        toast.success(t('کارمند تصحیح شد', 'کوونکی سمون وخوړ', 'Employee updated'))
       } else {
         await jsonReq('/api/employees', 'POST', body)
         toast.success(t('کارمند ثبت شد', 'کوونکی ثبت شو', 'Employee created'))
@@ -292,7 +292,7 @@ export default function HrModule() {
     }
   }
 
-  // ---------- پرداخت حقوق ----------
+  // ---------- پرداخت معاش ----------
   function openPay() {
     setPEmpId('')
     setPMonth('')
@@ -322,7 +322,7 @@ export default function HrModule() {
         amount,
         notes: pNotes || null,
       })
-      toast.success(t('پرداخت حقوق ثبت شد', 'د معاش ورکول ثبت شول', 'Salary payment recorded'))
+      toast.success(t('پرداخت معاش ثبت شد', 'د معاش ورکول ثبت شول', 'Salary payment recorded'))
       setPayOpen(false)
       refetchSal()
     } catch (err) {
@@ -344,9 +344,9 @@ export default function HrModule() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={t('منابع انسانی', 'انساني سرچینې', 'Human Resources')}
+        title={t('منابع بشری', 'انساني سرچینې', 'Human Resources')}
         subtitle={t(
-          'مدیریت کارکنان، حضور و غیاب و حقوق و دستمزد',
+          'مدیریت کارکنان، حاضری و معاش و دستمزد',
           'د کارکوونکیو، حاضرو او معاشونو مدیریت',
           'Employees, attendance and payroll'
         )}
@@ -360,7 +360,7 @@ export default function HrModule() {
           ) : tab === 'salaries' ? (
             <Button onClick={openPay}>
               <Plus className="h-4 w-4" />
-              {t('پرداخت حقوق', 'معاش ورکړه', 'Pay Salary')}
+              {t('پرداخت معاش', 'معاش ورکړه', 'Pay Salary')}
             </Button>
           ) : undefined
         }
@@ -376,7 +376,7 @@ export default function HrModule() {
           tone="green"
         />
         <StatCard
-          title={t('مجموع حقوق ماهانه', 'میاشتنی معاشونه', 'Monthly Payroll')}
+          title={t('مجموع معاش ماهانه', 'میاشتنی معاشونه', 'Monthly Payroll')}
           value={formatMoney(totalSalaries)}
           icon={Wallet}
           tone="blue"
@@ -398,8 +398,8 @@ export default function HrModule() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 sm:w-[440px]">
           <TabsTrigger value="employees">{t('کارکنان', 'کارکوونکي', 'Employees')}</TabsTrigger>
-          <TabsTrigger value="attendance">{t('حضور و غیاب', 'حاضره او غیرحاضره', 'Attendance')}</TabsTrigger>
-          <TabsTrigger value="salaries">{t('حقوق و دستمزد', 'معاشونه', 'Payroll')}</TabsTrigger>
+          <TabsTrigger value="attendance">{t('حاضری', 'حاضره او غیرحاضره', 'Attendance')}</TabsTrigger>
+          <TabsTrigger value="salaries">{t('معاش و دستمزد', 'معاشونه', 'Payroll')}</TabsTrigger>
         </TabsList>
 
         {/* ================= کارکنان ================= */}
@@ -426,10 +426,10 @@ export default function HrModule() {
                         <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
                         <TableHead>{t('وظیفه', 'دنده', 'Position')}</TableHead>
                         <TableHead>{t('تیلفون', 'تیلفون', 'Phone')}</TableHead>
-                        <TableHead>{t('حقوق', 'معاش', 'Salary')}</TableHead>
+                        <TableHead>{t('معاش', 'معاش', 'Salary')}</TableHead>
                         <TableHead>{t('تاریخ استخدام', 'د استخدام نېټه', 'Hire Date')}</TableHead>
                         <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                        <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                        <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -459,7 +459,7 @@ export default function HrModule() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
-                                title={t('ویرایش', 'سمون', 'Edit')}
+                                title={t('تصحیح', 'سمون', 'Edit')}
                                 onClick={() => openEditEmp(e)}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -507,7 +507,7 @@ export default function HrModule() {
           </Card>
         </TabsContent>
 
-        {/* ================= حضور و غیاب ================= */}
+        {/* ================= حاضری ================= */}
         <TabsContent value="attendance" className="mt-4 space-y-4">
           {/* پنل ثبت سریع */}
           <Card>
@@ -585,7 +585,7 @@ export default function HrModule() {
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-base">
-                  {t('سابقه حضور و غیاب', 'د حاضرو سابقه', 'Attendance History')}
+                  {t('سابقه حاضری', 'د حاضرو سابقه', 'Attendance History')}
                 </CardTitle>
                 <div className="ms-auto flex flex-wrap items-center gap-2">
                   <Select value={attEmpFilter} onValueChange={setAttEmpFilter}>
@@ -628,7 +628,7 @@ export default function HrModule() {
                         <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
                         <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
                         <TableHead>{t('شیفت', 'شفت', 'Shift')}</TableHead>
-                        <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                        <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -671,7 +671,7 @@ export default function HrModule() {
           </Card>
         </TabsContent>
 
-        {/* ================= حقوق و دستمزد ================= */}
+        {/* ================= معاش و دستمزد ================= */}
         <TabsContent value="salaries" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="lg:col-span-2">
@@ -695,7 +695,7 @@ export default function HrModule() {
                           <TableHead>{t('ماه', 'میاشت', 'Month')}</TableHead>
                           <TableHead>{t('مبلغ', 'مبلغ', 'Amount')}</TableHead>
                           <TableHead>{t('تاریخ پرداخت', 'د پرداخت نېټه', 'Paid At')}</TableHead>
-                          <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                          <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -777,7 +777,7 @@ export default function HrModule() {
                               variant="outline"
                               className="shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
                             >
-                              {t('حقوق پرداخت نشده', 'معاش نه دی پرداخت شوی', 'Unpaid')}
+                              {t('معاش پرداخت نشده', 'معاش نه دی پرداخت شوی', 'Unpaid')}
                             </Badge>
                           )}
                         </div>
@@ -797,7 +797,7 @@ export default function HrModule() {
           <DialogHeader>
             <DialogTitle>
               {empEditing
-                ? t('ویرایش کارمند', 'د کوونکي سمون', 'Edit Employee')
+                ? t('تصحیح کارمند', 'د کوونکي سمون', 'Edit Employee')
                 : t('کارمند جدید', 'نوی کوونکی', 'New Employee')}
             </DialogTitle>
           </DialogHeader>
@@ -818,7 +818,7 @@ export default function HrModule() {
                 <Input dir="ltr" className="font-mono" value={ePhone} onChange={(e) => setEPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>{t('حقوق ماهانه (؋)', 'میاشتنی معاش (؋)', 'Monthly Salary (؋)')}</Label>
+                <Label>{t('معاش ماهانه (؋)', 'میاشتنی معاش (؋)', 'Monthly Salary (؋)')}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -856,11 +856,11 @@ export default function HrModule() {
         </DialogContent>
       </Dialog>
 
-      {/* ---------- دیالوگ پرداخت حقوق ---------- */}
+      {/* ---------- دیالوگ پرداخت معاش ---------- */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('پرداخت حقوق', 'معاش ورکړه', 'Pay Salary')}</DialogTitle>
+            <DialogTitle>{t('پرداخت معاش', 'معاش ورکړه', 'Pay Salary')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <div className="space-y-1.5">

@@ -1,6 +1,6 @@
 'use client'
 
-// کامپوننت‌های مشترک — سربرگ ماژول، کارت آماری، حالت خالی و بارگذاری
+// کامپوننت‌های مشترک — سرلوحه ماژول، کارت آماری، حالت خالی و بارگیری
 import { Loader2, Inbox } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -73,7 +73,7 @@ export function StatCard({
   )
 }
 
-export function LoadingBlock({ label = 'در حال بارگذاری...' }: { label?: string }) {
+export function LoadingBlock({ label = 'در حال بارگیری...' }: { label?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
       <Loader2 className="h-6 w-6 animate-spin text-primary" />

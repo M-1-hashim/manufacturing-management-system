@@ -1,4 +1,4 @@
-// بکاپ JSON — مستقل از نوع دیتابیس (SQLite و MySQL هر دو پشتیبانی می‌شوند)
+// کاپی احتیاطی JSON — مستقل از نوع دیتابیس (SQLite و MySQL هر دو کاپی احتیاطیی می‌شوند)
 // برای انتقال دیتا بین SQLite محلی و MySQL هاست اشتراکی استفاده می‌شود
 import { db } from '@/lib/db'
 import type { AuditActor } from '@/lib/audit'
@@ -67,18 +67,18 @@ export async function exportAllJson(): Promise<FullJsonBackup> {
   }
 }
 
-/** بررسی صحت ساختار فایل بکاپ JSON */
+/** بررسی صحت ساختار فایل کاپی احتیاطی JSON */
 export function validateJsonBackup(data: unknown): FullJsonBackup {
   if (!data || typeof data !== 'object') {
-    throw new Error('فایل بکاپ JSON نامعتبر است')
+    throw new Error('فایل کاپی احتیاطی JSON نامعتبر است')
   }
   const d = data as Partial<FullJsonBackup>
   if (d.app !== 'manufacturing-management-system' || d.version !== 1 || !d.tables) {
-    throw new Error('این فایل یک پشتیبان معتبر سامانه نیست')
+    throw new Error('این فایل یک کاپی احتیاطی معتبر سامانه نیست')
   }
   for (const t of TABLES) {
     if (!Array.isArray(d.tables[t.name])) {
-      throw new Error(`فایل پشتیبان ناقص است — جدول ${t.name} یافت نشد`)
+      throw new Error(`فایل کاپی احتیاطی ناقص است — جدول ${t.name} یافت نشد`)
     }
   }
   return d as FullJsonBackup
@@ -104,9 +104,9 @@ export interface JsonRestoreResult {
 }
 
 /**
- * بازیابی کامل از بکاپ JSON — در یک تراکنش اتمیک:
+ * بازیابی کامل از کاپی احتیاطی JSON — در یک تراکنش اتمیک:
  * اگر هر مرحله‌ای خطا بدهد، همه‌چیز به حالت قبل برمی‌گردد
- * (بکاپ امنیتی قبل از فراخوانی این تابع باید گرفته شود)
+ * (کاپی احتیاطی امنیتی قبل از فراخوانی این تابع باید گرفته شود)
  */
 export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult> {
   const backup = validateJsonBackup(data)
@@ -129,12 +129,12 @@ export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult>
     for (const t of parsed) {
       for (let i = 0; i < t.rows.length; i += CHUNK) {
         const chunk = t.rows.slice(i, i + CHUNK).map((r) => parseRow(t.name, t.dates, r))
-        // بدون skipDuplicates — جدول خالی است و کلیدها از بکاپ عیناً برمی‌گردند
+        // بدون skipDuplicates — جدول خالی است و کلیدها از کاپی احتیاطی عیناً برمی‌گردند
         await txc(t.name).createMany({ data: chunk })
       }
     }
 
-    // ۳) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق بکاپ باشد
+    // ۳) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق کاپی احتیاطی باشد
     for (const t of parsed) {
       const found = await txc(t.name).findMany()
       if (found.length !== t.rows.length) {

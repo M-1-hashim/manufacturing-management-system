@@ -1,6 +1,6 @@
-// پشتیبان‌گیری خودکار و دستی دیتابیس — فقط سمت سرور
+// کاپی احتیاطی خودکار و دستی دیتابیس — فقط سمت هاست
 // SQLite: کپی فایل (VACUUM) — MySQL هاست اشتراکی: اسنپ‌شات JSON
-// فایل‌های پشتیبان در پوشه backups/ کنار دیتابیس ذخیره می‌شوند
+// فایل‌های کاپی احتیاطی در پوشه backups/ کنار دیتابیس ذخیره می‌شوند
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
@@ -14,7 +14,7 @@ export interface BackupFile {
   createdAt: string // ISO
 }
 
-// الگوی نام فایل پشتیبان: backup-YYYYMMDD-HHMMSS.db یا backup-YYYYMMDD-HHMMSS.json
+// الگوی نام فایل کاپی احتیاطی: backup-YYYYMMDD-HHMMSS.db یا backup-YYYYMMDD-HHMMSS.json
 const NAME_RE = /^backup-\d{8}-\d{6}\.(db|json)$/
 const DEFAULT_KEEP = 10
 
@@ -36,7 +36,7 @@ export function isValidBackupName(name: string): boolean {
   return NAME_RE.test(name)
 }
 
-// ---------------- تنظیمات پشتیبان‌گیری (جدول Setting) ----------------
+// ---------------- تنظیمات کاپی احتیاطی (جدول Setting) ----------------
 async function getSettingRaw(key: string, fallback: string): Promise<string> {
   try {
     const row = await db.setting.findUnique({ where: { key } })
@@ -54,14 +54,14 @@ async function putSetting(key: string, value: string): Promise<void> {
   })
 }
 
-/** فاصله زمانی پشتیبان‌گیری خودکار به ساعت — 0 یعنی غیرفعال */
+/** فاصله زمانی کاپی احتیاطی خودکار به ساعت — 0 یعنی غیرفعال */
 export async function getBackupIntervalHours(): Promise<number> {
   const v = parseFloat(await getSettingRaw('backupIntervalHours', '24'))
   if (!Number.isFinite(v) || v < 0) return 24
   return Math.min(v, 24 * 30)
 }
 
-/** تعداد نسخه‌های پشتیبان نگهداری‌شده */
+/** تعداد نسخه‌های کاپی احتیاطی نگهداری‌شده */
 export async function getBackupKeep(): Promise<number> {
   const v = parseInt(await getSettingRaw('backupKeepCount', String(DEFAULT_KEEP)), 10)
   if (!Number.isFinite(v) || v < 1) return DEFAULT_KEEP
@@ -75,7 +75,7 @@ export async function saveBackupConfig(intervalHours: number, keep: number): Pro
   await putSetting('backupKeepCount', String(k))
 }
 
-// ---------------- عملیات پشتیبان‌گیری ----------------
+// ---------------- اجراؤات کاپی احتیاطی ----------------
 export async function listBackups(): Promise<BackupFile[]> {
   const dir = backupsDir()
   if (!fs.existsSync(dir)) return []
@@ -104,7 +104,7 @@ async function pruneBackups(): Promise<void> {
 }
 
 /**
- * ایجاد یک نسخه پشتیبان
+ * ایجاد یک نسخه کاپی احتیاطی
  * SQLite: VACUUM INTO (در برابر نوشتن همزمان امن است)
  * MySQL: اسنپ‌شات JSON از همه جداول
  * format: تحمیل نوع فایل — «json» حتی روی SQLite هم برای مهاجرت دیتا به هاست کاربرد دارد
@@ -152,7 +152,7 @@ export function backupAbsPath(name: string): string {
   return path.join(backupsDir(), name)
 }
 
-// ---------------- بازیابی نسخه پشتیبان (Restore) ----------------
+// ---------------- بازیابی نسخه کاپی احتیاطی (Restore) ----------------
 const SQLITE_MAGIC = Buffer.from('SQLite format 3\0')
 const RESTORE_MAX_BYTES = 512 * 1024 * 1024 // حداکثر ۵۱۲ مگابایت
 
@@ -171,9 +171,9 @@ export interface RestoreResult {
 }
 
 /**
- * بازیابی از بایت‌های فایل پشتیبان — نوع فایل خودکار تشخیص داده می‌شود:
- *  — JSON (بکاپ جدید): روی SQLite و MySQL هر دو کار می‌کند (تراکنش اتمیک)
- *  — باینری SQLite (.db): فقط در حالت SQLite — تعویض فایل با بکاپ امنیتی و رول‌بک خودکار
+ * بازیابی از بایت‌های فایل کاپی احتیاطی — نوع فایل خودکار تشخیص داده می‌شود:
+ *  — JSON (کاپی احتیاطی جدید): روی SQLite و MySQL هر دو کار می‌کند (تراکنش اتمیک)
+ *  — باینری SQLite (.db): فقط در حالت SQLite — تعویض فایل با کاپی احتیاطی امنیتی و رول‌بک خودکار
  */
 export async function restoreFromBuffer(
   dbBytes: Buffer,
@@ -192,7 +192,7 @@ export async function restoreFromBuffer(
     }
     const validated = validateJsonBackup(data)
 
-    // بکاپ امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+    // کاپی احتیاطی امنیتی از دیتابیس فعلی (قبل از هر تغییری)
     const safety = await createBackup('manual', actor)
     try {
       const res = await restoreFromJson(validated)
@@ -214,14 +214,14 @@ export async function restoreFromBuffer(
 
   // ---------- مسیر ۲: فایل باینری SQLite ----------
   if (currentDbType() === 'mysql') {
-    throw new Error('فایل .db مخصوص دیتابیس SQLite است — در حالت MySQL از بکاپ JSON استفاده کنید')
+    throw new Error('فایل .db مخصوص دیتابیس SQLite است — در حالت MySQL از کاپی احتیاطی JSON استفاده کنید')
   }
 
   if (!validateSqliteDbBuffer(dbBytes)) {
     throw new Error('فایل ارسالی یک دیتابیس معتبر سامانه نیست')
   }
 
-  // ۱) بکاپ امنیتی از دیتابیس فعلی (قبل از هر تغییری)
+  // ۱) کاپی احتیاطی امنیتی از دیتابیس فعلی (قبل از هر تغییری)
   const safety = await createBackup('manual', actor)
 
   // ۲) قطع اتصال‌ها و تعویض فایل
@@ -239,7 +239,7 @@ export async function restoreFromBuffer(
     throw e
   }
 
-  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، بکاپ امنیتی برمی‌گردد
+  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، کاپی احتیاطی امنیتی برمی‌گردد
   try {
     await db.$queryRaw`SELECT COUNT(*) FROM "User"`
     await logAudit(actor ?? null, 'backup_restore', 'system', undefined, `${sourceLabel} — safety: ${safety.name}`)
@@ -258,11 +258,11 @@ export async function restoreFromBuffer(
     } catch (rbErr) {
       console.error('[backup] rollback failed', rbErr)
     }
-    throw new Error('فایل پشتیبان سازگار نبود — دیتابیس قبلی بازگردانده شد')
+    throw new Error('فایل کاپی احتیاطی سازگار نبود — دیتابیس قبلی بازگردانده شد')
   }
 }
 
-/** بازیابی از یکی از فایل‌های پشتیبان موجود در پوشه backups */
+/** بازیابی از یکی از فایل‌های کاپی احتیاطی موجود در پوشه backups */
 export async function restoreFromBackupFile(
   name: string,
   actor?: AuditActor | null
@@ -294,7 +294,7 @@ async function autoBackupTick(): Promise<void> {
   }
 }
 
-/** در instrumentation.ts سرور فراخوانی می‌شود — هر ۱۰ دقیقه بررسی می‌کند */
+/** در instrumentation.ts هاست فراخوانی می‌شود — هر ۱۰ دقیقه بررسی می‌کند */
 export function initBackupScheduler(): void {
   if (g.__mfgBackupTimer) return
   g.__mfgBackupTimer = setInterval(() => {

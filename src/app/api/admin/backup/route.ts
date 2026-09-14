@@ -24,13 +24,13 @@ async function requireAdmin(req: Request) {
     return { error: NextResponse.json({ error: 'ابتدا وارد سیستم شوید' }, { status: 401 }) }
   }
   if (session.role !== 'admin') {
-    return { error: NextResponse.json({ error: 'فقط مدیر سیستم به پشتیبان‌گیری دسترسی دارد' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: 'فقط مدیر سیستم به کاپی احتیاطی دسترسی دارد' }, { status: 403 }) }
   }
   return { session }
 }
 
 // GET /api/admin/backup                 → فهرست + تنظیمات + نوع دیتابیس
-// GET /api/admin/backup?download=x.db   → دانلود فایل پشتیبان
+// GET /api/admin/backup?download=x.db   → دانلود فایل کاپی احتیاطی
 // GET /api/admin/backup?export=json     → خروجی JSON فوری (برای مهاجرت دیتا به هاست)
 export async function GET(req: Request) {
   try {
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
           },
         })
       } catch {
-        return NextResponse.json({ error: 'فایل پشتیبان یافت نشد' }, { status: 404 })
+        return NextResponse.json({ error: 'فایل کاپی احتیاطی یافت نشد' }, { status: 404 })
       }
     }
 
@@ -81,15 +81,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ files, intervalHours, keep, dbType: currentDbType() })
   } catch (e) {
     console.error('backup GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت فهرست پشتیبان' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت فهرست کاپی احتیاطی' }, { status: 500 })
   }
 }
 
 // POST /api/admin/backup
-//  — JSON {}                        → ایجاد نسخه پشتیبان جدید (نوع خودکار بر اساس دیتابیس فعلی)
+//  — JSON {}                        → ایجاد نسخه کاپی احتیاطی جدید (نوع خودکار بر اساس دیتابیس فعلی)
 //  — JSON {format: "json"}          → اسنپ‌شات JSON (حتی روی SQLite — برای مهاجرت دیتا به هاست)
-//  — JSON {restore: "backup-….db"}  → بازیابی از یکی از پشتیبان‌های موجود
-//  — multipart/form-data (file)     → آپلود فایل پشتیبان (.db یا .json) و بازیابی آن
+//  — JSON {restore: "backup-….db"}  → بازیابی از یکی از کاپی احتیاطی‌های موجود
+//  — multipart/form-data (file)     → آپلود فایل کاپی احتیاطی (.db یا .json) و بازیابی آن
 export async function POST(req: Request) {
   try {
     const guard = await requireAdmin(req)
@@ -97,12 +97,12 @@ export async function POST(req: Request) {
     const actor = { uid: guard.session!.uid, username: guard.session!.username }
     const contentType = req.headers.get('content-type') || ''
 
-    // آپلود فایل پشتیبان و بازیابی
+    // آپلود فایل کاپی احتیاطی و بازیابی
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData()
       const file = form.get('file')
       if (!(file instanceof File)) {
-        return NextResponse.json({ error: 'فایل پشتیبان ارسال نشده است' }, { status: 400 })
+        return NextResponse.json({ error: 'فایل کاپی احتیاطی ارسال نشده است' }, { status: 400 })
       }
       if (file.size > 512 * 1024 * 1024) {
         return NextResponse.json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر ۵۱۲ مگابایت)' }, { status: 400 })
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as { restore?: string }
 
-    // بازیابی از فایل پشتیبان موجود
+    // بازیابی از فایل کاپی احتیاطی موجود
     if (body.restore) {
       if (!isValidBackupName(body.restore)) {
         return NextResponse.json({ error: 'نام فایل نامعتبر است' }, { status: 400 })
@@ -138,16 +138,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // ایجاد نسخه پشتیبان جدید
+    // ایجاد نسخه کاپی احتیاطی جدید
     const created = await createBackup('manual', actor, body.format === 'json' ? 'json' : undefined)
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error('backup POST', e)
-    return NextResponse.json({ error: 'خطا در تهیه نسخه پشتیبان' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تهیه نسخه کاپی احتیاطی' }, { status: 500 })
   }
 }
 
-// PUT /api/admin/backup — ذخیره تنظیمات پشتیبان‌گیری خودکار
+// PUT /api/admin/backup — ذخیره تنظیمات کاپی احتیاطی خودکار
 export async function PUT(req: Request) {
   try {
     const guard = await requireAdmin(req)
@@ -164,11 +164,11 @@ export async function PUT(req: Request) {
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('backup PUT', e)
-    return NextResponse.json({ error: 'خطا در ذخیره تنظیمات پشتیبان' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ذخیره تنظیمات کاپی احتیاطی' }, { status: 500 })
   }
 }
 
-// DELETE /api/admin/backup?file=x.db — حذف یک نسخه پشتیبان
+// DELETE /api/admin/backup?file=x.db — حذف یک نسخه کاپی احتیاطی
 export async function DELETE(req: Request) {
   try {
     const guard = await requireAdmin(req)
@@ -181,6 +181,6 @@ export async function DELETE(req: Request) {
     await deleteBackup(file, { uid: guard.session!.uid, username: guard.session!.username })
     return NextResponse.json({ ok: true })
   } catch {
-    return NextResponse.json({ error: 'خطا در حذف فایل پشتیبان' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در حذف فایل کاپی احتیاطی' }, { status: 500 })
   }
 }

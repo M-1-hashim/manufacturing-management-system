@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول مدیریت کاربران — ایجاد حساب برای کارکنان بخش‌ها، تعیین نقش و وضعیت (فقط ادمین)
+// ماژول مدیریت استفاده‌کنندگان — ایجاد حساب برای کارکنان بخش‌ها، تعیین نقش و وضعیت (فقط ادمین)
 import { useMemo, useState } from 'react'
 import {
   Pencil,
@@ -114,7 +114,7 @@ export default function UsersModule() {
   const operatorCount = users.filter((u) => u.role === 'operator').length
   const adminMgrCount = users.filter((u) => u.role === 'admin' || u.role === 'manager').length
 
-  // ---------- دیالوگ ایجاد/ویرایش ----------
+  // ---------- دیالوگ ایجاد/تصحیح ----------
   const [dlgOpen, setDlgOpen] = useState(false)
   const [editing, setEditing] = useState<UserRow | null>(null)
   const [fName, setFName] = useState('')
@@ -150,7 +150,7 @@ export default function UsersModule() {
   }
 
   const PASSWORD_MSG = t(
-    'رمز عبور باید حداقل ۶ حرف باشد',
+    'پاسورد باید حداقل ۶ حرف باشد',
     'د پټ نوم باید لږ تر لږه ۶ توري وي',
     'Password must be at least 6 characters'
   )
@@ -164,7 +164,7 @@ export default function UsersModule() {
     if (!editing && fUsername.trim().length < 3) {
       toast.error(
         t(
-          'نام کاربری باید حداقل ۳ حرف باشد',
+          'نام استفاده‌کننده باید حداقل ۳ حرف باشد',
           'د کاروونکي نوم باید لږ تر لږه ۳ توري وي',
           'Username must be at least 3 characters'
         )
@@ -192,7 +192,7 @@ export default function UsersModule() {
         } = { fullName: name, role: fRole, department: dept }
         if (fPassword) body.password = fPassword
         await apiPut(`/api/users/${editing.id}`, body)
-        toast.success(t('کاربر ویرایش شد', 'کاروونکی سم شو', 'User updated'))
+        toast.success(t('استفاده‌کننده تصحیح شد', 'کاروونکی سم شو', 'User updated'))
       } else {
         await apiPost('/api/users', {
           username: fUsername.trim(),
@@ -202,7 +202,7 @@ export default function UsersModule() {
           department: dept,
           active: fActive,
         })
-        toast.success(t('کاربر ایجاد شد', 'کاروونکی جوړ شو', 'User created'))
+        toast.success(t('استفاده‌کننده ایجاد شد', 'کاروونکی جوړ شو', 'User created'))
       }
       setDlgOpen(false)
       refetch()
@@ -221,8 +221,8 @@ export default function UsersModule() {
       await apiPut(`/api/users/${u.id}`, { active: !u.active })
       toast.success(
         u.active
-          ? t('کاربر غیرفعال شد', 'کاروونکی غیرفعال شو', 'User deactivated')
-          : t('کاربر فعال شد', 'کاروونکی فعال شو', 'User activated')
+          ? t('استفاده‌کننده غیرفعال شد', 'کاروونکی غیرفعال شو', 'User deactivated')
+          : t('استفاده‌کننده فعال شد', 'کاروونکی فعال شو', 'User activated')
       )
       refetch()
     } catch (err) {
@@ -238,7 +238,7 @@ export default function UsersModule() {
   async function deleteUser(u: UserRow) {
     try {
       await apiDelete(`/api/users/${u.id}`)
-      toast.success(t('کاربر حذف شد', 'کاروونکی ړنګ شو', 'User deleted'))
+      toast.success(t('استفاده‌کننده حذف شد', 'کاروونکی ړنګ شو', 'User deleted'))
       refetch()
     } catch (err) {
       toast.error(
@@ -250,7 +250,7 @@ export default function UsersModule() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={t('مدیریت کاربران و دسترسی‌ها', 'د کاروونکو او لاسرسي مدیریت', 'Users & Access Management')}
+        title={t('مدیریت استفاده‌کنندگان و دسترسی‌ها', 'د کاروونکو او لاسرسي مدیریت', 'Users & Access Management')}
         subtitle={t(
           'ایجاد حساب برای کارکنان بخش‌ها، تعیین نقش و فعال/غیرفعال کردن دسترسی‌ها (فقط مدیر سیستم)',
           'د برخو کارکوونکو لپاره حساب جوړول، رول ټاکل او لاسرسي فعال/غیرفعالول (یوازې سیسټم مدیر)',
@@ -260,7 +260,7 @@ export default function UsersModule() {
         actions={
           <Button onClick={openNew}>
             <Plus className="h-4 w-4" />
-            {t('کاربر جدید', 'نوی کاروونکی', 'New User')}
+            {t('استفاده‌کننده جدید', 'نوی کاروونکی', 'New User')}
           </Button>
         }
       />
@@ -268,13 +268,13 @@ export default function UsersModule() {
       {/* ---------- آمار ---------- */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          title={t('کل کاربران', 'ټول کاروونکي', 'Total Users')}
+          title={t('کل استفاده‌کنندگان', 'ټول کاروونکي', 'Total Users')}
           value={formatNumber(users.length)}
           icon={Users}
           tone="green"
         />
         <StatCard
-          title={t('کاربران فعال', 'فعال کاروونکي', 'Active Users')}
+          title={t('استفاده‌کنندگان فعال', 'فعال کاروونکي', 'Active Users')}
           value={formatNumber(activeCount)}
           icon={UserCheck}
           tone="blue"
@@ -293,7 +293,7 @@ export default function UsersModule() {
         />
       </div>
 
-      {/* ---------- جدول کاربران ---------- */}
+      {/* ---------- جدول استفاده‌کنندگان ---------- */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -302,7 +302,7 @@ export default function UsersModule() {
               <Input
                 className="ps-8"
                 placeholder={t(
-                  'جستجوی نام یا نام کاربری...',
+                  'جستجوی نام یا نام استفاده‌کننده...',
                   'د نوم یا د کاروونکي نوم لټون...',
                   'Search name or username...'
                 )}
@@ -347,24 +347,24 @@ export default function UsersModule() {
             <div className="flex flex-col items-center gap-2 py-8">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               <Button variant="outline" size="sm" onClick={refetch}>
-                {t('تلاش مجدد', 'بیا هڅه', 'Retry')}
+                {t('کوشش مجدد', 'بیا هڅه', 'Retry')}
               </Button>
             </div>
           ) : data === null ? (
             <TableSkeleton rows={5} />
           ) : filtered.length === 0 ? (
-            <EmptyState label={t('کاربری یافت نشد', 'کاروونکی نه موندل شو', 'No users found')} />
+            <EmptyState label={t('استفاده‌کننده پیدا نشد', 'کاروونکی نه موندل شو', 'No users found')} />
           ) : (
             <div className="max-h-96 overflow-y-auto overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('کاربر', 'کاروونکی', 'User')}</TableHead>
+                    <TableHead>{t('استفاده‌کننده', 'کاروونکی', 'User')}</TableHead>
                     <TableHead>{t('نقش', 'رول', 'Role')}</TableHead>
                     <TableHead>{t('بخش', 'برخه', 'Department')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
                     <TableHead>{t('تاریخ ایجاد', 'د جوړولو نېټه', 'Created At')}</TableHead>
-                    <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                    <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,7 +418,7 @@ export default function UsersModule() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              title={t('ویرایش', 'سمون', 'Edit')}
+                              title={t('تصحیح', 'سمون', 'Edit')}
                               onClick={() => openEdit(u)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -473,11 +473,11 @@ export default function UsersModule() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>
-                                    {t('حذف کاربر', 'د کاروونکي ړنګول', 'Delete User')}
+                                    {t('حذف استفاده‌کننده', 'د کاروونکي ړنګول', 'Delete User')}
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
                                     {t(
-                                      'آیا از حذف کاربر',
+                                      'آیا از حذف استفاده‌کننده',
                                       'له کاروونکي ړنګولو څخه ډاډه یاست',
                                       'Are you sure you want to delete'
                                     )}{' '}
@@ -514,14 +514,14 @@ export default function UsersModule() {
         </CardContent>
       </Card>
 
-      {/* ---------- دیالوگ ایجاد/ویرایش کاربر ---------- */}
+      {/* ---------- دیالوگ ایجاد/تصحیح استفاده‌کننده ---------- */}
       <Dialog open={dlgOpen} onOpenChange={setDlgOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? t('ویرایش کاربر', 'د کاروونکي سمون', 'Edit User')
-                : t('کاربر جدید', 'نوی کاروونکی', 'New User')}
+                ? t('تصحیح استفاده‌کننده', 'د کاروونکي سمون', 'Edit User')
+                : t('استفاده‌کننده جدید', 'نوی کاروونکی', 'New User')}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
@@ -531,7 +531,7 @@ export default function UsersModule() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>{t('نام کاربری *', 'د کاروونکي نوم *', 'Username *')}</Label>
+                <Label>{t('نام استفاده‌کننده *', 'د کاروونکي نوم *', 'Username *')}</Label>
                 <Input
                   dir="ltr"
                   className="font-mono"
@@ -542,7 +542,7 @@ export default function UsersModule() {
                 {editing && (
                   <p className="text-xs text-muted-foreground">
                     {t(
-                      'نام کاربری قابل تغییر نیست',
+                      'نام استفاده‌کننده قابل تغییر نیست',
                       'د کاروونکي نوم نه بدلیږي',
                       'Username cannot be changed'
                     )}
@@ -552,8 +552,8 @@ export default function UsersModule() {
               <div className="space-y-1.5">
                 <Label>
                   {editing
-                    ? t('رمز جدید (اختیاری)', 'نوی پټ نوم (اختیاري)', 'New password (optional)')
-                    : t('رمز عبور *', 'پټ نوم *', 'Password *')}
+                    ? t('پاسورد جدید (اختیاری)', 'نوی پټ نوم (اختیاري)', 'New password (optional)')
+                    : t('پاسورد *', 'پټ نوم *', 'Password *')}
                 </Label>
                 <Input
                   dir="ltr"
@@ -648,7 +648,7 @@ export default function UsersModule() {
                 ? t('در حال ثبت...', 'په ثبت کې...', 'Saving...')
                 : editing
                   ? t('ذخیره تغییرات', 'بدلونونه خوندي کړه', 'Save Changes')
-                  : t('ایجاد کاربر', 'کاروونکی جوړ کړه', 'Create User')}
+                  : t('ایجاد استفاده‌کننده', 'کاروونکی جوړ کړه', 'Create User')}
             </Button>
           </DialogFooter>
         </DialogContent>

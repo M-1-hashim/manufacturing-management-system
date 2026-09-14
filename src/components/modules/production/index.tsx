@@ -43,9 +43,9 @@ const fmtQty = (n: number) => (Number.isInteger(n) ? formatNumber(n) : formatNum
 async function errFrom(res: Response): Promise<string> {
   try {
     const j = await res.json()
-    return j?.error || 'خطا در ارتباط با سرور'
+    return j?.error || 'خطا در ارتباط با هاست'
   } catch {
-    return 'خطا در ارتباط با سرور'
+    return 'خطا در ارتباط با هاست'
   }
 }
 
@@ -156,7 +156,7 @@ export default function ProductionModule() {
     }
   }
 
-  // ---------- عملیات ----------
+  // ---------- اجراؤات ----------
   async function startOrder(o: ProductionOrderT) {
     const res = await fetch(`/api/production/${o.id}`, {
       method: 'PUT',
@@ -267,9 +267,9 @@ export default function ProductionModule() {
       : '—'
 
   const steps = [
-    t('انتخاب محصول و فرمول', 'د محصول او فورمول ټاکنه', 'Product & formula'),
+    t('انتخاب محصول و فورمولا', 'د محصول او فورمول ټاکنه', 'Product & formula'),
     t('مقدار و پیش‌نمایش مواد', 'مقدار او د موادو مخکتنه', 'Quantity & materials'),
-    t('تأیید و ثبت', 'تصدیق او ثبت', 'Confirm & submit'),
+    t('تصدیق و ثبت', 'تصدیق او ثبت', 'Confirm & submit'),
   ]
 
   return (
@@ -317,15 +317,15 @@ export default function ProductionModule() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead>{t('شماره', 'شمېره', 'Number')}</TableHead>
+                    <TableHead>{t('نمبر', 'شمېره', 'Number')}</TableHead>
                     <TableHead>{t('محصول', 'محصول', 'Product')}</TableHead>
                     <TableHead>{t('مقدار برنامه', 'پلان شوی مقدار', 'Planned qty')}</TableHead>
                     <TableHead>{t('تولیدشده / ضایعات', 'تولید / ضایعات', 'Produced / waste')}</TableHead>
-                    <TableHead>{t('هزینه کل', 'ټول لګښت', 'Total cost')}</TableHead>
+                    <TableHead>{t('مصرف کل', 'ټول لګښت', 'Total cost')}</TableHead>
                     <TableHead>{t('وضعیت', 'وضعیت', 'Status')}</TableHead>
                     <TableHead>{t('کنترل کیفیت', 'کیفیت کنټرول', 'QC')}</TableHead>
                     <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
-                    <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                    <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -454,7 +454,7 @@ export default function ProductionModule() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t('فرمول', 'فورمول', 'Formula')} *</Label>
+                <Label>{t('فورمولا', 'فورمول', 'Formula')} *</Label>
                 {!wProductId ? (
                   <p className="text-sm text-muted-foreground border rounded-lg px-3 py-2.5 bg-muted/40">
                     {t('ابتدا محصول را انتخاب کنید', 'لومړی محصول وټاکه', 'Select a product first')}
@@ -465,7 +465,7 @@ export default function ProductionModule() {
                   </p>
                 ) : (
                   <Select value={wFormulaId} onValueChange={setWFormulaId}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder={t('انتخاب فرمول', 'د فورمول ټاکنه', 'Select formula')} /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder={t('انتخاب فورمولا', 'د فورمول ټاکنه', 'Select formula')} /></SelectTrigger>
                     <SelectContent>
                       {wProductFormulas.map((f) => (
                         <SelectItem key={f.id} value={f.id}>
@@ -544,10 +544,10 @@ export default function ProductionModule() {
                     </Table>
                   </div>
 
-                  {/* پیش‌نمایش هزینه */}
+                  {/* پیش‌نمایش مصرف */}
                   <div className="rounded-lg border bg-muted/40 px-3 py-2.5 space-y-1.5 text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">{t('هزینه مواد', 'د موادو لګښت', 'Material cost')}</span>
+                      <span className="text-muted-foreground">{t('مصرف مواد', 'د موادو لګښت', 'Material cost')}</span>
                       <span className="font-medium">{formatMoney(wMatCost)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -560,7 +560,7 @@ export default function ProductionModule() {
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('هزینه برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total cost')}</span>
+                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total cost')}</span>
                       <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(wTotal)}</span>
                     </div>
                   </div>
@@ -578,7 +578,7 @@ export default function ProductionModule() {
                   <span className="font-medium">{wFormula.product.name}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">{t('فرمول', 'فورمول', 'Formula')}</span>
+                  <span className="text-muted-foreground">{t('فورمولا', 'فورمول', 'Formula')}</span>
                   <span className="font-medium">v{wFormula.version} — {wFormula.name}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -587,7 +587,7 @@ export default function ProductionModule() {
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">{t('هزینه مواد', 'د موادو لګښت', 'Materials')}</span>
+                  <span className="text-muted-foreground">{t('مصرف مواد', 'د موادو لګښت', 'Materials')}</span>
                   <span>{formatMoney(wMatCost)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -595,7 +595,7 @@ export default function ProductionModule() {
                   <span>{formatMoney(wLabor + wOverhead)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('هزینه برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total')}</span>
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف برآوردی کل', 'اټکلي ټول لګښت', 'Estimated total')}</span>
                   <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(wTotal)}</span>
                 </div>
                 {wInsufficient.length > 0 && (
@@ -715,7 +715,7 @@ export default function ProductionModule() {
               <div className="flex items-center gap-2 pt-1">
                 <Button onClick={submitComplete} disabled={completing} className="gap-1.5">
                   {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {completing ? t('در حال تکمیل...', 'په بشپړولو کې...', 'Completing...') : t('تأیید تکمیل', 'بشپړول تصدیق', 'Confirm completion')}
+                  {completing ? t('در حال تکمیل...', 'په بشپړولو کې...', 'Completing...') : t('تصدیق تکمیل', 'بشپړول تصدیق', 'Confirm completion')}
                 </Button>
                 <Button variant="outline" onClick={() => setCompleteTarget(null)}>{t('انصراف', 'لغوه', 'Cancel')}</Button>
               </div>
@@ -724,7 +724,7 @@ export default function ProductionModule() {
         </DialogContent>
       </Dialog>
 
-      {/* ---------- تأیید لغو ---------- */}
+      {/* ---------- تصدیق لغو ---------- */}
       <AlertDialog open={!!cancelTarget} onOpenChange={(v) => !v && setCancelTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -750,7 +750,7 @@ export default function ProductionModule() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ---------- تأیید حذف ---------- */}
+      {/* ---------- تصدیق حذف ---------- */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

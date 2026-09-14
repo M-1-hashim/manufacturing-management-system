@@ -157,8 +157,8 @@ async function pingMysql(): Promise<void> {
 
 /**
  * راه‌اندازی خودکار هاست — یک‌بار در طول عمر پروسه:
- * ساخت/به‌روزرسانی جدول‌های هاست (۱۹ جدول + ستون‌های جدید + جدول سنگ‌قبر)
- * + بوت‌استرپ کاربران/تنظیمات وقتی هاست خالی است.
+ * ساخت/تجدید جدول‌های هاست (۱۹ جدول + ستون‌های جدید + جدول سنگ‌قبر)
+ * + بوت‌استرپ استفاده‌کنندگان/تنظیمات وقتی هاست خالی است.
  */
 async function ensureHostOnce(): Promise<boolean> {
   const s = st()
@@ -220,7 +220,7 @@ async function switchToOnline(): Promise<void> {
   try {
     const ready = await ensureHostOnce()
     if (!ready) throw new Error('host setup failed')
-    // اگر دستگاه محلی خالی است (نصب تازه روی دستگاه جدید) → اول کپی کامل سرور
+    // اگر دستگاه محلی خالی است (نصب تازه روی دستگاه جدید) → اول کپی کامل هاست
     await ensureInitialPull(pair)
     const summary = await runReconnectSync(pair, s.offlineSince)
     s.lastSyncAt = summary.finishedAt
@@ -236,7 +236,7 @@ async function switchToOnline(): Promise<void> {
   }
 }
 
-/* --------------------------- اولین کپی سرور → دستگاه --------------------------- */
+/* --------------------------- اولین کپی هاست → دستگاه --------------------------- */
 
 let initialPullDone = false
 
@@ -283,7 +283,7 @@ async function runTick(): Promise<void> {
   try {
     const r = await syncTick(pair)
     if (!r.ok && r.error && !r.error.startsWith('tables:')) {
-      // خطای سطح شبکه/سرور — بگذار پینگ سریع بعدی وضعیت را تشخیص دهد
+      // خطای سطح شبکه/هاست — بگذار پینگ سریع بعدی وضعیت را تشخیص دهد
       s.fails++
       if (dbInternal.getMode() === 'host-mysql' && s.fails >= FAILS_TO_SWITCH) {
         await switchToOffline(`tick: ${r.error}`)
@@ -418,7 +418,7 @@ export function startConnectionManager(): void {
 
 /* ------------------------------- اکشن‌های دستی ------------------------------- */
 
-/** «همگام‌سازی اکنون»: در آفلاین تلاش برای اتصال؛ در آنلاین یک تیک فوری */
+/** «همگام‌سازی اکنون»: در آفلاین کوشش برای اتصال؛ در آنلاین یک تیک فوری */
 export async function triggerSyncNow(): Promise<{ action: string; result?: string; error?: string }> {
   const s = st()
   const mode = dbInternal.getMode()

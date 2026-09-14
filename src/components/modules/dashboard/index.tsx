@@ -111,7 +111,7 @@ function jalaliMonthLabel(gregLabel: string): string {
   }
 }
 
-// اعداد فشرده برای محور نمودار
+// اعداد فشرده برای محور چارت
 function compact(n: number): string {
   if (Math.abs(n) >= 1000000) return `${formatNumber(Math.round(n / 100000) / 10)}م`
   if (Math.abs(n) >= 1000) return `${formatNumber(Math.round(n / 100) / 10)}k`
@@ -133,7 +133,7 @@ export default function DashboardModule() {
           title={t('داشبورد', 'معلوماتي پاڼه', 'Dashboard')}
           subtitle={companyName}
         />
-        <LoadingBlock label={t('در حال بارگذاری داشبورد...', 'داشبورد بارېږي...', 'Loading dashboard...')} />
+        <LoadingBlock label={t('در حال بارگیری داشبورد...', 'داشبورد بارېږي...', 'Loading dashboard...')} />
       </div>
     )
   }
@@ -150,11 +150,11 @@ export default function DashboardModule() {
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <AlertTriangle className="h-9 w-9 text-red-500" />
             <p className="text-sm text-muted-foreground">
-              {t('خطا در بارگذاری داشبورد', 'د داشبورد په بارولو کې ستونزه', 'Failed to load dashboard')}
+              {t('خطا در بارگیری داشبورد', 'د داشبورد په بارولو کې ستونزه', 'Failed to load dashboard')}
             </p>
             <Button variant="outline" size="sm" onClick={refetch}>
               <RotateCcw className="me-2 h-4 w-4" />
-              {t('تلاش مجدد', 'بیا هڅه', 'Retry')}
+              {t('کوشش مجدد', 'بیا هڅه', 'Retry')}
             </Button>
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export default function DashboardModule() {
   const { stats } = data
   const lowStockTotal = stats.lowStockProductsCount + stats.lowStockMaterialsCount
 
-  // داده‌های نمودارها با برچسب شمسی
+  // داده‌های چارتها با برچسب شمسی
   const salesTrendData = data.salesTrend.map((d) => ({ ...d, jalali: shortDateLabel(d.date) }))
   const productionTrendData = data.productionTrend.map((d) => ({ ...d, jalali: jalaliMonthLabel(d.label) }))
   const maxTopQty = Math.max(1, ...data.topProducts.map((p) => p.qty))
@@ -240,7 +240,7 @@ export default function DashboardModule() {
         />
       </div>
 
-      {/* نمودارها */}
+      {/* چارتها */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-2">

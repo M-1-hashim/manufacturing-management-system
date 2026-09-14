@@ -5,7 +5,7 @@ import { signSession, SESSION_COOKIE, SESSION_MAX_AGE_S } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { ensureInitialPull } from '@/lib/connection-manager'
 
-// قفل شدن حساب پس از ۵ ورود ناموفق به مدت ۱۵ دقیقه (حافظه محلی سرور)
+// قفل شدن حساب بعد از ۵ بار داخل شدن ناکام به مدت ۱۵ دقیقه (حافظه محلی هاست)
 const MAX_FAILS = 5
 const LOCK_MS = 15 * 60 * 1000
 const failMap = new Map<string, { count: number; lockedUntil: number }>()
@@ -21,21 +21,21 @@ export async function POST(req: Request) {
   try {
     const { username, password } = await req.json()
     if (!username || !password) {
-      return NextResponse.json({ error: 'نام کاربری و رمز عبور الزامی است' }, { status: 400 })
+      return NextResponse.json({ error: 'نام استفاده‌کننده و پاسورد الزامی است' }, { status: 400 })
     }
 
     const uname = String(username).trim()
     const lockMin = isLocked(failMap.get(uname))
     if (lockMin > 0) {
       return NextResponse.json(
-        { error: `حساب شما موقتاً قفل شده است؛ ${lockMin} دقیقه دیگر تلاش کنید` },
+        { error: `حساب شما موقتاً قفل شده است؛ ${lockMin} دقیقه دیگر کوشش کنید` },
         { status: 423 }
       )
     }
 
-    // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول کاربران محلی خالی است.
+    // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول استفاده‌کنندگان محلی خالی است.
     // اگر هاست تنظیم شده باشد، اول دیتای هاست کشیده می‌شود (نصب تازه روی
-    // دستگاه جدید) تا ورود با کاربران واقعی سرور انجام شود — نه ادمین ساختگی.
+    // دستگاه جدید) تا ورود با استفاده‌کنندگان واقعی هاست انجام شود — نه ادمین ساختگی.
     const userCountBefore = await db.user.count()
     if (userCountBefore === 0 && dbInternal.mysqlConfigured()) {
       await ensureInitialPull()
@@ -63,11 +63,11 @@ export async function POST(req: Request) {
         entry.count = 0
       }
       failMap.set(uname, entry)
-      await logAudit(null, 'login_failed', 'auth', undefined, `نام کاربری: ${uname}`)
-      return NextResponse.json({ error: 'نام کاربری یا رمز عبور اشتباه است' }, { status: 401 })
+      await logAudit(null, 'login_failed', 'auth', undefined, `نام استفاده‌کننده: ${uname}`)
+      return NextResponse.json({ error: 'نام استفاده‌کننده یا پاسورد اشتباه است' }, { status: 401 })
     }
     if (!user.active) {
-      return NextResponse.json({ error: 'حساب کاربری شما غیرفعال است؛ با ادمین تماس بگیرید' }, { status: 403 })
+      return NextResponse.json({ error: 'حساب استفاده‌کننده شما غیرفعال است؛ با ادمین تماس بگیرید' }, { status: 403 })
     }
 
     // ارتقای شفاف رمزهای قدیمی (بدون هش) به هش scrypt
@@ -96,6 +96,6 @@ export async function POST(req: Request) {
     return res
   } catch (e) {
     console.error('login error', e)
-    return NextResponse.json({ error: 'خطای داخلی سرور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطای داخلی هاست' }, { status: 500 })
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 
-// لایه ذخیره‌سازی آفلاین (IndexedDB) — صف عملیات نوشتن + کش پاسخ‌های GET
-// در حالت آفلاین، نوشتن‌ها صف می‌شوند و پس از اتصال دوباره به سرور ارسال می‌گردند
+// لایه ذخیره‌سازی آفلاین (IndexedDB) — صف اجراؤات نوشتن + کش پاسخ‌های GET
+// در حالت آفلاین، نوشتن‌ها صف می‌شوند و پس از اتصال دوباره به هاست ارسال می‌گردند
 
 const DB_NAME = 'mfg-offline'
 const DB_VERSION = 1
@@ -11,7 +11,7 @@ const MAX_CACHE_ENTRIES = 300
 
 export interface QueuedOp {
   id: string
-  user: string // نام کاربری سازنده — برای همگام‌سازی فقط توسط همان کاربر
+  user: string // نام استفاده‌کننده سازنده — برای همگام‌سازی فقط توسط همان استفاده‌کننده
   url: string
   method: string
   body: string // متن خام (JSON)
@@ -53,7 +53,7 @@ function withStore<T>(
   )
 }
 
-// ---------------- صف عملیات نوشتن ----------------
+// ---------------- صف اجراؤات نوشتن ----------------
 export async function enqueueOp(op: QueuedOp): Promise<void> {
   if (!idbAvailable()) return
   try {

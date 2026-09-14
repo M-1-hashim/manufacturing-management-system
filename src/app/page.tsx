@@ -54,14 +54,14 @@ const NAV = [
   { id: 'finance', fa: 'مالی', ps: 'مالي', en: 'Finance', icon: Wallet },
   { id: 'hr', fa: 'کارکنان', ps: 'کارکوونکي', en: 'HR', icon: Users },
   { id: 'reports', fa: 'گزارشات', ps: 'راپورونه', en: 'Reports', icon: BarChart3 },
-  { id: 'users', fa: 'کاربران', ps: 'کاروونکي', en: 'Users', icon: UserCog },
+  { id: 'users', fa: 'استفاده‌کنندگان', ps: 'کاروونکي', en: 'Users', icon: UserCog },
   { id: 'audit', fa: 'فعالیت‌ها', ps: 'فعالیتونه', en: 'Activity Log', icon: History },
   { id: 'settings', fa: 'تنظیمات', ps: 'امستنې', en: 'Settings', icon: Settings },
 ] as const
 
 // گروه‌بندی منوی کنار — برای خوانایی بهتر
 const NAV_GROUPS: { key: string; labelFa: string; labelPs: string; labelEn: string; items: readonly string[] }[] = [
-  { key: 'ops', labelFa: 'عملیات روزانه', labelPs: 'ورځني کارونه', labelEn: 'Daily operations', items: ['dashboard', 'products', 'materials', 'formulas', 'production', 'sales'] },
+  { key: 'ops', labelFa: 'اجراؤات روزانه', labelPs: 'ورځني کارونه', labelEn: 'Daily operations', items: ['dashboard', 'products', 'materials', 'formulas', 'production', 'sales'] },
   { key: 'mgmt', labelFa: 'مدیریت', labelPs: 'مدیریت', labelEn: 'Management', items: ['inventory', 'finance', 'hr', 'reports'] },
   { key: 'sys', labelFa: 'سیستم', labelPs: 'سیسټم', labelEn: 'System', items: ['users', 'audit', 'settings'] },
 ]
@@ -81,7 +81,7 @@ const COLOR_THEMES = [
   { id: 'graphite', fa: 'گرافیتی', ps: 'ګرافیتي', en: 'Graphite', dot: '#5c6470' },
 ] as const
 
-// ---------------- تغییر رمز عبور (پروفایل) ----------------
+// ---------------- تغییر پاسورد (پروفایل) ----------------
 function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n()
   const user = useAppStore((s) => s.user)
@@ -102,21 +102,21 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
     e.preventDefault()
     setError(null)
     if (next.length < 6) {
-      setError(t('رمز جدید باید حداقل ۶ کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه ۶ توري وي', 'New password must be at least 6 characters'))
+      setError(t('پاسورد جدید باید حداقل ۶ کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه ۶ توري وي', 'New password must be at least 6 characters'))
       return
     }
     if (next !== confirm) {
-      setError(t('تکرار رمز جدید مطابقت ندارد', 'د نوي پټ نوم تکرار سم نه دی', 'Password confirmation does not match'))
+      setError(t('تکرار پاسورد جدید مطابقت ندارد', 'د نوي پټ نوم تکرار سم نه دی', 'Password confirmation does not match'))
       return
     }
     setLoading(true)
     try {
       await apiPost('/api/auth/change-password', { currentPassword: current, newPassword: next })
-      toast.success(t('رمز عبور با موفقیت تغییر کرد', 'پټ نوم په بریالیتوب بدل شو', 'Password changed successfully'))
+      toast.success(t('پاسورد با کامیابی تغییر کرد', 'پټ نوم په بریالیتوب بدل شو', 'Password changed successfully'))
       reset()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('خطا در تغییر رمز', 'د پټ نوم بدلون کې ستونزه', 'Failed to change password'))
+      setError(err instanceof Error ? err.message : t('خطا در تغییر پاسورد', 'د پټ نوم بدلون کې ستونزه', 'Failed to change password'))
     } finally {
       setLoading(false)
     }
@@ -128,21 +128,21 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-primary" />
-            {t('تغییر رمز عبور', 'پټ نوم بدلول', 'Change password')}
+            {t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
           </DialogTitle>
-          <p className="text-xs text-muted-foreground">{user?.username ? `${t('کاربر', 'کارن', 'User')}: ${user.username}` : ''}</p>
+          <p className="text-xs text-muted-foreground">{user?.username ? `${t('استفاده‌کننده', 'کارن', 'User')}: ${user.username}` : ''}</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="cur-pw">{t('رمز عبور فعلی', 'اوسنی پټ نوم', 'Current password')}</Label>
+            <Label htmlFor="cur-pw">{t('پاسورد فعلی', 'اوسنی پټ نوم', 'Current password')}</Label>
             <Input id="cur-pw" dir="ltr" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="new-pw">{t('رمز عبور جدید', 'نوی پټ نوم', 'New password')}</Label>
+            <Label htmlFor="new-pw">{t('پاسورد جدید', 'نوی پټ نوم', 'New password')}</Label>
             <Input id="new-pw" dir="ltr" type="password" value={next} onChange={(e) => setNext(e.target.value)} required autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="conf-pw">{t('تکرار رمز جدید', 'د نوي پټ نوم تکرار', 'Confirm new password')}</Label>
+            <Label htmlFor="conf-pw">{t('تکرار پاسورد جدید', 'د نوي پټ نوم تکرار', 'Confirm new password')}</Label>
             <Input id="conf-pw" dir="ltr" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
           </div>
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
@@ -151,7 +151,7 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
               {t('انصراف', 'لغوه', 'Cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? t('در حال ذخیره...', 'ثبتول...', 'Saving...') : t('تغییر رمز', 'پټ نوم بدلول', 'Change')}
+              {loading ? t('در حال ذخیره...', 'ثبتول...', 'Saving...') : t('تغییر پاسورد', 'پټ نوم بدلول', 'Change')}
             </Button>
           </DialogFooter>
         </form>
@@ -194,10 +194,10 @@ function LoginView() {
       const user = await apiPost<SessionUser>('/api/auth/login', { username, password })
       setUser(user)
       toast.success(`${t('خوش آمدید', 'ښه راغلاست', 'Welcome')}, ${user.fullName}`)
-      // اگر عملیات آفلاین در صف باشد، بلافاصله همگام‌سازی می‌شود
+      // اگر اجراؤات آفلاین در صف باشد، بلافاصله همگام‌سازی می‌شود
       void trySync()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('خطا در ورود', 'د ننوتلو ستونزه', 'Login failed'))
+      setError(err instanceof Error ? err.message : t('خطا در داخل شدن', 'د ننوتلو ستونزه', 'Login failed'))
     } finally {
       setLoading(false)
     }
@@ -244,7 +244,7 @@ function LoginView() {
           </ul>
         </div>
 
-        {/* فرم ورود */}
+        {/* فورم ورود */}
         <div className="p-7 md:p-10 flex flex-col justify-center bg-card">
           <div className="lg:hidden text-center mb-6">
             <div className="mx-auto h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md mb-3">
@@ -254,7 +254,7 @@ function LoginView() {
           </div>
 
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-semibold text-base">{t('ورود به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</h2>
+            <h2 className="font-semibold text-base">{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</h2>
             <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => setLang(lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa')} title={t('تغییر زبان', 'ژبه بدلول', 'Change language')}>
               <Languages className="h-4 w-4" />
               <span className="text-sm">{langLabel}</span>
@@ -263,18 +263,18 @@ function LoginView() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
+              <Label htmlFor="username">{t('نام استفاده‌کننده', 'کارن نوم', 'Username')}</Label>
               <Input id="username" dir="ltr" value={username} onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin" autoComplete="username" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('رمز عبور', 'پټ نوم', 'Password')}</Label>
+              <Label htmlFor="password">{t('پاسورد', 'پټ نوم', 'Password')}</Label>
               <Input id="password" dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" autoComplete="current-password" required />
             </div>
             {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
             <Button type="submit" className="w-full h-11" disabled={loading}>
-              {loading ? t('در حال ورود...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('ورود به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
+              {loading ? t('در حال داخل شدن...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
             </Button>
             <div className="text-xs text-muted-foreground text-center space-y-1 pt-3 border-t">
               <p>{t('حساب ادمین:', 'د ادمین حساب:', 'Admin account:')} <span dir="ltr" className="font-mono">admin / admin123</span></p>
@@ -338,7 +338,7 @@ function Shell() {
     }
   }, [])
 
-  // وضعیت اتصال دیتابیس (سرور به کدام دیتابیس وصل است؟) — هر ۲۰ ثانیه
+  // وضعیت اتصال دیتابیس (هاست به کدام دیتابیس وصل است؟) — هر ۲۰ ثانیه
   useEffect(() => {
     if (!user || !online) return
     let alive = true
@@ -358,7 +358,7 @@ function Shell() {
     }
   }, [user, online])
 
-  // اعتبارسنجی نشست با سرور — اگر کوکی منقضی/نامعتبر باشد خروج خودکار
+  // اعتبارسنجی نشست با هاست — اگر کوکی ختم شده/نامعتبر باشد خروج خودکار
   useEffect(() => {
     // رهگیری سراسری 401 + لایه آفلاین/همگام‌سازی — همه fetch های مستقیم ماژول‌ها را هم پوشش می‌دهد
     installAuthInterceptor()
@@ -388,7 +388,7 @@ function Shell() {
     setProfileOpen(false)
     setUser(null)
     setActiveTab('dashboard')
-    // کش داده‌های کاربر قبلی حذف می‌شود تا در صفحه ورود آفلاین قابل مشاهده نباشد
+    // کش داده‌های استفاده‌کننده قبلی حذف می‌شود تا در صفحه ورود آفلاین قابل مشاهده نباشد
     void clearOfflineCache().then(() => refreshPendingCount())
   }
 
@@ -423,14 +423,14 @@ function Shell() {
   const langLabel = lang === 'fa' ? 'دری' : lang === 'ps' ? 'پښتو' : 'EN'
   const nextLang = lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa'
 
-  // بج وضعیت اتصال دیتابیس — بر اساس وضعیت واقعی سرور (نه فقط navigator.onLine)
+  // بج وضعیت اتصال دیتابیس — بر اساس وضعیت واقعی هاست (نه فقط navigator.onLine)
   const dbBadge = (() => {
     if (!online)
       return {
         cls: 'text-red-600 border-red-300',
         icon: <WifiOff className="h-3.5 w-3.5" />,
         label: t('آفلاین', 'آفلاین', 'Offline'),
-        title: t('اتصال اینترنت دستگاه قطع است', 'انترنت دستگاه قطع دی', 'Device internet is offline'),
+        title: t('اتصال انترنت دستگاه قطع است', 'انترنت دستگاه قطع دی', 'Device internet is offline'),
       }
     if (dbStatus?.mode === 'host-offline')
       return {
@@ -439,7 +439,7 @@ function Shell() {
         label: t('آفلاین — دیتابیس محلی', 'افلاین — ځایی ډاټابیس', 'Offline — Local DB'),
         title:
           t(
-            'هاست در دسترس نیست — برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، همهٔ تغییرات خودکار با سرور همگام می‌شود',
+            'هاست در دسترس نیست — برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، همهٔ تغییرات خودکار با هاست همگام می‌شود',
             'هوسټ نه لرېږي — پروګرام په ځایی ډاټابیس کار کوي او له نښلېدو وروسته ټول بدلونونه اتوماتیک همغه کېږي',
             'Host unreachable — the app works on the local database copy; all changes sync automatically once the host is back'
           ) +
@@ -450,7 +450,7 @@ function Shell() {
         cls: 'border-amber-400 text-amber-600',
         icon: <RefreshCw className="h-3.5 w-3.5 animate-spin" />,
         label: t('همگام‌سازی…', 'همغه کول…', 'Syncing…'),
-        title: t('در حال همگام‌سازی تغییرات آفلاین با سرور', 'د افلاین بدلونونو همغه کول', 'Syncing offline changes with the server'),
+        title: t('در حال همگام‌سازی تغییرات آفلاین با هاست', 'د افلاین بدلونونو همغه کول', 'Syncing offline changes with the server'),
       }
     if (dbStatus?.mode === 'host-mysql')
       return {
@@ -459,10 +459,10 @@ function Shell() {
         label:
           dbStatus.pendingPush && dbStatus.pendingPush > 0
             ? t('همگام لحظه‌ای', 'لحظه‌يي همغه کول', 'Live sync')
-            : t('متصل به سرور', 'سرور نښلی', 'Server'),
+            : t('به هاست وصل است', 'هاست نښلی', 'Server'),
         title:
           t(
-            'همگام‌سازی لحظه‌ای فعال است — هر تغییر در چند ثانیه با سرور جابه‌جا می‌شود',
+            'همگام‌سازی لحظه‌ای فعال است — هر تغییر در چند ثانیه با هاست جابه‌جا می‌شود',
             'همغه کولو لحظه‌يي سیستم فعال دی — هر بدلون په څو ثانیو کې سره تبادله کېږي',
             'Live sync active — every change reaches the server within seconds'
           ) +
@@ -569,16 +569,16 @@ function Shell() {
               <button
                 onClick={() => setProfileOpen(true)}
                 className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                aria-label={t('تغییر رمز عبور', 'پټ نوم بدلول', 'Change password')}
-                title={t('تغییر رمز عبور', 'پټ نوم بدلول', 'Change password')}
+                aria-label={t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
+                title={t('تغییر پاسورد', 'پټ نوم بدلول', 'Change password')}
               >
                 <KeyRound className="h-4 w-4" />
               </button>
               <button
                 onClick={handleLogout}
                 className="p-1.5 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                aria-label={t('خروج', 'وتل', 'Logout')}
-                title={t('خروج', 'وتل', 'Logout')}
+                aria-label={t('خارج شدن', 'وتل', 'Logout')}
+                title={t('خارج شدن', 'وتل', 'Logout')}
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -600,7 +600,7 @@ function Shell() {
               {pendingOps > 0 && (
                 <button
                   onClick={() => void trySync()}
-                  title={t('عملیات در انتظار همگام‌سازی — برای تلاش دستی کلیک کنید', 'د همغه کولو انتظار عملیات — لاسي هڅه', 'Operations pending sync — click to retry now')}
+                  title={t('اجراؤات در انتظار همگام‌سازی — برای کوشش دستی کلیک کنید', 'د همغه کولو انتظار عملیې — لاسي هڅه', 'Operations pending sync — click to retry now')}
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-amber-300 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
@@ -648,7 +648,7 @@ function Shell() {
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2.5 leading-4">
-                    {t('رنگ کلیدها، نمودارها و هایلایت‌ها را عوض می‌کند', 'د تڼیو، چارټونو او هایلایت رنګ بدلوي', 'Changes the color of buttons, charts and highlights')}
+                    {t('رنگ کلیدها، چارتها و هایلایت‌ها را عوض می‌کند', 'د تڼیو، چارټونو او هایلایت رنګ بدلوي', 'Changes the color of buttons, charts and highlights')}
                   </p>
                 </PopoverContent>
               </Popover>
@@ -687,9 +687,9 @@ function Shell() {
  * اولین باز شدن برنامه بعد از نصب → ویزارد تنظیمات (زبان/تم + هاست).
  * تشخیص «بار اول»:
  *   - فلگ localStorage (mfg-setup-completed) نباشد
- *   - و کاربر ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
+ *   - و استفاده‌کننده ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
  *   - و در نسخهٔ دسکتاپ، اتصال هاست از قبل فعال نباشد
- * در نسخهٔ وب (مرورگر) ویزارد نمایش داده نمی‌شود — اتصال هاست از env سرور می‌آید.
+ * در نسخهٔ وب (مرورگر) ویزارد نمایش داده نمی‌شود — اتصال هاست از env هاست می‌آید.
  */
 const SETUP_FLAG = 'mfg-setup-completed'
 
@@ -699,13 +699,13 @@ function FirstRunGate() {
   useEffect(() => {
     let alive = true
     async function decide() {
-      // درگاه پشتیبانی: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
+      // درگاه کاپی احتیاطیی: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
       const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
       if (!forceSetup && localStorage.getItem(SETUP_FLAG) === '1') {
         if (alive) setState('app')
         return
       }
-      // کاربر ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
+      // استفاده‌کننده ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
       if (useAppStore.getState().user) {
         localStorage.setItem(SETUP_FLAG, '1')
         if (alive) setState('app')
@@ -725,7 +725,7 @@ function FirstRunGate() {
         return
       }
       if (forceSetup) {
-        // درگاه پشتیبانی در مرورگر هم ویزارد را نشان می‌دهد
+        // درگاه کاپی احتیاطیی در مرورگر هم ویزارد را نشان می‌دهد
         if (alive) setState('wizard')
         return
       }

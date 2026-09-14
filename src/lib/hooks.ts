@@ -1,6 +1,6 @@
 'use client'
 
-// هوک دریافت داده از API با وضعیت بارگذاری و خطا
+// هوک دریافت داده از API با وضعیت بارگیری و خطا
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { notifyAuthFailure } from '@/lib/auth-client'
 
@@ -34,9 +34,9 @@ export function useFetch<T>(url: string | null, deps: unknown[] = []): UseFetchR
       fetch(url, { cache: 'no-store' })
         .then(async (res) => {
           if (!res.ok) {
-            // انقضای نشست → خروج خودکار و بازگشت به صفحه ورود
+            // ختم نشست → خروج خودکار و بازگشت به صفحه ورود
             if (res.status === 401) notifyAuthFailure()
-            // استخراج پیام خطای سرور برای نمایش تمیز (به‌جای متن خام HTTP)
+            // استخراج پیام خطای هاست برای نمایش تمیز (به‌جای متن خام HTTP)
             let msg = `خطا در دریافت داده (${res.status})`
             try {
               const json = (await res.json()) as { error?: string }

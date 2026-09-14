@@ -79,7 +79,7 @@ type CustomerRow = {
   balance: number
 }
 
-const CATEGORIES = ['حقوق', 'کرایه', 'برق', 'سوخت', 'حمل‌ونقل', 'تعمیرات', 'عمومی']
+const CATEGORIES = ['معاش', 'کرایه', 'برق', 'سوخت', 'حمل‌ونقل', 'تعمیرات', 'عمومی']
 const OTHER = '__other__'
 const CURRENCIES: Currency[] = ['AFN', 'USD', 'PKR']
 const ALL = '__all__'
@@ -99,7 +99,7 @@ async function callApi<T>(
     if (!res.ok) return { ok: false, error: json.error || `خطا (${res.status})` }
     return { ok: true, data: json as T }
   } catch {
-    return { ok: false, error: 'خطا در اتصال به سرور' }
+    return { ok: false, error: 'خطا در اتصال به هاست' }
   }
 }
 
@@ -203,7 +203,7 @@ export default function FinanceModule() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Row label={t('درآمد فروش', 'د پلورنې عاید', 'Sales revenue')} value={formatMoney(fin.revenue)} tone="text-emerald-600" />
-            <Row label={t('هزینه‌های تولید (سفارش‌های تکمیل‌شده)', 'د تولید لګښتونه', 'Production costs (completed)')} value={`− ${formatMoney(fin.productionCosts)}`} tone="text-red-600" icon={<Factory className="h-3.5 w-3.5" />} />
+            <Row label={t('مصارفی تولید (سفارش‌های تکمیل‌شده)', 'د تولید لګښتونه', 'Production costs (completed)')} value={`− ${formatMoney(fin.productionCosts)}`} tone="text-red-600" icon={<Factory className="h-3.5 w-3.5" />} />
             <Separator />
             <Row label={t('سود ناخالص تقریبی', 'تقریبي ناټوله ګټه', 'Gross profit (approx.)')} value={formatMoney(fin.grossProfit)} bold tone={fin.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} />
             <Row label={t('مصارف عملیاتی', 'عملیاتي لګښتونه', 'Operating expenses')} value={`− ${formatMoney(fin.opex)}`} tone="text-red-600" icon={<ReceiptText className="h-3.5 w-3.5" />} />
@@ -222,7 +222,7 @@ export default function FinanceModule() {
             ) : (
               <p className="flex items-center gap-1.5 text-xs text-red-600">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {t('هزینه‌ها از درآمد بیشتر است', 'لګښتونه له عاید ډېر دي', 'Expenses exceed revenue')}
+                {t('مصارف از درآمد بیشتر است', 'لګښتونه له عاید ډېر دي', 'Expenses exceed revenue')}
               </p>
             )}
           </CardContent>
@@ -279,7 +279,7 @@ export default function FinanceModule() {
                       <TableHead>{t('فاکتور', 'فاکتور', 'Invoice')}</TableHead>
                       <TableHead>{t('مشتری', 'پیرودونکی', 'Customer')}</TableHead>
                       <TableHead>{t('مبلغ', 'مبلغ', 'Total')}</TableHead>
-                      <TableHead>{t('باقی‌مانده', 'پاتې', 'Remaining')}</TableHead>
+                      <TableHead>{t('باقیات', 'پاتې', 'Remaining')}</TableHead>
                       <TableHead>{t('تاریخ', 'نېټه', 'Date')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -300,13 +300,13 @@ export default function FinanceModule() {
               )}
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>{t('جمع باقی‌مانده', 'ټوله پاتې', 'Total remaining')}</span>
+              <span>{t('جمع باقیات', 'ټوله پاتې', 'Total remaining')}</span>
               <span className="text-amber-600">{formatMoney(fin.receivable)}</span>
             </div>
             <Separator />
             <div>
               <p className="text-sm font-medium mb-2">
-                {t('مانده بدهی مشتریان (دفتر)', 'د پیرودونکو پور (دفتر)', 'Customer book balances')}
+                {t('باقیات بدهی مشتریان (دفتر)', 'د پیرودونکو پور (دفتر)', 'Customer book balances')}
               </p>
               {debtCustomers.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
@@ -451,7 +451,7 @@ function ExpensesCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* فرم ثبت مصرف */}
+        {/* فورم ثبت مصرف */}
         <div className="rounded-lg border p-3 space-y-2">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div className="space-y-1">
@@ -528,7 +528,7 @@ function ExpensesCard({
         {/* لیست مصارف */}
         <div className="max-h-96 overflow-y-auto rounded-lg border">
           {loading ? (
-            <p className="text-sm text-muted-foreground p-4 text-center">{t('در حال بارگذاری...', 'بارېږي...', 'Loading...')}</p>
+            <p className="text-sm text-muted-foreground p-4 text-center">{t('در حال بارگیری...', 'بارېږي...', 'Loading...')}</p>
           ) : filtered.length === 0 ? (
             <EmptyState label={t('مصرفی ثبت نشده است', 'لګښت نه دی ثبت شوی', 'No expenses yet')} />
           ) : (

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/attendance?employeeId=&days= — سابقه حضور و غیاب
+// GET /api/attendance?employeeId=&days= — سابقه حاضری
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     return NextResponse.json(rows)
   } catch (e) {
     console.error('attendance GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت حضور و غیاب' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت حاضری' }, { status: 500 })
   }
 }
 
@@ -52,6 +52,6 @@ export async function POST(req: Request) {
     return NextResponse.json(row, { status: 201 })
   } catch (e) {
     console.error('attendance POST', e)
-    return NextResponse.json({ error: 'خطا در ثبت حضور و غیاب' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ثبت حاضری' }, { status: 500 })
   }
 }

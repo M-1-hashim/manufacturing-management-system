@@ -1,4 +1,4 @@
-// ثبت رخدادهای سیستم (Audit Log) — فقط سمت سرور
+// ثبت رخدادهای سیستم (Audit Log) — فقط سمت هاست
 import { db } from '@/lib/db'
 
 export type AuditAction =

@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-// PUT /api/customers/[id] — ویرایش مشتری
+// PUT /api/customers/[id] — تصحیح مشتری
 export async function PUT(req: Request, { params }: Ctx) {
   try {
     const { id } = await params
@@ -29,7 +29,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     return NextResponse.json(customer)
   } catch (e) {
     console.error('customers PUT [id]', e)
-    return NextResponse.json({ error: 'خطا در ویرایش مشتری' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح مشتری' }, { status: 500 })
   }
 }
 

@@ -18,14 +18,14 @@ function buildItemData(items: ItemInput[]) {
   }))
 }
 
-// PUT /api/formulas/[id] — ویرایش فرمول یا ساخت نسخه جدید (createNewVersion)
+// PUT /api/formulas/[id] — تصحیح فورمولا یا ساخت نسخه جدید (createNewVersion)
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
     const body = await req.json()
     const existing = await db.formula.findUnique({ where: { id } })
     if (!existing) {
-      return NextResponse.json({ error: 'فرمول یافت نشد' }, { status: 404 })
+      return NextResponse.json({ error: 'فورمولا یافت نشد' }, { status: 404 })
     }
 
     const rawItems = Array.isArray(body.items) ? body.items : null
@@ -76,7 +76,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json(created)
     }
 
-    // ---- ویرایش همان فرمول ----
+    // ---- تصحیح همان فورمولا ----
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : existing.name
     const outputQty = Number(body.outputQty) > 0 ? Number(body.outputQty) : existing.outputQty
     const laborCost = body.laborCost !== undefined ? Number(body.laborCost) || 0 : existing.laborCost
@@ -105,29 +105,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(updated)
   } catch (e) {
     console.error('formulas PUT', e)
-    return NextResponse.json({ error: 'خطا در ذخیره فرمول' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ذخیره فورمولا' }, { status: 500 })
   }
 }
 
-// DELETE /api/formulas/[id] — حذف فرمول (اگر در تولید استفاده نشده باشد)
+// DELETE /api/formulas/[id] — حذف فورمولا (اگر در تولید استفاده نشده باشد)
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
     const existing = await db.formula.findUnique({ where: { id } })
     if (!existing) {
-      return NextResponse.json({ error: 'فرمول یافت نشد' }, { status: 404 })
+      return NextResponse.json({ error: 'فورمولا یافت نشد' }, { status: 404 })
     }
     const ordersCount = await db.productionOrder.count({ where: { formulaId: id } })
     if (ordersCount > 0) {
       return NextResponse.json(
-        { error: 'این فرمول در سفارش‌های تولید استفاده شده است و قابل حذف نیست. برای تغییر، نسخه جدید بسازید.' },
+        { error: 'این فورمولا در سفارش‌های تولید استفاده شده است و قابل حذف نیست. برای تغییر، نسخه جدید بسازید.' },
         { status: 400 },
       )
     }
-    await db.formula.delete({ where: { id } }) // مواد فرمول به‌صورت زنجیره‌ای حذف می‌شوند
+    await db.formula.delete({ where: { id } }) // مواد فورمولا به‌صورت زنجیره‌ای حذف می‌شوند
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('formulas DELETE', e)
-    return NextResponse.json({ error: 'خطا در حذف فرمول' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در حذف فورمولا' }, { status: 500 })
   }
 }

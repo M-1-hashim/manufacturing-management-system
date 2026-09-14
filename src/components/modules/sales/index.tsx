@@ -136,7 +136,7 @@ const NONE = '__none__'
 const ALL = '__all__'
 const CURRENCIES: Currency[] = ['AFN', 'USD', 'PKR']
 
-// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (سرور)
+// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (هاست)
 interface LiveRatesT {
   usd: number
   pkr: number
@@ -164,7 +164,7 @@ async function callApi<T>(
     if (!res.ok) return { ok: false, error: json.error || `خطا (${res.status})` }
     return { ok: true, data: json as T }
   } catch {
-    return { ok: false, error: 'خطا در اتصال به سرور' }
+    return { ok: false, error: 'خطا در اتصال به هاست' }
   }
 }
 
@@ -329,7 +329,7 @@ export default function SalesModule() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('جستجوی شماره فاکتور یا مشتری...', 'د فاکتور یا پیرودونکي لټون...', 'Search invoice / customer...')}
+            placeholder={t('جستجوی نمبر فاکتور یا مشتری...', 'د فاکتور یا پیرودونکي لټون...', 'Search invoice / customer...')}
             className="ps-8"
           />
         </div>
@@ -380,7 +380,7 @@ export default function SalesModule() {
                   <TableHead>{t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}</TableHead>
                   <TableHead>{t('روش', 'طریقه', 'Method')}</TableHead>
                   <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                  <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                  <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -491,7 +491,7 @@ export default function SalesModule() {
         />
       )}
 
-      {/* تایید حذف فاکتور */}
+      {/* تصدیق حذف فاکتور */}
       <AlertDialog open={!!delSale} onOpenChange={(o) => !o && setDelSale(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -570,7 +570,7 @@ function NewSaleDialog({
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [rowSeq, setRowSeq] = useState(1)
-  // هر بار که دیالوگ از والد مونت می‌شود، فرم تازه است
+  // هر بار که دیالوگ از والد مونت می‌شود، فورم تازه است
   const [rows, setRows] = useState<DraftRow[]>([
     { key: 0, productId: '', quantity: '', unitPrice: '', discount: '0' },
   ])
@@ -599,7 +599,7 @@ function NewSaleDialog({
     setRows((r) => r.map((row) => (row.key === key ? { ...row, ...patch } : row)))
   }
 
-  // انتخاب مشتری → قیمت‌های خودکار به‌روز می‌شوند
+  // انتخاب مشتری → قیمت‌های خودکار تجدید می‌شوند
   function handleCustomerChange(v: string) {
     setCustomerId(v)
     const type = customers.find((c) => c.id === v)?.type
@@ -623,7 +623,7 @@ function NewSaleDialog({
     else setExchangeRate(String(live.data?.pkr || Number(settings?.pkrRate) || 0.25))
   }
 
-  // وقتی نرخ لحظه‌ای رسید → اگر کاربر هنوز نرخ دستی وارد نکرده، فیلد با نرخ زنده همگام می‌شود
+  // وقتی نرخ لحظه‌ای رسید → اگر استفاده‌کننده هنوز نرخ دستی وارد نکرده، فیلد با نرخ زنده همگام می‌شود
   // (الگوی رسمی React: تنظیم state هنگام رندر هنگام تغییر داده بیرونی — بدون useEffect)
   const [syncedLive, setSyncedLive] = useState<LiveRatesT | null>(null)
   if (live.data !== syncedLive) {
@@ -728,7 +728,7 @@ function NewSaleDialog({
               ) : (
                 selectedCustomer && (
                   <div className="space-y-1.5">
-                    <Label>{t('مانده بدهی فعلی', 'اوسنی پور', 'Current balance')}</Label>
+                    <Label>{t('باقیات بدهی فعلی', 'اوسنی پور', 'Current balance')}</Label>
                     <div className="h-9 flex items-center text-sm text-amber-600 font-medium">
                       {formatMoney(selectedCustomer.balance)}
                     </div>
@@ -739,7 +739,7 @@ function NewSaleDialog({
 
             <Separator />
 
-            {/* ویرایشگر اقلام */}
+            {/* تصحیحگر اقلام */}
             <div className="space-y-2">
               <div className="hidden md:grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
                 <div className="col-span-5">{t('کالا', 'توک', 'Product')}</div>
@@ -824,7 +824,7 @@ function NewSaleDialog({
               })}
               <Button variant="outline" size="sm" onClick={addRow} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4" />
-                {t('افزودن کالا', 'توک اضافه کول', 'Add item')}
+                {t('علاوه کردن کالا', 'توک اضافه کول', 'Add item')}
               </Button>
             </div>
           </div>
@@ -965,7 +965,7 @@ function NewSaleDialog({
                   remaining > 0.001 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                 )}
               >
-                <span className="text-sm">{t('باقی‌مانده', 'پاتې', 'Remaining')}</span>
+                <span className="text-sm">{t('باقیات', 'پاتې', 'Remaining')}</span>
                 <span className="font-bold">{formatNumber(remaining, 2)}</span>
               </div>
             </div>
@@ -1163,7 +1163,7 @@ function InvoiceDialog({
             <div className="h-2 w-full bg-gradient-to-l from-emerald-700 via-emerald-500 to-teal-500" />
 
             <div className="space-y-5 p-4 sm:p-8">
-              {/* ---------- سربرگ ---------- */}
+              {/* ---------- سرلوحه ---------- */}
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-sm">
@@ -1196,7 +1196,7 @@ function InvoiceDialog({
                 </div>
               </div>
 
-              {/* ---------- اطلاعات مشتری و فاکتور ---------- */}
+              {/* ---------- معلومات مشتری و فاکتور ---------- */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-neutral-200 p-3.5">
                   <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-emerald-700">
@@ -1314,7 +1314,7 @@ function InvoiceDialog({
                       <span className="font-semibold text-emerald-700">{formatMoney(sale.paidAmount, currency)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-neutral-500">{t('باقی‌مانده', 'پاتې', 'Remaining')}</span>
+                      <span className="text-neutral-500">{t('باقیات', 'پاتې', 'Remaining')}</span>
                       <span className={remaining > 0.001 ? 'font-bold text-red-600' : 'font-semibold text-emerald-700'}>
                         {formatMoney(remaining, currency)}
                       </span>
@@ -1383,7 +1383,7 @@ function PayDialog({
   onSaved: () => void
 }) {
   const { t } = useI18n()
-  // مقدار اولیه = کل باقی‌مانده (دیالوگ با هر فاکتور از نو مونت می‌شود)
+  // مقدار اولیه = کل باقیات (دیالوگ با هر فاکتور از نو مونت می‌شود)
   const [amount, setAmount] = useState(() =>
     sale ? String(Math.max(0, Number((sale.total - sale.paidAmount).toFixed(2)))) : ''
   )
@@ -1432,7 +1432,7 @@ function PayDialog({
                 <p className="font-semibold">{formatMoney(sale.total, sale.currency as Currency)}</p>
               </div>
               <div className="rounded-md bg-amber-500/10 p-2">
-                <p className="text-xs text-muted-foreground">{t('باقی‌مانده', 'پاتې', 'Remaining')}</p>
+                <p className="text-xs text-muted-foreground">{t('باقیات', 'پاتې', 'Remaining')}</p>
                 <p className="font-semibold text-amber-700 dark:text-amber-400">
                   {formatMoney(remaining, sale.currency as Currency)}
                 </p>
@@ -1512,7 +1512,7 @@ function CustomersDialog({
       toast.error(res.error || t('خطا در ذخیره مشتری', 'د پیرودونکي ستونزه', 'Save failed'))
       return
     }
-    toast.success(editingId ? t('مشتری ویرایش شد', 'پیرودونکی سم شو', 'Customer updated') : t('مشتری ثبت شد', 'پیرودونکی ثبت شو', 'Customer added'))
+    toast.success(editingId ? t('مشتری تصحیح شد', 'پیرودونکی سم شو', 'Customer updated') : t('مشتری ثبت شد', 'پیرودونکی ثبت شو', 'Customer added'))
     resetForm()
     onChanged()
   }
@@ -1534,18 +1534,18 @@ function CustomersDialog({
         <DialogHeader>
           <DialogTitle>{t('مشتریان', 'پیرودونکي', 'Customers')}</DialogTitle>
           <DialogDescription>
-            {t('مدیریت مشتریان و مانده بدهی‌ها', 'د پیرودونکو او پورونو مدیریت', 'Manage customers & balances')}
+            {t('مدیریت مشتریان و باقیات بدهی‌ها', 'د پیرودونکو او پورونو مدیریت', 'Manage customers & balances')}
           </DialogDescription>
         </DialogHeader>
 
-        {/* فرم افزودن / ویرایش */}
+        {/* فورم علاوه کردن / تصحیح */}
         <div className="rounded-lg border p-3 space-y-3">
           <p className="text-sm font-medium">
-            {editingId ? t('ویرایش مشتری', 'پیرودونکی سمول', 'Edit customer') : t('مشتری جدید', 'نوی پیرودونکی', 'New customer')}
+            {editingId ? t('تصحیح مشتری', 'پیرودونکی سمول', 'Edit customer') : t('مشتری جدید', 'نوی پیرودونکی', 'New customer')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('نام *', 'نوم *', 'Name *')} />
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('تلفن', 'تیلیفون', 'Phone')} dir="ltr" />
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('تیلیفون', 'تیلیفون', 'Phone')} dir="ltr" />
             <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t('آدرس', 'پته', 'Address')} />
             <Select value={type} onValueChange={(v) => setType(v as 'retail' | 'wholesale')}>
               <SelectTrigger className="w-full">
@@ -1570,7 +1570,7 @@ function CustomersDialog({
               )}
               <Button className="flex-1" onClick={submit} disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                {editingId ? t('ذخیره تغییرات', 'بدلونونه خوندي', 'Save changes') : t('افزودن مشتری', 'پیرودونکی اضافه', 'Add customer')}
+                {editingId ? t('ذخیره تغییرات', 'بدلونونه خوندي', 'Save changes') : t('علاوه کردن مشتری', 'پیرودونکی اضافه', 'Add customer')}
               </Button>
             </div>
           </div>
@@ -1586,10 +1586,10 @@ function CustomersDialog({
                 <TableRow>
                   <TableHead>{t('نام', 'نوم', 'Name')}</TableHead>
                   <TableHead>{t('نوع', 'ډول', 'Type')}</TableHead>
-                  <TableHead>{t('تلفن', 'تیلیفون', 'Phone')}</TableHead>
-                  <TableHead>{t('مانده بدهی', 'پور', 'Balance')}</TableHead>
+                  <TableHead>{t('تیلیفون', 'تیلیفون', 'Phone')}</TableHead>
+                  <TableHead>{t('باقیات بدهی', 'پور', 'Balance')}</TableHead>
                   <TableHead>{t('فاکتورها', 'فاکتورونه', 'Sales')}</TableHead>
-                  <TableHead>{t('عملیات', 'کړنې', 'Actions')}</TableHead>
+                  <TableHead>{t('اجراؤات', 'کړنې', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1614,7 +1614,7 @@ function CustomersDialog({
                     <TableCell>{formatNumber(c._count?.sales ?? 0)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-start gap-1">
-                        <Button variant="ghost" size="icon" title={t('ویرایش', 'سمول', 'Edit')} onClick={() => startEdit(c)}>
+                        <Button variant="ghost" size="icon" title={t('تصحیح', 'سمول', 'Edit')} onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button

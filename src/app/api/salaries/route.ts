@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/salaries?employeeId= — پرداخت‌های حقوق
+// GET /api/salaries?employeeId= — پرداخت‌های معاش
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -15,11 +15,11 @@ export async function GET(req: Request) {
     return NextResponse.json(rows)
   } catch (e) {
     console.error('salaries GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت حقوق‌ها' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت معاشات' }, { status: 500 })
   }
 }
 
-// POST /api/salaries — ثبت پرداخت حقوق
+// POST /api/salaries — ثبت پرداخت معاش
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -49,6 +49,6 @@ export async function POST(req: Request) {
     return NextResponse.json(row, { status: 201 })
   } catch (e) {
     console.error('salaries POST', e)
-    return NextResponse.json({ error: 'خطا در ثبت پرداخت حقوق' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ثبت پرداخت معاش' }, { status: 500 })
   }
 }

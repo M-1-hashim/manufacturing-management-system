@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول تنظیمات — اطلاعات شرکت، نرخ ارز، مالیات پیش‌فرض + پشتیبان‌گیری خودکار
+// ماژول تنظیمات — معلومات شرکت، اسعار، مالیات پیش‌فرض + کاپی احتیاطی خودکار
 import { useEffect, useRef, useState } from 'react'
 import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
@@ -126,7 +126,7 @@ interface BackupFileT {
   createdAt: string
 }
 
-// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (سرور)
+// پاسخ API نرخ لحظه‌ای — همان ساختار src/lib/exchange-rate.ts (هاست)
 interface LiveRatesT {
   usd: number
   pkr: number
@@ -193,7 +193,7 @@ export default function SettingsModule() {
   const [form, setForm] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
-  // ---------- پشتیبان‌گیری خودکار (فقط ادمین) ----------
+  // ---------- کاپی احتیاطی خودکار (فقط ادمین) ----------
   const isAdmin = user?.role === 'admin'
   const backup = useFetch<{ files: BackupFileT[]; intervalHours: number; keep: number; dbType?: 'sqlite' | 'mysql' }>(isAdmin ? '/api/admin/backup' : null)
   const [bInterval, setBInterval] = useState('24')
@@ -248,7 +248,7 @@ export default function SettingsModule() {
         if (r.bootstrapped)
           parts.push(
             t(
-              `${r.copiedUsers ?? 0} کاربر و ${r.copiedSettings ?? 0} تنظیم از دستگاه به هاست کپی شد`,
+              `${r.copiedUsers ?? 0} استفاده‌کننده و ${r.copiedSettings ?? 0} تنظیم از دستگاه به هاست کپی شد`,
               `${r.copiedUsers ?? 0} کارن او ${r.copiedSettings ?? 0} امستنې هوسټ ته کاپي شوې`,
               `${r.copiedUsers ?? 0} users and ${r.copiedSettings ?? 0} settings copied to host`
             )
@@ -258,7 +258,7 @@ export default function SettingsModule() {
       } else {
         setHostSetupResult(
           t(
-            `${r.copied ?? 0} سطر کپی و ${r.updated ?? 0} سطر به‌روز شد — دیتای هاست حالا مثل همین دستگاه است`,
+            `${r.copied ?? 0} سطر کپی و ${r.updated ?? 0} سطر تازه شد — دیتای هاست حالا مثل همین دستگاه است`,
             `${r.copied ?? 0} کرښه کاپي او ${r.updated ?? 0} تازه شوه`,
             `${r.copied ?? 0} rows copied and ${r.updated ?? 0} updated — host data now matches this device`
           )
@@ -319,14 +319,14 @@ export default function SettingsModule() {
             res.result === 'sync started'
               ? t('هاست وصل شد — همگام‌سازی آغاز گردید', 'هوسټ ونښل — همغه کول پیل شو', 'Host connected — sync started')
               : res.result
-                ? t('کپی دیتای سرور گرفته شد', 'د سرور ډاټا کاپي شو', 'Server data copied')
+                ? t('کپی دیتای هاست گرفته شد', 'د هاست ډاټا کاپي شو', 'Server data copied')
                 : t('درخواست انجام شد', 'غوښتنه ترسره شوه', 'Request done')
           )
         } else if (action === 'snapshot-now') {
-          toast.success(`${t('کپی کامل دیتای سرور روی دستگاه گرفته شد', 'ډاټا کاپي شو', 'Server data copied to device')}${res.rows != null ? ` (${formatNumber(res.rows)} ${t('سطر', 'کرښه', 'rows')})` : ''}`)
+          toast.success(`${t('کپی کامل دیتای هاست روی دستگاه گرفته شد', 'ډاټا کاپي شو', 'Server data copied to device')}${res.rows != null ? ` (${formatNumber(res.rows)} ${t('سطر', 'کرښه', 'rows')})` : ''}`)
         }
       } else {
-        toast.error(res.error || t('عملیات ناموفق بود', 'عملیه ناکامه شوه', 'Operation failed'))
+        toast.error(res.error || t('اجراؤات ناموفق بود', 'عملیه ناکامه شوه', 'Operation failed'))
       }
       await refreshConnStatus()
       void refreshDbInfo()
@@ -368,7 +368,7 @@ export default function SettingsModule() {
   async function testSshConnection() {
     if (!connApi) return
     if (!connForm.sshHost.trim() || !connForm.sshUser.trim()) {
-      toast.error(t('آدرس سرور و نام کاربری SSH الزامی است', 'د SSH پته او کاروونکی نوم اړین دي', 'SSH server address and username are required'))
+      toast.error(t('آدرس هاست و نام استفاده‌کننده SSH الزامی است', 'د SSH پته او کاروونکی نوم اړین دي', 'SSH server address and username are required'))
       return
     }
     setConnTesting(true)
@@ -382,11 +382,11 @@ export default function SettingsModule() {
       if (res.ok) {
         toast.success(t('✅ اتصال SSH موفق بود — مقادیر درست است، حالا ذخیره کنید', '✅ د SSH نښلول بریالی شو — اوس خوندي کړئ', '✅ SSH connection OK — now save'))
       } else if (res.kind === 'AUTH') {
-        toast.error(t('🔑 رمز یا نام کاربری SSH (همان cPanel) غلط است', '🔑 د SSH (cPanel) پاسورد یا کاروونکی غلط دی', 'Wrong SSH (cPanel) username or password'))
+        toast.error(t('🔑 پاسورد یا نام استفاده‌کننده SSH (همان cPanel) غلط است', '🔑 د SSH (cPanel) پاسورد یا کاروونکی غلط دی', 'Wrong SSH (cPanel) username or password'))
       } else if (res.kind === 'TIMEOUT') {
-        toast.error(t('⏳ از سرور پاسخی نیامد — اینترنت یا فایروال را چک کنید', '⏳ له سرور ځواب نه شو — انترنت یا فایروال وګورئ', 'No response from server — check internet/firewall'))
+        toast.error(t('⏳ از هاست پاسخی نیامد — انترنت یا فایروال را چک کنید', '⏳ له هاست ځواب نه شو — انترنت یا فایروال وګورئ', 'No response from server — check internet/firewall'))
       } else {
-        toast.error(t('🌐 سرور SSH پیدا نشد — آدرس/پورت را چک کنید و در cPanel → Manage Shell دسترسی SSH را فعال کنید', '🌐 د SSH سرور نه موندل شو — پته/بورډ وګورئ او په cPanel → Manage Shell کې SSH فعاله کړئ', 'SSH server not reachable — check address/port and enable SSH in cPanel → Manage Shell'))
+        toast.error(t('🌐 هاست SSH پیدا نشد — آدرس/پورت را چک کنید و در cPanel → Manage Shell دسترسی SSH را فعال کنید', '🌐 د SSH هاست نه موندل شو — پته/بورډ وګورئ او په cPanel → Manage Shell کې SSH فعاله کړئ', 'SSH server not reachable — check address/port and enable SSH in cPanel → Manage Shell'))
       }
     } catch {
       toast.error(t('خطا در تست اتصال', 'د ازمویلې ستونزه', 'Test failed'))
@@ -400,15 +400,15 @@ export default function SettingsModule() {
     const ssh = connForm.mode === 'ssh'
     if (ssh) {
       if (!connForm.sshHost.trim() || !connForm.sshUser.trim() || !connForm.database.trim() || !connForm.user.trim()) {
-        toast.error(t('آدرس SSH، نام کاربری SSH، نام دیتابیس و نام کاربری دیتابیس الزامی است', 'د SSH پته، د SSH کاروونکی، د ډاټابیس نوم او کاروونکی اړین دي', 'SSH address, SSH user, database name and username are required'))
+        toast.error(t('آدرس SSH، نام استفاده‌کننده SSH، نام دیتابیس و نام استفاده‌کننده دیتابیس الزامی است', 'د SSH پته، د SSH کاروونکی، د ډاټابیس نوم او کاروونکی اړین دي', 'SSH address, SSH user, database name and username are required'))
         return
       }
       if (!connForm.sshPassword) {
-        toast.error(t('رمز SSH (همان رمز cPanel) الزامی است', 'د SSH پاسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required'))
+        toast.error(t('پاسورد SSH (همان پاسورد cPanel) الزامی است', 'د SSH پاسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required'))
         return
       }
     } else if (!connForm.host.trim() || !connForm.database.trim() || !connForm.user.trim()) {
-      toast.error(t('آدرس هاست، نام دیتابیس و نام کاربری الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
+      toast.error(t('آدرس هاست، نام دیتابیس و نام استفاده‌کننده الزامی است', 'د هوسټ پته، د ډاټابیس نوم او د کاروونکي نوم اړین دي', 'Host, database and username are required'))
       return
     }
     setConnSaving(true)
@@ -469,7 +469,7 @@ export default function SettingsModule() {
     setBSaving(true)
     try {
       await apiPut('/api/admin/backup', { intervalHours: Number(bInterval) || 0, keep: Number(bKeep) || 10 })
-      toast.success(t('تنظیمات پشتیبان‌گیری ذخیره شد', 'د بیک اپ امستنې خوندي شوې', 'Backup settings saved'))
+      toast.success(t('تنظیمات کاپی احتیاطی ذخیره شد', 'د بیک اپ امستنې خوندي شوې', 'Backup settings saved'))
       backup.refetch()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('خطا در ذخیره', 'د خوندي کولو ستونزه', 'Save failed'))
@@ -482,10 +482,10 @@ export default function SettingsModule() {
     setBCreating(true)
     try {
       const created = await apiPost<BackupFileT>('/api/admin/backup', {})
-      toast.success(t(`نسخه پشتیبان ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`))
+      toast.success(t(`نسخه کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`))
       backup.refetch()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه پشتیبان', 'د بیک اپ ستونزه', 'Backup failed'))
+      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
     } finally {
       setBCreating(false)
     }
@@ -534,7 +534,7 @@ export default function SettingsModule() {
     setBDeleting(name)
     try {
       await apiDelete(`/api/admin/backup?file=${encodeURIComponent(name)}`)
-      toast.success(t('فایل پشتیبان حذف شد', 'د بیک اپ فایل له منځه ولاړ', 'Backup file deleted'))
+      toast.success(t('فایل کاپی احتیاطی حذف شد', 'د بیک اپ فایل له منځه ولاړ', 'Backup file deleted'))
       backup.refetch()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('خطا در حذف', 'د حذف ستونزه', 'Delete failed'))
@@ -544,7 +544,7 @@ export default function SettingsModule() {
   }
 
   // ---------- بازیابی (از فایل موجود یا آپلود) ----------
-  const [restoreTarget, setRestoreTarget] = useState<string | null>(null) // نام فایل پشتیبان موجود
+  const [restoreTarget, setRestoreTarget] = useState<string | null>(null) // نام فایل کاپی احتیاطی موجود
   const [restoreFile, setRestoreFile] = useState<File | null>(null) // فایل آپلودی
   const [restoring, setRestoring] = useState(false)
   const uploadInputRef = useRef<HTMLInputElement>(null)
@@ -574,7 +574,7 @@ export default function SettingsModule() {
       if (!res.ok) throw new Error(body.error || t('بازیابی ناموفق بود', 'بیا رغونه ناکامې شوه', 'Restore failed'))
       toast.success(
         t(
-          `بازیابی انجام شد — بکاپ امنیتی ${body.safetyBackup} گرفته شد`,
+          `بازیابی انجام شد — کاپی احتیاطی امنیتی ${body.safetyBackup} گرفته شد`,
           `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
           `Restored — safety backup ${body.safetyBackup} created`
         ),
@@ -599,7 +599,7 @@ export default function SettingsModule() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  // ---------- نرخ ارز لحظه‌ای از API واقعی ----------
+  // ---------- اسعار لحظه‌ای از API واقعی ----------
   const [rateFetching, setRateFetching] = useState(false)
   const [liveInfo, setLiveInfo] = useState<LiveRatesT | null>(null)
 
@@ -618,7 +618,7 @@ export default function SettingsModule() {
       if (r.stale) {
         toast.warning(
           t(
-            'اینترنت در دسترس نیست — آخرین نرخ ذخیره‌شده نمایش داده می‌شود',
+            'انترنت در دسترس نیست — آخرین نرخ ذخیره‌شده نمایش داده می‌شود',
             'انټرنټ نه لري — وروستنی ذخیره شوې نرخ ښودل کیږي',
             'No internet — showing last stored rates'
           )
@@ -687,7 +687,7 @@ export default function SettingsModule() {
     <div className="space-y-6">
       <PageHeader
         title={t('تنظیمات سیستم', 'د سیسټم امستنې', 'System Settings')}
-        subtitle={t('اطلاعات شرکت، نرخ ارز و مالیات', 'د شرکت معلومات، د اسعارو نرخ او مالیه', 'Company info, exchange rates & tax')}
+        subtitle={t('معلومات شرکت، اسعار و مالیات', 'د شرکت معلومات، د اسعارو نرخ او مالیه', 'Company info, exchange rates & tax')}
         icon={SettingsIcon}
         actions={
           <Button onClick={save} disabled={saving} className="gap-2">
@@ -698,12 +698,12 @@ export default function SettingsModule() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* اطلاعات شرکت */}
+        {/* معلومات شرکت */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Building2 className="h-4 w-4 text-primary" />
-              {t('اطلاعات شرکت', 'د شرکت معلومات', 'Company Information')}
+              {t('معلومات شرکت', 'د شرکت معلومات', 'Company Information')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -716,22 +716,22 @@ export default function SettingsModule() {
               <Input id="companyAddress" value={form.companyAddress ?? ''} onChange={(e) => set('companyAddress', e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="companyPhone">{t('تلفن', 'ټیلیفون', 'Phone')}</Label>
+              <Label htmlFor="companyPhone">{t('تیلیفون', 'ټیلیفون', 'Phone')}</Label>
               <Input id="companyPhone" dir="ltr" className="text-end" value={form.companyPhone ?? ''} onChange={(e) => set('companyPhone', e.target.value)} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {t('این اطلاعات در سربرگ فاکتورهای فروش نمایش داده می‌شود.', 'دا معلومات د پلورنې فاکتورونو سربرګ کې ښکاري.', 'Shown on sales invoice headers.')}
+              {t('این معلومات در سرلوحه فاکتورهای فروش نمایش داده می‌شود.', 'دا معلومات د پلورنې فاکتورونو سربرګ کې ښکاري.', 'Shown on sales invoice headers.')}
             </p>
           </CardContent>
         </Card>
 
         <div className="space-y-6">
-          {/* نرخ ارز */}
+          {/* اسعار */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Coins className="h-4 w-4 text-primary" />
-                {t('نرخ ارز (نسبت به افغانی)', 'د اسعارو نرخ (په افغانۍ)', 'Exchange rates (vs AFN)')}
+                {t('اسعار (نسبت به افغانی)', 'د اسعارو نرخ (په افغانۍ)', 'Exchange rates (vs AFN)')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -744,7 +744,7 @@ export default function SettingsModule() {
                     ) : (
                       <Wifi className="h-4 w-4 shrink-0 text-emerald-600" />
                     )}
-                    {t('نرخ لحظه‌ای از اینترنت', 'لحظه يي نرخ له انټرنټ', 'Live rates from the internet')}
+                    {t('نرخ لحظه‌ای از انترنت', 'لحظه يي نرخ له انټرنټ', 'Live rates from the internet')}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     {form.ratesUpdatedAt
@@ -753,7 +753,7 @@ export default function SettingsModule() {
                           `وروستنی بروز رسانی: ${fmtDate(form.ratesUpdatedAt)} — سرچینه: ${form.ratesSource || liveInfo?.source || '—'}`,
                           `Last update: ${fmtDate(form.ratesUpdatedAt)} — source: ${form.ratesSource || liveInfo?.source || '—'}`
                         )
-                      : t('هنوز نرخ از اینترنت دریافت نشده — دکمه را بزنید', 'تر اوسه نرخ له انټرنټ نه دی اخیستل شوی', 'No rate fetched yet — click refresh')}
+                      : t('هنوز نرخ از انترنت دریافت نشده — دکمه را بزنید', 'تر اوسه نرخ له انټرنټ نه دی اخیستل شوی', 'No rate fetched yet — click refresh')}
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchLiveRates} disabled={rateFetching} className="gap-1.5 shrink-0">
@@ -789,7 +789,7 @@ export default function SettingsModule() {
                 <div className="min-w-0">
                   <Label htmlFor="ratesAutoSync" className="cursor-pointer">{t('بروزرسانی خودکار نرخ‌ها', 'اتوماتیک بروز رسانی نرخونه', 'Auto-update rates')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('نرخ‌ها هر ساعت از اینترنت گرفته و ذخیره می‌شوند؛ در قطعی اینترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له انټرنټ اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly and stored; last known rates are used when offline.')}
+                    {t('نرخ‌ها هر ساعت از انترنت گرفته و ذخیره می‌شوند؛ در قطعی انترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له انټرنټ اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly and stored; last known rates are used when offline.')}
                   </p>
                 </div>
                 <Switch id="ratesAutoSync" checked={form.ratesAutoSync !== '0'} onCheckedChange={(v) => void toggleAutoSync(v)} />
@@ -929,13 +929,13 @@ export default function SettingsModule() {
         </CardContent>
       </Card>
 
-      {/* پشتیبان‌گیری — فقط ادمین */}
+      {/* کاپی احتیاطی — فقط ادمین */}
       {isAdmin && (
         <Card className="border-emerald-200 dark:border-emerald-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <DatabaseBackup className="h-4 w-4 text-primary" />
-              {t('پشتیبان‌گیری خودکار و دستی', 'اتوماتیک او لاسي بیک اپ', 'Automatic & manual backup')}
+              {t('کاپی احتیاطی خودکار و دستی', 'اتوماتیک او لاسي بیک اپ', 'Automatic & manual backup')}
               <Badge variant="outline" className="ms-2">{t('مخصوص ادمین', 'ځانګړی ادمین', 'Admin only')}</Badge>
               {backup.data?.dbType === 'mysql' ? (
                 <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
@@ -954,7 +954,7 @@ export default function SettingsModule() {
               <Server className="h-4 w-4 shrink-0 text-amber-600" />
               <p className="flex-1 text-xs leading-5 text-amber-900 dark:text-amber-200">
                 {t(
-                  'برای ذخیره دیتا در هاست اشتراکی: فایل SQL را در phpMyAdmin هاست ایمپورت کنید، سپس طبق راهنما برنامه را به دیتابیس هاست وصل کرده و بکاپ JSON را بازیابی کنید.',
+                  'برای ذخیره دیتا در هاست اشتراکی: فایل SQL را در phpMyAdmin هاست ایمپورت کنید، سپس طبق راهنما برنامه را به دیتابیس هاست وصل کرده و کاپی احتیاطی JSON را بازیابی کنید.',
                   'د ډاټا د هوسټ کې ساتلو لپاره: د SQL فایل په phpMyAdmin کې داخل کړئ، بیا د لارښود له مخې پروګرام وصل او بیک اپ بیا رغوئ.',
                   'To store data on your shared host: import the SQL file in phpMyAdmin, then connect the app to the host database and restore the JSON backup.'
                 )}
@@ -976,7 +976,7 @@ export default function SettingsModule() {
             {/* تنظیمات خودکار */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="space-y-1.5">
-                <Label htmlFor="bInterval">{t('فاصله پشتیبان‌گیری خودکار', 'د اتوماتیک بیک اپ فاصله', 'Auto-backup interval')}</Label>
+                <Label htmlFor="bInterval">{t('فاصله کاپی احتیاطی خودکار', 'د اتوماتیک بیک اپ فاصله', 'Auto-backup interval')}</Label>
                 <select
                   id="bInterval"
                   value={bInterval}
@@ -1002,7 +1002,7 @@ export default function SettingsModule() {
             </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                'سیستم به‌صورت خودکار در فواصل انتخابی از کل دیتابیس نسخه پشتیبان می‌گیرد و نسخه‌های قدیمی‌تر را خودکار حذف می‌کند. فایل‌ها کنار دیتابیس در پوشه backups نگهداری می‌شوند.',
+                'سیستم به‌صورت خودکار در فواصل انتخابی از کل دیتابیس نسخه کاپی احتیاطی می‌گیرد و نسخه‌های قدیمی‌تر را خودکار حذف می‌کند. فایل‌ها کنار دیتابیس در پوشه backups نگهداری می‌شوند.',
                 'سیسټم په ټاکل شوو فاصلو کې له ټولې ډاټابیس څخه اتوماتیک بیک اپ اخلي او زړې نسخې اتوماتیک حذفوي.',
                 'The system automatically backs up the whole database at the chosen interval and prunes old versions. Files are stored in the backups folder next to the database.'
               )}
@@ -1010,11 +1010,11 @@ export default function SettingsModule() {
 
             <Separator />
 
-            {/* فهرست نسخه‌های پشتیبان */}
+            {/* فهرست نسخه‌های کاپی احتیاطی */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p className="text-sm text-muted-foreground flex-1">
                 {t(
-                  `${(backup.data?.files.length ?? 0)} نسخه پشتیبان ذخیره شده است. برای انتقال به کامپیوتر دیگر، فایل را دانلود کنید.`,
+                  `${(backup.data?.files.length ?? 0)} نسخه کاپی احتیاطی ذخیره شده است. برای انتقال به کامپیوتر دیگر، فایل را دانلود کنید.`,
                   `${(backup.data?.files.length ?? 0)} بیک اپ فایلونه ساتل شوي دي.`,
                   `${(backup.data?.files.length ?? 0)} backup files stored. Download to move to another computer.`
                 )}
@@ -1033,17 +1033,17 @@ export default function SettingsModule() {
                 </Button>
                 <Button onClick={createBackupNow} disabled={bCreating} size="sm" className="gap-2">
                   <HardDriveDownload className="h-4 w-4" />
-                  {bCreating ? t('در حال تهیه...', 'چمتو کول...', 'Creating...') : t('پشتیبان بگیر', 'بیک اپ واخله', 'Backup now')}
+                  {bCreating ? t('در حال تهیه...', 'چمتو کول...', 'Creating...') : t('کاپی احتیاطی بگیر', 'بیک اپ واخله', 'Backup now')}
                 </Button>
               </div>
             </div>
 
             <div className="max-h-72 overflow-y-auto rounded-lg border">
               {backup.loading && !backup.data ? (
-                <p className="p-4 text-sm text-muted-foreground text-center">{t('در حال بارگذاری...', 'بارول...', 'Loading...')}</p>
+                <p className="p-4 text-sm text-muted-foreground text-center">{t('در حال بارگیری...', 'بارول...', 'Loading...')}</p>
               ) : (backup.data?.files.length ?? 0) === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
-                  {t('هنوز نسخه پشتیبانی وجود ندارد', 'تر اوسه بیک اپ نشته', 'No backups yet')}
+                  {t('هنوز نسخه کاپی احتیاطیی وجود ندارد', 'تر اوسه بیک اپ نشته', 'No backups yet')}
                 </p>
               ) : (
                 <table className="w-full text-sm">
@@ -1084,19 +1084,19 @@ export default function SettingsModule() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {t('توصیه: فایل پشتیبان را به‌صورت دوره‌ای دانلود و در فلش یا محل امن نگه‌داری کنید.', 'مشوره: د بیک اپ فایل په دوره يي ډول ښکته کړئ او په خوندي ځای کې یې وساتئ.', 'Tip: periodically download a backup file and keep it on a USB drive or safe location.')}
+              {t('توصیه: فایل کاپی احتیاطی را به‌صورت دوره‌ای دانلود و در فلش یا محل امن نگه‌داری کنید.', 'مشوره: د بیک اپ فایل په دوره يي ډول ښکته کړئ او په خوندي ځای کې یې وساتئ.', 'Tip: periodically download a backup file and keep it on a USB drive or safe location.')}
             </p>
 
-            {/* اینپوت مخفی آپلود بکاپ */}
+            {/* اینپوت مخفی آپلود کاپی احتیاطی */}
             <input ref={uploadInputRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={pickRestoreFile} />
 
-            {/* تأیید بازیابی — از فایل موجود یا آپلودی */}
+            {/* تصدیق بازیابی — از فایل موجود یا آپلودی */}
             <AlertDialog open={!!restoreTarget || !!restoreFile} onOpenChange={(o) => { if (!o && !restoring) { setRestoreTarget(null); setRestoreFile(null) } }}>
               <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
                     <RotateCcw className="h-4 w-4 text-destructive" />
-                    {t('بازیابی نسخه پشتیبان', 'بیک اپ بیا رغونه', 'Restore backup')}
+                    {t('بازیابی نسخه کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
                   </AlertDialogTitle>
                   <AlertDialogDescription className="space-y-2 text-sm">
                     <span className="block">
@@ -1116,7 +1116,7 @@ export default function SettingsModule() {
                       {t('تمام دیتای فعلی با محتوای این فایل جایگزین می‌شود!', 'ټول اوسني معلومات د دې فایل سره بدلېږي!', 'All current data will be replaced with this file!')}
                     </span>
                     <span className="block text-muted-foreground">
-                      {t('قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک بکاپ امنیتی گرفته می‌شود.', 'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.', 'A safety backup of current data is created automatically first.')}
+                      {t('قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی امنیتی گرفته می‌شود.', 'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.', 'A safety backup of current data is created automatically first.')}
                     </span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1151,7 +1151,7 @@ export default function SettingsModule() {
                 v{dbInfo?.appVersion || '?'}
               </Badge>
               {connInfo?.active ? (
-                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">{t('متصل به هاست', 'له هوسټ سره نښلول شوی', 'Connected to host')}</Badge>
+                <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">{t('به هاست وصل است', 'له هوسټ سره نښلول شوی', 'Connected to host')}</Badge>
               ) : (
                 <Badge variant="secondary">{t('دیتابیس محلی', 'ځایی ډاټابیس', 'Local database')}</Badge>
               )}
@@ -1209,7 +1209,7 @@ export default function SettingsModule() {
                           {t('جدول‌های گمشده:', 'ورک جدولونه:', 'Missing tables:')} <span dir="ltr" className="font-mono">{(dbInfo.missingTables || []).join(', ')}</span>
                         </p>
                         <p className="mt-1">
-                          {t('راه‌حل: فایل SQL هاست (دکمه «دانلود فایل SQL هاست» در بخش پشتیبان‌گیری) را در phpMyAdmin هاست ایمپورت کنید.', 'حل: د SQL هوسټ فایل په phpMyAdmin کې وارد کړئ.', 'Fix: import the host SQL file (backup section) in your hosting phpMyAdmin.')}
+                          {t('راه‌حل: فایل SQL هاست (دکمه «دانلود فایل SQL هاست» در بخش کاپی احتیاطی) را در phpMyAdmin هاست ایمپورت کنید.', 'حل: د SQL هوسټ فایل په phpMyAdmin کې وارد کړئ.', 'Fix: import the host SQL file (backup section) in your hosting phpMyAdmin.')}
                         </p>
                       </div>
                     ) : (
@@ -1223,20 +1223,20 @@ export default function SettingsModule() {
                         </p>
                         <p className="mt-1">
                           {dbInfo.errorKind === 'AUTH'
-                            ? t('🔑 رمز یا نام کاربری دیتابیس غلط است — در cPanel → MySQL Databases دوباره چک کنید.', '🔑 پاسورد یا د کاروونکی نوم غلط دی — په cPanel کې بیا وګورئ.', 'Wrong database password or username — recheck in cPanel → MySQL Databases.')
+                            ? t('🔑 پاسورد یا نام استفاده‌کننده دیتابیس غلط است — در cPanel → MySQL Databases دوباره چک کنید.', '🔑 پاسورد یا د کاروونکی نوم غلط دی — په cPanel کې بیا وګورئ.', 'Wrong database password or username — recheck in cPanel → MySQL Databases.')
                             : dbInfo.errorKind === 'NO_DATABASE'
                               ? t('🗄 دیتابیس با این نام پیدا نشد — نام را دقیقاً مثل cPanel بنویسید (مثل username_dbname).', '🗄 ډاټابیس د دې نوم سره نه موندل کېږي — نوم دقیقاً لکه cPanel ولیکئ.', 'Database not found — write the name exactly as in cPanel.')
                               : dbInfo.errorKind === 'NO_TABLES'
                                 ? t('📋 وصل شد ولی جدول‌ها ساخته نشده‌اند — فایل SQL هاست را در phpMyAdmin ایمپورت کنید.', '📋 ونښلول خو جدولونه نه دي جوړ شوي — د SQL هوسټ فایل په phpMyAdmin وارد کړئ.', 'Connected but tables are missing — import the host SQL file in phpMyAdmin.')
                                 : dbInfo.host === '127.0.0.1'
                                   ? t(
-                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) اینترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس سرور SSH، پورت (معمولاً 21098) و نام کاربری/رمز cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
-                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH سرور پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پاسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
+                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) انترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس هاست SSH، پورت (معمولاً 21098) و نام استفاده‌کننده/پاسورد cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
+                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH هاست پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پاسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
                                       '🔗 SSH tunnel cannot connect. Check: (1) internet is on; (2) SSH access enabled in cPanel → Manage Shell; (3) SSH server address, port (usually 21098) and cPanel credentials are correct — the "Test SSH connection" button gives an exact answer. Until the tunnel connects, the app works on the local database.'
                                     )
                                   : t(
-                                      '🌐 سرور MySQL پیدا نشد. اگر هاست شما اشتراکی است (Namecheap و اکثر cPanelها)، اتصال مستقیم پورت 3306 همیشه بسته است — در فرم پایین حالت «تونل SSH» را انتخاب و ذخیره کنید. برای VPS/سرور اختصاصی: (۱) IP دستگاه در Remote MySQL ثبت و به‌روز باشد؛ (۲) پورت 3306 در فایروال باز باشد؛ (۳) آدرس هاست درست باشد.',
-                                      '🌐 د MySQL سرور نه موندل کېږي. که هوسټ مو شریک دی (Namecheap او ډېری cPanel)، مستقیم نښلول 3306 تل تړلی وي — په فرم کې «د SSH تونل» حالت غوره او خوندي کړئ. د VPS لپاره: (۱) IP په Remote MySQL کې اوسمن وي؛ (۲) بورډ 3306 پرانیستی وي؛ (۳) پته سمه وي.',
+                                      '🌐 هاست MySQL پیدا نشد. اگر هاست شما اشتراکی است (Namecheap و اکثر cPanelها)، اتصال مستقیم پورت 3306 همیشه بسته است — در فورم پایین حالت «تونل SSH» را انتخاب و ذخیره کنید. برای VPS/هاست اختصاصی: (۱) IP دستگاه در Remote MySQL ثبت و تازه باشد؛ (۲) پورت 3306 در فایروال باز باشد؛ (۳) آدرس هاست درست باشد.',
+                                      '🌐 د MySQL هاست نه موندل کېږي. که هوسټ مو شریک دی (Namecheap او ډېری cPanel)، مستقیم نښلول 3306 تل تړلی وي — په فورم کې «د SSH تونل» حالت غوره او خوندي کړئ. د VPS لپاره: (۱) IP په Remote MySQL کې اوسمن وي؛ (۲) بورډ 3306 پرانیستی وي؛ (۳) پته سمه وي.',
                                       '🌐 MySQL server not reachable. If you are on shared hosting (Namecheap and most cPanels), direct port 3306 is always blocked — switch to SSH tunnel mode in the form below and save. For VPS/dedicated: (1) your IP registered/updated in Remote MySQL; (2) port 3306 open in firewall; (3) correct host address.'
                                     )}
                         </p>
@@ -1246,7 +1246,7 @@ export default function SettingsModule() {
                     <div>
                       <p>
                         ⚠️ {t(
-                          'هاست در دسترس نیست — برنامه خودکار به دیتابیس محلی برگشته و روی آخرین کپی دیتای سرور کار می‌کند. همهٔ تغییرات محفوظ است و بعد از وصل شدن اینترنت، خودکار با سرور همگام می‌شود.',
+                          'هاست در دسترس نیست — برنامه خودکار به دیتابیس محلی برگشته و روی آخرین کپی دیتای هاست کار می‌کند. همهٔ تغییرات محفوظ است و بعد از وصل شدن انترنت، خودکار با هاست همگام می‌شود.',
                           'هوسټ نه لرېږي — پروګرام اتوماتیک ځایی ډاټابیس ته ګرځېدلی او په وروستۍ کاپي کار کوي. ټول بدلونونه خوندي دي او له نښلېدو وروسته اتوماتیک همغه کېږي.',
                           'Host unreachable — the app automatically switched to the local database (last copy of server data). All changes are safe and will sync automatically once internet returns.'
                         )}
@@ -1257,7 +1257,7 @@ export default function SettingsModule() {
                     </div>
                   ) : (
                     <p>
-                      {t('حالت محلی (SQLite) — دیتا فقط در همین دستگاه ذخیره می‌شود. برای ذخیره در هاست، اطلاعات بالا را پر و ذخیره کنید.', 'ځایی حالت (SQLite) — ډاټا یوازې په همدې ماشین کې خوندي کېږي.', 'Local mode (SQLite) — data is stored only on this device. Fill the form below to store data on your host.')}
+                      {t('حالت محلی (SQLite) — دیتا فقط در همین دستگاه ذخیره می‌شود. برای ذخیره در هاست، معلومات بالا را پر و ذخیره کنید.', 'ځایی حالت (SQLite) — ډاټا یوازې په همدې ماشین کې خوندي کېږي.', 'Local mode (SQLite) — data is stored only on this device. Fill the form below to store data on your host.')}
                       {dbInfo.ok && dbInfo.tableCount != null ? ` (${t(`${dbInfo.tableCount} جدول`, `${dbInfo.tableCount} جدولونه`, `${dbInfo.tableCount} tables`)})` : ''}
                     </p>
                   )}
@@ -1301,7 +1301,7 @@ export default function SettingsModule() {
                 {hostSetupResult && <p className="text-[11px] text-muted-foreground leading-5">{hostSetupResult}</p>}
                 <p className="text-[11px] text-muted-foreground leading-5">
                   {t(
-                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی کاربران محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
+                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی استفاده‌کنندگان محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
                     '«جوړول» نوی/تش هوسټ چمتو کوي (۱۹ جدول + کاپي کارنانو). «انتقال» ټول د دې دستگاه ډاټا هوسټ ته اچي — کله چې مخکې بې هوسټه کارېدئ او اوس هوسټ ته ځئ.',
                     '"Create tables" prepares a fresh/empty host (19 tables + copies local users). "Migrate" pushes all data from this device to the host — for when you worked locally before and now want to move to the host.'
                   )}
@@ -1309,7 +1309,7 @@ export default function SettingsModule() {
               </div>
             )}
 
-            {/* تأیید انتقال دیتا به هاست */}
+            {/* تصدیق انتقال دیتا به هاست */}
             <AlertDialog open={migrateConfirm} onOpenChange={setMigrateConfirm}>
               <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
@@ -1320,15 +1320,15 @@ export default function SettingsModule() {
                   <AlertDialogDescription className="space-y-2 text-sm">
                     <span className="block">
                       {t(
-                        'همهٔ دیتای این دستگاه (محصولات، مشتریان، فاکتورها، تولید و…) به هاست کپی و سطرهای موجود به‌روز می‌شوند. دیتای هاست حذف نمی‌شود.',
+                        'همهٔ دیتای این دستگاه (محصولات، مشتریان، فاکتورها، تولید و…) به هاست کپی و سطرهای موجود تجدید می‌شوند. دیتای هاست حذف نمی‌شود.',
                         'ټول د دې دستگاه ډاټا (محصولات، پیرودونکي، فاکتورونه، تولید او…) هوسټ ته کاپي او موجودې کرښې تازه کېږي. د هوسټ ډاټا نه حذفېږي.',
                         'All data from this device (products, customers, invoices, production…) is copied to the host and existing rows are updated. Nothing on the host is deleted.'
                       )}
                     </span>
                     <span className="block text-muted-foreground">
                       {t(
-                        'این عملیات ممکن است بسته به حجم دیتا چند دقیقه طول بکشد؛ در طول انتقال برنامه را نبندید.',
-                        'دا عملیات کېدای شي د ډاټا حجم پورې څو دقیقې وکړي؛ د لېږد په جریان کې پروګرام مه بنده کړئ.',
+                        'این اجراؤات ممکن است بسته به حجم دیتا چند دقیقه طول بکشد؛ در طول انتقال برنامه را نبندید.',
+                        'دا عملیې کېدای شي د ډاټا حجم پورې څو دقیقې وکړي؛ د لېږد په جریان کې پروګرام مه بنده کړئ.',
                         'This can take a few minutes depending on data size; keep the app open until it finishes.'
                       )}
                     </span>
@@ -1364,7 +1364,7 @@ export default function SettingsModule() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 font-semibold">
                   <ArrowLeftRight className="h-3.5 w-3.5" />
-                  {t('قطع/وصل خودکار اینترنت (همگام‌سازی)', 'اتوماتیک قطع/وصل (همغه کول)', 'Auto online/offline (sync)')}
+                  {t('قطع/وصل خودکار انترنت (همگام‌سازی)', 'اتوماتیک قطع/وصل (همغه کول)', 'Auto online/offline (sync)')}
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('check')} disabled={syncAction !== null}>
@@ -1374,13 +1374,13 @@ export default function SettingsModule() {
                   {connStatus?.mode === 'host-mysql' && (
                     <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('snapshot-now')} disabled={syncAction !== null || connStatus.snapshotting}>
                       <HardDriveDownload className="h-3 w-3" />
-                      {t('کپی دیتای سرور به دستگاه', 'د سرور ډاټا کاپي', 'Copy server data to device')}
+                      {t('کپی دیتای هاست به دستگاه', 'د هاست ډاټا کاپي', 'Copy server data to device')}
                     </Button>
                   )}
                   <Button size="sm" className="h-7 gap-1.5 px-2" onClick={() => void runSyncAction('sync-now')} disabled={syncAction !== null || connStatus?.syncing}>
                     <ArrowLeftRight className="h-3 w-3" />
                     {connStatus?.mode === 'host-offline'
-                      ? t('تلاش برای اتصال و همگام‌سازی', 'هڅه د نښلولو او همغه کولو', 'Try connect & sync')
+                      ? t('کوشش برای اتصال و همگام‌سازی', 'هڅه د نښلولو او همغه کولو', 'Try connect & sync')
                       : t('همگام‌سازی اکنون', 'اوس همغه کول', 'Sync now')}
                   </Button>
                 </div>
@@ -1390,8 +1390,8 @@ export default function SettingsModule() {
                   <>
                     <p>
                       ⚡ {t(
-                        'همگام‌سازی لحظه‌ای فعال است — برنامه با سرعت کامل روی دیتابیس همین دستگاه کار می‌کند و هر تغییر (ثبت، ویرایش، حذف) در چند ثانیه دوطرفه با سرور جابه‌جا می‌شود. دیتای سرور هم خودکار به دستگاه اضافه می‌شود.',
-                        'لحظه‌يي همغه کول فعال دي — پروګرام په بشپړه سرعت سره په ځایی ډاټابیس کار کوي او هر بدلون په څو ثانیو کې دوه اړخیزه له سرور سره تبادله کېږي.',
+                        'همگام‌سازی لحظه‌ای فعال است — برنامه با سرعت کامل روی دیتابیس همین دستگاه کار می‌کند و هر تغییر (ثبت، تصحیح، حذف) در چند ثانیه دوطرفه با هاست جابه‌جا می‌شود. دیتای هاست هم خودکار به دستگاه اضافه می‌شود.',
+                        'لحظه‌يي همغه کول فعال دي — پروګرام په بشپړه سرعت سره په ځایی ډاټابیس کار کوي او هر بدلون په څو ثانیو کې دوه اړخیزه له هاست سره تبادله کېږي.',
                         'Live sync active — the app runs at full speed on this device\u2019s database and every change (create, edit, delete) reaches the server within seconds, while server changes flow back automatically.'
                       )}
                     </p>
@@ -1407,12 +1407,12 @@ export default function SettingsModule() {
                     </p>
                     {connStatus.pendingPush != null && connStatus.pendingPush > 0 && (
                       <p className="font-semibold">
-                        {formatNumber(connStatus.pendingPush)} {t('تغییر در صف ارسال به سرور', 'بدلون په د لیږلو لیبل کې', 'changes queued for upload')}
+                        {formatNumber(connStatus.pendingPush)} {t('تغییر در صف ارسال به هاست', 'بدلون په د لیږلو لیبل کې', 'changes queued for upload')}
                       </p>
                     )}
                     {connStatus.lastSnapshotAt && (
                       <p className="text-[11px] opacity-80">
-                        {t('آخرین کپی کامل سرور:', 'وروستنۍ بشپړه کاپي:', 'Last full server copy:')} <span dir="ltr">{fmtDate(connStatus.lastSnapshotAt)}</span>
+                        {t('آخرین کپی کامل هاست:', 'وروستنۍ بشپړه کاپي:', 'Last full server copy:')} <span dir="ltr">{fmtDate(connStatus.lastSnapshotAt)}</span>
                       </p>
                     )}
                   </>
@@ -1425,18 +1425,18 @@ export default function SettingsModule() {
                     </p>
                     <p>
                       {t(
-                        'هر وقت اینترنت وصل شود (حداکثر ۱۵ ثانیه بعد) همهٔ تغییرات خودکار به سرور منتقل و جدیدترین دیتا دریافت می‌شود — نیازی به هیچ کاری نیست.',
-                        'له انترنت له نښلېدو سره (تر ۱۵ ثانیو) ټول بدلونونه اتوماتیک سرور ته ځي او نوی ډاټا راځي — هیڅ کار ته اړتیا نشته.',
+                        'هر وقت انترنت وصل شود (حداکثر ۱۵ ثانیه بعد) همهٔ تغییرات خودکار به هاست منتقل و جدیدترین دیتا دریافت می‌شود — نیازی به هیچ کاری نیست.',
+                        'له انترنت له نښلېدو سره (تر ۱۵ ثانیو) ټول بدلونونه اتوماتیک هاست ته ځي او نوی ډاټا راځي — هیڅ کار ته اړتیا نشته.',
                         'When internet returns (within ~15 seconds) all changes are pushed to the server and fresh data is pulled automatically — no action needed.'
                       )}
                     </p>
                   </>
                 )}
-                {connStatus?.syncing && <p className="font-semibold">⟳ {t('در حال همگام‌سازی تغییرات با سرور…', 'د سرور سره همغه کول…', 'Syncing changes with server…')}</p>}
+                {connStatus?.syncing && <p className="font-semibold">⟳ {t('در حال همگام‌سازی تغییرات با هاست…', 'د هاست سره همغه کول…', 'Syncing changes with server…')}</p>}
                 {connStatus?.mode === 'local' && (
                   <p>
                     {t(
-                      'هاست تنظیم نشده — دیتا فقط روی همین دستگاه ذخیره می‌شود. برای فعال‌کردن همگام‌سازی خودکار، اطلاعات هاست را در فرم زیر ذخیره کنید.',
+                      'هاست تنظیم نشده — دیتا فقط روی همین دستگاه ذخیره می‌شود. برای فعال‌کردن همگام‌سازی خودکار، معلومات هاست را در فورم زیر ذخیره کنید.',
                       'هوسټ نه دی تنظیم شوی — ډاټا یوازې په همدې دستگاه کې. د فعالولو لپاره د هوسټ معلومات خوندي کړئ.',
                       'No host configured — data stays on this device. Save host details below to enable auto sync.'
                     )}
@@ -1454,14 +1454,14 @@ export default function SettingsModule() {
               <>
                 <p className="text-sm text-muted-foreground">
                   {t(
-                    'نیازی به جستجوی فایل تنظیمات نیست — اطلاعات هاست خود را همین‌جا وارد کنید؛ برنامه فایل db-connection.txt را خودکار می‌نویسد و دوباره باز می‌شود.',
+                    'نیازی به جستجوی فایل تنظیمات نیست — معلومات هاست خود را همین‌جا وارد کنید؛ برنامه فایل db-connection.txt را خودکار می‌نویسد و دوباره باز می‌شود.',
                     'له فایل پلټنې ته اړتیا نشته — د هوسټ معلومات دلته داخل کړئ؛ پروګرام فایل اتوماتیک لیکي او بیا پرانیستل کېږي.',
                     'No need to hunt for the config file — enter your host details here; the app writes db-connection.txt automatically and restarts.'
                   )}
                 </p>
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   {t(
-                    'مهم: برای اولین انتقال دیتای فعلی به هاست، اول دکمه «خروجی JSON (انتقال به هاست)» را بزنید، بعد اینجا وصل شوید و در بخش پشتیبان‌گیری همان فایل را بازیابی کنید. بعد از آن، همه‌چیز خودکار است: در قطعی اینترنت برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، تغییرات خودکار همگام می‌شود.',
+                    'مهم: برای اولین انتقال دیتای فعلی به هاست، اول دکمه «خروجی JSON (انتقال به هاست)» را بزنید، بعد اینجا وصل شوید و در بخش کاپی احتیاطی همان فایل را بازیابی کنید. بعد از آن، همه‌چیز خودکار است: در قطعی انترنت برنامه روی دیتابیس محلی کار می‌کند و بعد از وصل شدن، تغییرات خودکار همگام می‌شود.',
                     'مهم: د لومړي ځل لېږدولو لپاره «د JSON صادرول» وکاروئ، بیا دلته وصل شئ او هماغه فایل بیا رغوئ. وروسته هرڅه اتوماتیک دي.',
                     'Important: for the first migration export the JSON backup, connect here, then restore that file. After that everything is automatic: on internet loss the app works locally and syncs automatically when back online.'
                   )}
@@ -1502,12 +1502,12 @@ export default function SettingsModule() {
                   >
                     <span className="flex items-center gap-2 text-sm font-semibold">
                       <Server className="h-4 w-4 text-primary" />
-                      {t('اتصال مستقیم — VPS / سرور اختصاصی', 'مستقیم نښلول — VPS / ځانګړی سرور', 'Direct connection — VPS / dedicated')}
+                      {t('اتصال مستقیم — VPS / هاست اختصاصی', 'مستقیم نښلول — VPS / ځانګړی هاست', 'Direct connection — VPS / dedicated')}
                     </span>
                     <span className="mt-1 block text-xs text-muted-foreground leading-5">
                       {t(
-                        'وقتی MySQL روی شبکه داخلی یا سروری در دسترس است که پورت 3306 آن باز است.',
-                        'کله چې MySQL په داخلي شبکه یا هغه سرور وي چې بورډ 3306 یې پرانیستی وي.',
+                        'وقتی MySQL روی شبکه داخلی یا هاستی در دسترس است که پورت 3306 آن باز است.',
+                        'کله چې MySQL په داخلي شبکه یا هغه هاست وي چې بورډ 3306 یې پرانیستی وي.',
                         'When MySQL is on a LAN or a server with port 3306 open.'
                       )}
                     </span>
@@ -1521,20 +1521,20 @@ export default function SettingsModule() {
                         {t('تنظیم در cPanel (یک‌بار):', 'په cPanel کې امستنه (یو ځل):', 'Setup in cPanel (once):')}
                       </p>
                       <p>
-                        ۱) {t('«Manage My Databases» → دیتابیس و کاربر بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
+                        ۱) {t('«Manage My Databases» → دیتابیس و استفاده‌کننده بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
                         {'  '}۲) {t('«Manage Shell» → دسترسی SSH را Enable کنید.', '«Manage Shell» → د SSH لاسرسی فعاله کړئ.', '«Manage Shell» → enable SSH access.')}
                       </p>
                       <p>
                         {t(
-                          'آدرس سرور SSH در ایمیل خوش‌آمد هاست است (مثل server370.web-hosting.com)، پورت آن معمولاً 21098، و نام کاربری/رمز SSH همان ورود cPanel است.',
-                          'د SSH سرور پته په د هوسټ د هرکلي بریښنالیک کې ده (لکه server370.web-hosting.com)، بورډ یې معمولاً 21098 دی، او د SSH کاروونکی/پاسورد هماغه د cPanel ننوتل دی.',
+                          'آدرس هاست SSH در ایمیل خوش‌آمد هاست است (مثل server370.web-hosting.com)، پورت آن معمولاً 21098، و نام استفاده‌کننده/پاسورد SSH همان است که با آن به cPanel داخل می‌شوید.',
+                          'د SSH هاست پته په د هوسټ د هرکلي بریښنالیک کې ده (لکه server370.web-hosting.com)، بورډ یې معمولاً 21098 دی، او د SSH کاروونکی/پاسورد هماغه د cPanel ننوتل دی.',
                           'The SSH server address is in your hosting welcome email (e.g. server370.web-hosting.com), port is usually 21098, and SSH user/password are your cPanel login.'
                         )}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="sHost">{t('آدرس سرور SSH', 'د SSH سرور پته', 'SSH server address')}</Label>
+                        <Label htmlFor="sHost">{t('آدرس هاست SSH', 'د SSH هاست پته', 'SSH server address')}</Label>
                         <Input id="sHost" dir="ltr" placeholder="server370.web-hosting.com" autoComplete="off" value={connForm.sshHost} onChange={(e) => setConnForm({ ...connForm, sshHost: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
@@ -1542,11 +1542,11 @@ export default function SettingsModule() {
                         <Input id="sPort" dir="ltr" inputMode="numeric" placeholder="21098" value={connForm.sshPort} onChange={(e) => setConnForm({ ...connForm, sshPort: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="sUser">{t('نام کاربری SSH (همان cPanel)', 'د SSH کاروونکی (همان cPanel)', 'SSH username (same as cPanel)')}</Label>
+                        <Label htmlFor="sUser">{t('نام استفاده‌کننده SSH (همان cPanel)', 'د SSH کاروونکی (همان cPanel)', 'SSH username (same as cPanel)')}</Label>
                         <Input id="sUser" dir="ltr" placeholder="cpuser" autoComplete="off" value={connForm.sshUser} onChange={(e) => setConnForm({ ...connForm, sshUser: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="sPass">{t('رمز SSH (همان رمز cPanel)', 'د SSH پاسورد (همان د cPanel)', 'SSH password (same as cPanel)')}</Label>
+                        <Label htmlFor="sPass">{t('پاسورد SSH (همان پاسورد cPanel)', 'د SSH پاسورد (همان د cPanel)', 'SSH password (same as cPanel)')}</Label>
                         <Input id="sPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.sshPassword} onChange={(e) => setConnForm({ ...connForm, sshPassword: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
@@ -1554,11 +1554,11 @@ export default function SettingsModule() {
                         <Input id="hDb" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                        <Label htmlFor="hUser">{t('نام استفاده‌کننده دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
                         <Input id="hUser" dir="ltr" placeholder="cpuser_factory" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
-                        <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                        <Label htmlFor="hPass">{t('پاسورد دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
                         <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
                       </div>
                     </div>
@@ -1578,11 +1578,11 @@ export default function SettingsModule() {
                       <Input id="hDb" dir="ltr" placeholder="erp_db" autoComplete="off" value={connForm.database} onChange={(e) => setConnForm({ ...connForm, database: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="hUser">{t('نام کاربری دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
+                      <Label htmlFor="hUser">{t('نام استفاده‌کننده دیتابیس', 'د ډاټابیس کاروونکی', 'Database username')}</Label>
                       <Input id="hUser" dir="ltr" placeholder="erp_user" autoComplete="off" value={connForm.user} onChange={(e) => setConnForm({ ...connForm, user: e.target.value })} />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <Label htmlFor="hPass">{t('رمز دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
+                      <Label htmlFor="hPass">{t('پاسورد دیتابیس', 'د ډاټابیس پاسورد', 'Database password')}</Label>
                       <Input id="hPass" dir="ltr" type="password" autoComplete="new-password" value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} />
                     </div>
                   </div>
@@ -1631,7 +1631,7 @@ export default function SettingsModule() {
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     {t(
-                      'توجه: در هاست‌های اشتراکی (Namecheap و اکثر cPanelها) اتصال مستقیم MySQL بسته است و فقط حالت «تونل SSH» کار می‌کند. اتصال مستقیم برای VPS/سرور اختصاصی است.',
+                      'توجه: در هاست‌های اشتراکی (Namecheap و اکثر cPanelها) اتصال مستقیم MySQL بسته است و فقط حالت «تونل SSH» کار می‌کند. اتصال مستقیم برای VPS/هاست اختصاصی است.',
                       'پاملرنه: په شریکو هوسټونو کې مستقیم نښلول تړلی وي — یوازې «د SSH تونل» کار کوي. مستقیم نښلول د VPS لپاره دي.',
                       'Note: on shared hosts (Namecheap and most cPanels) direct MySQL is blocked — only SSH tunnel works. Direct mode is for VPS/dedicated servers.'
                     )}
@@ -1652,7 +1652,7 @@ export default function SettingsModule() {
                     {t('کلیدهای', 'تڼۍ', 'Press')} <b dir="ltr">Win + R</b> {t('را فشار دهید و تایپ کنید:', 'وګړئ او ولیکئ:', 'and type:')}&nbsp;
                     <span dir="ltr" className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">%APPDATA%\ManufacturingERP</span>
                   </li>
-                  <li>{t('فایل db-connection.txt را با Notepad باز کنید و طبق راهنمای داخل آن، خط mysql:// را ویرایش کنید.', 'د db-connection.txt فایل په Notepad کې پرانیزئ او د mysql:// کرښه سم کړئ.', 'Open db-connection.txt in Notepad and edit the mysql:// line as guided inside.')}</li>
+                  <li>{t('فایل db-connection.txt را با Notepad باز کنید و طبق راهنمای داخل آن، خط mysql:// را تصحیح کنید.', 'د db-connection.txt فایل په Notepad کې پرانیزئ او د mysql:// کرښه سم کړئ.', 'Open db-connection.txt in Notepad and edit the mysql:// line as guided inside.')}</li>
                   <li>{t('اگر فایل وجود ندارد یعنی نسخه برنامه شما قدیمی است — نسخه جدید را دانلود و نصب کنید.', 'که فایل نشته، نو ستاسو نسخه زړه ده — نوی نسخه ښکته او نصب کړئ.', 'If the file does not exist, your app version is old — download and install the latest release.')}</li>
                 </ol>
                 <a href="https://github.com/M-1-hashim/manufacturing-management-system/releases/latest" target="_blank" rel="noreferrer" className="inline-block">

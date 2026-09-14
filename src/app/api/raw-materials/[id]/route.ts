@@ -22,7 +22,7 @@ export async function GET(
   }
 }
 
-// PUT /api/raw-materials/[id] — ویرایش ماده خام (فیلدهای ارسال‌شده)
+// PUT /api/raw-materials/[id] — تصحیح ماده خام (فیلدهای ارسال‌شده)
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -90,11 +90,11 @@ export async function PUT(
       return NextResponse.json({ error: 'کود تکراری است؛ کود دیگری انتخاب کنید' }, { status: 400 })
     }
     console.error('raw-material PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش ماده خام' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح ماده خام' }, { status: 500 })
   }
 }
 
-// DELETE /api/raw-materials/[id] — حذف ماده خام (اگر در فرمول‌ها استفاده نشده باشد)
+// DELETE /api/raw-materials/[id] — حذف ماده خام (اگر در فورمولاها استفاده نشده باشد)
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -104,7 +104,7 @@ export async function DELETE(
     const used = await db.formulaItem.count({ where: { rawMaterialId: id } })
     if (used > 0) {
       return NextResponse.json(
-        { error: 'قابل حذف نیست؛ در فرمول‌های تولید استفاده شده است' },
+        { error: 'قابل حذف نیست؛ در فورمولاهای تولید استفاده شده است' },
         { status: 400 }
       )
     }

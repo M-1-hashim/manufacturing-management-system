@@ -17,7 +17,7 @@ import {
   type QueuedOp,
 } from '@/lib/offline-db'
 
-const SKIP_PREFIXES = ['/api/auth/', '/api/admin/'] // نشست/پشتیبان — صف و کش نمی‌شوند
+const SKIP_PREFIXES = ['/api/auth/', '/api/admin/'] // نشست/کاپی احتیاطی — صف و کش نمی‌شوند
 const SYNC_INTERVAL_MS = 45_000
 const MAX_ATTEMPTS = 5
 
@@ -25,14 +25,14 @@ const MSG = {
   fa: {
     queued: 'آفلاین ذخیره شد — پس از وصل شدن، خودکار همگام می‌شود',
     cached: 'نمایش داده‌های ذخیره‌شده (آفلاین)',
-    synced: (n: number) => `${n} عملیات آفلاین با سرور همگام شد`,
-    failed: (n: number) => `${n} عملیات همگام نشد و حذف شد`,
+    synced: (n: number) => `${n} اجراؤات آفلاین با هاست همگام شد`,
+    failed: (n: number) => `${n} اجراؤات همگام نشد و حذف شد`,
   },
   ps: {
     queued: 'افلاین خوندي شو — له نښلېدو وروسته اتوماتیک همغه کیږي',
     cached: 'د خوندي شویو معلوماتو نمایش (افلاین)',
-    synced: (n: number) => `${n} افلاین عملیات سره همغه شول`,
-    failed: (n: number) => `${n} عملیات همغه نه شو`,
+    synced: (n: number) => `${n} افلاین اجراؤات سره همغه شول`,
+    failed: (n: number) => `${n} اجراؤات همغه نه شو`,
   },
   en: {
     queued: 'Saved offline — will sync automatically once back online',
@@ -132,7 +132,7 @@ async function wrappedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
       }
       return res
     } catch (err) {
-      // خطای شبکه (سرور در دسترس نیست) → از کش نمایش بده
+      // خطای شبکه (هاست در دسترس نیست) → از کش نمایش بده
       const c = await cacheGet(pathname)
       if (c) {
         toast.info(m('cached'))
@@ -152,7 +152,7 @@ async function wrappedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     try {
       return await originalFetch!(input, init)
     } catch (err) {
-      // سرور در دسترس نبود اما مرورگر آنلاین گزارش می‌شود → صف کن
+      // هاست در دسترس نبود اما مرورگر آنلاین گزارش می‌شود → صف کن
       return queueWrite(pathname, method, bodyText)
     }
   }
@@ -174,7 +174,7 @@ export async function trySync(): Promise<{ done: number; failed: number } | null
   let networkLost = false
   try {
     for (const op of ops) {
-      // فقط عملیات همین کاربر همگام می‌شود
+      // فقط اجراؤات همین استفاده‌کننده همگام می‌شود
       if (op.user && op.user !== user.username) continue
       try {
         const res = await originalFetch!(op.url, {
@@ -189,7 +189,7 @@ export async function trySync(): Promise<{ done: number; failed: number } | null
           await removeOp(op.id)
           done++
         } else if (res.status === 401) {
-          break // نشست منقضی — پس از ورود دوباره تلاش می‌شود
+          break // نشست ختم شده — پس از ورود دوباره کوشش می‌شود
         } else if (res.status >= 400 && res.status < 500) {
           await removeOp(op.id) // خطای دائمی (مثلاً اعتبارسنجی) — قابل تکرار نیست
           failed++
@@ -220,7 +220,7 @@ export async function trySync(): Promise<{ done: number; failed: number } | null
     if (done > 0) toast.success(m('synced')(done))
     if (failed > 0) toast.error(m('failed')(failed))
     if (done > 0) {
-      // دریافت داده‌های تازه سرور — پاک‌سازی کش و بارگذاری مجدد
+      // دریافت داده‌های تازه هاست — پاک‌سازی کش و بارگیری مجدد
       await cacheClear()
       if (!networkLost) {
         setTimeout(() => window.location.reload(), 1200)
@@ -235,7 +235,7 @@ export async function refreshPendingCount(): Promise<void> {
   useAppStore.getState().setPendingOps(n)
 }
 
-/** خروج/تغییر کاربر — کش داده‌های کاربر قبلی پاک می‌شود (صف عملیات باقی می‌ماند) */
+/** خروج/تغییر استفاده‌کننده — کش داده‌های استفاده‌کننده قبلی پاک می‌شود (صف اجراؤات باقی می‌ماند) */
 export async function clearOfflineCache(): Promise<void> {
   await cacheClear()
 }

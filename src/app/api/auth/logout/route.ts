@@ -14,6 +14,6 @@ export async function POST(req: Request) {
     return res
   } catch (e) {
     console.error('logout error', e)
-    return NextResponse.json({ error: 'خطای داخلی سرور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطای داخلی هاست' }, { status: 500 })
   }
 }

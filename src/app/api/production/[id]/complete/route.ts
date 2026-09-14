@@ -16,10 +16,10 @@ class ApiError extends Error {
  * POST /api/production/[id]/complete
  * تکمیل سفارش تولید به‌صورت اتمیک:
  *  ۱) کسر مواد اولیه از انبار + ثبت تراکنش خروجی برای هر ماده
- *  ۲) افزودن «مقدار خالص» محصول (تولید منهای ضایعات) به انبار + ثبت تراکنش ورودی
+ *  ۲) علاوه کردن «مقدار خالص» محصول (تولید منهای ضایعات) به انبار + ثبت تراکنش ورودی
  *     — ضایعات هرگز به گدام اضافه نمی‌شود، فقط ثبت می‌گردد
- *  ۳) ثبت ضایعات، هزینه‌های نهایی، وضعیت QC و تاریخ پایان
- *  ۴) به‌روزرسانی قیمت تمام‌شده محصول (costPrice) بر اساس مقدار خالص
+ *  ۳) ثبت ضایعات، مصارفی نهایی، وضعیت QC و تاریخ پایان
+ *  ۴) تجدید قیمت تمام‌شده محصول (costPrice) بر اساس مقدار خالص
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -50,7 +50,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (order.status === 'completed') throw new ApiError(400, 'این سفارش قبلاً تکمیل شده است')
       if (order.status === 'cancelled') throw new ApiError(400, 'این سفارش لغو شده است')
 
-      // ضریب: مقدار واقعی تولید نسبت به خروجی یک بچ فرمول
+      // ضریب: مقدار واقعی تولید نسبت به خروجی یک بچ فورمولا
       const multiplier = producedQty / (order.formula.outputQty || 1)
 
       // ۱) کسر مواد اولیه + تراکنش خروجی انبار برای هر ماده
@@ -95,7 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         })
       }
 
-      // ۳) هزینه‌های نهایی بر اساس مقدار واقعی تولیدشده
+      // ۳) مصارفی نهایی بر اساس مقدار واقعی تولیدشده
       const materialCost = order.formula.items.reduce(
         (a, i) => a + i.quantity * multiplier * i.rawMaterial.purchasePrice,
         0,
@@ -129,7 +129,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       })
 
-      // ۴) قیمت تمام‌شده واحد = هزینه کل ÷ مقدار خالص (ضایعات به قیمت اقلام سالم توزیع می‌شود)
+      // ۴) قیمت تمام‌شده واحد = مصرف کل ÷ مقدار خالص (ضایعات به قیمت اقلام سالم توزیع می‌شود)
       if (goodQty > 0) {
         await tx.product.update({
           where: { id: order.productId },

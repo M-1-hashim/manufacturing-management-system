@@ -1,7 +1,7 @@
-// نرخ ارز لحظه‌ای — دریافت از API عمومی واقعی (رایگان بدون کلید)
+// اسعار لحظه‌ای — دریافت از API عمومی واقعی (رایگان بدون کلید)
 // منبع اصلی: exchangerate-api.com (open.er-api.com)
-// منبع پشتیبان: fawazahmed0 currency-api روی CDN jsDelivr
-// کش حافظه ۱ ساعته + ذخیره در دیتابیس تا حتی هنگام قطع اینترنت، آخرین نرخ در دسترس باشد
+// منبع کاپی احتیاطی: fawazahmed0 currency-api روی CDN jsDelivr
+// کش حافظه ۱ ساعته + ذخیره در دیتابیس تا حتی هنگام قطع انترنت، آخرین نرخ در دسترس باشد
 import { db } from '@/lib/db'
 
 export interface LiveRates {
@@ -9,13 +9,13 @@ export interface LiveRates {
   pkr: number // 1 PKR = ? AFN
   source: string // منبع نرخ
   updatedAt: string // آخرین بروزرسانی نرخ از سوی منبع (ISO)
-  fetchedAt: string // زمان دریافت روی سرور (ISO)
-  cached: boolean // از کش حافظه سرور
-  stale: boolean // true → اینترنت در دسترس نبود؛ آخرین نرخ ذخیره‌شده در دیتابیس
+  fetchedAt: string // زمان دریافت روی هاست (ISO)
+  cached: boolean // از کش حافظه هاست
+  stale: boolean // true → انترنت در دسترس نبود؛ آخرین نرخ ذخیره‌شده در دیتابیس
   nextUpdate?: string // بروزرسانی بعدی منبع (ISO)
 }
 
-const TTL_MS = 60 * 60 * 1000 // کش حافظه سرور: ۱ ساعت
+const TTL_MS = 60 * 60 * 1000 // کش حافظه هاست: ۱ ساعت
 const FETCH_TIMEOUT_MS = 8000
 const DEFAULT_USD = 70 // fallback نهایی اگر هیچ منبعی نبود
 const DEFAULT_PKR = 0.25
@@ -76,7 +76,7 @@ async function fromErApi(): Promise<ProviderResult> {
   }
 }
 
-// ---- منبع پشتیبان: currency-api روی jsDelivr ----
+// ---- منبع کاپی احتیاطی: currency-api روی jsDelivr ----
 async function fromJsDelivr(): Promise<ProviderResult> {
   const j = (await fetchJson(
     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json'
@@ -103,7 +103,7 @@ async function fetchLive(): Promise<ProviderResult> {
       lastErr = e
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error('هیچ منبع نرخ ارز در دسترس نیست')
+  throw lastErr instanceof Error ? lastErr : new Error('هیچ منبع اسعار در دسترس نیست')
 }
 
 async function readDbRates(): Promise<Record<string, string>> {
@@ -170,7 +170,7 @@ export async function getLiveRates(force = false): Promise<LiveRates> {
         }
         return result
       } catch {
-        // اینترنت قطع / منابع در دسترس نیست → آخرین نرخ ذخیره‌شده در دیتابیس
+        // انترنت قطع / منابع در دسترس نیست → آخرین نرخ ذخیره‌شده در دیتابیس
         const dbv = await readDbRates()
         const result: LiveRates = {
           usd: Number(dbv.usdRate) > 0 ? Number(dbv.usdRate) : DEFAULT_USD,

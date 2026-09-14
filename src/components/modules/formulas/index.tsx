@@ -1,5 +1,5 @@
 'use client'
-// ماژول فرمول‌نویسی (BOM) — نسخه‌بندی فرمول‌ها، مواد تشکیل‌دهنده و برآورد هزینه
+// ماژول فورمولا‌نویسی (BOM) — نسخه‌بندی فورمولاها، مواد تشکیل‌دهنده و برآورد مصرف
 import { useMemo, useState } from 'react'
 import { useFetch } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
@@ -37,9 +37,9 @@ const fmtQty = (n: number) => (Number.isInteger(n) ? formatNumber(n) : formatNum
 async function errFrom(res: Response): Promise<string> {
   try {
     const j = await res.json()
-    return j?.error || 'خطا در ارتباط با سرور'
+    return j?.error || 'خطا در ارتباط با هاست'
   } catch {
-    return 'خطا در ارتباط با سرور'
+    return 'خطا در ارتباط با هاست'
   }
 }
 
@@ -54,7 +54,7 @@ export default function FormulasModule() {
 
   const [search, setSearch] = useState('')
 
-  // حالت دیالوگ ثبت/ویرایش
+  // حالت دیالوگ ثبت/تصحیح
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FormulaT | null>(null)
   const [saving, setSaving] = useState(false)
@@ -151,7 +151,7 @@ export default function FormulasModule() {
       return
     }
     if (!form.name.trim()) {
-      toast.error(t('نام فرمول را وارد کنید', 'د فورمول نوم ولیکئ', 'Formula name is required'))
+      toast.error(t('نام فورمولا را وارد کنید', 'د فورمول نوم ولیکئ', 'Formula name is required'))
       return
     }
     const validItems = items.filter((it) => it.rawMaterialId && Number(it.quantity) > 0)
@@ -187,8 +187,8 @@ export default function FormulasModule() {
         return
       }
       toast.success(editing
-        ? t('فرمول به‌روزرسانی شد', 'فورمول تازه شو', 'Formula updated')
-        : t('فرمول جدید ثبت شد', 'نوی فورمول ثبت شو', 'Formula created'))
+        ? t('فورمولا تجدید شد', 'فورمول تازه شو', 'Formula updated')
+        : t('فورمولا جدید ثبت شد', 'نوی فورمول ثبت شو', 'Formula created'))
       setOpen(false)
       refetch()
     } finally {
@@ -196,7 +196,7 @@ export default function FormulasModule() {
     }
   }
 
-  // ---------- عملیات کارت ----------
+  // ---------- اجراؤات کارت ----------
   async function toggleActive(f: FormulaT, next: boolean) {
     const res = await fetch(`/api/formulas/${f.id}`, {
       method: 'PUT',
@@ -208,8 +208,8 @@ export default function FormulasModule() {
       return
     }
     toast.success(next
-      ? t('فرمول فعال شد', 'فورمول فعال شو', 'Formula activated')
-      : t('فرمول غیرفعال شد', 'فورمول غیرفعال شو', 'Formula deactivated'))
+      ? t('فورمولا فعال شد', 'فورمول فعال شو', 'Formula activated')
+      : t('فورمولا غیرفعال شد', 'فورمول غیرفعال شو', 'Formula deactivated'))
     refetch()
   }
 
@@ -248,7 +248,7 @@ export default function FormulasModule() {
         toast.error(await errFrom(res))
         return
       }
-      toast.success(t('فرمول حذف شد', 'فورمول ړنګ شو', 'Formula deleted'))
+      toast.success(t('فورمولا حذف شد', 'فورمول ړنګ شو', 'Formula deleted'))
       setDeleteTarget(null)
       refetch()
     } finally {
@@ -260,13 +260,13 @@ export default function FormulasModule() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={t('فرمول‌نویسی (BOM)', 'فورمول جوړونه (BOM)', 'Formulation (BOM)')}
-        subtitle={t('تعریف ترکیب مواد اولیه و هزینه‌های هر محصول', 'د هر محصول خامو موادو ترکیب او لګښتونه', 'Define material composition and costs per product')}
+        title={t('فورمولا‌نویسی (BOM)', 'فورمول جوړونه (BOM)', 'Formulation (BOM)')}
+        subtitle={t('تعریف ترکیب مواد اولیه و مصارفی هر محصول', 'د هر محصول خامو موادو ترکیب او لګښتونه', 'Define material composition and costs per product')}
         icon={FlaskConical}
         actions={
           <Button onClick={openCreate} className="gap-1.5">
             <Plus className="h-4 w-4" />
-            {t('فرمول جدید', 'نوی فورمول', 'New Formula')}
+            {t('فورمولا جدید', 'نوی فورمول', 'New Formula')}
           </Button>
         }
       />
@@ -277,7 +277,7 @@ export default function FormulasModule() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('جستجوی محصول یا نام فرمول...', 'د محصول یا فورمول لټون...', 'Search product or formula name...')}
+          placeholder={t('جستجوی محصول یا نام فورمولا...', 'د محصول یا فورمول لټون...', 'Search product or formula name...')}
           className="ps-9"
         />
       </div>
@@ -343,7 +343,7 @@ export default function FormulasModule() {
 
                   <Separator />
 
-                  {/* تفکیک هزینه */}
+                  {/* تفکیک مصرف */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">{t('مواد', 'مواد', 'Materials')}</span>
@@ -358,14 +358,14 @@ export default function FormulasModule() {
                       <span className="font-medium">{formatMoney(f.overheadCost)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">{t('هزینه هر واحد', 'د هرې واحدې لګښت', 'Cost per unit')}</span>
+                      <span className="text-muted-foreground">{t('مصرف هر واحد', 'د هرې واحدې لګښت', 'Cost per unit')}</span>
                       <span className="font-medium">{formatMoney(unitCost)}</span>
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{t('هزینه کل برای یک بچ', 'د یوې بچې ټول لګښت', 'Total cost per batch')}</span>
+                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{t('مصرف کل برای یک بچ', 'د یوې بچې ټول لګښت', 'Total cost per batch')}</span>
                       <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(batchTotal)}</span>
                     </div>
                   </div>
@@ -377,7 +377,7 @@ export default function FormulasModule() {
                   <div className="flex items-center gap-1.5 pt-1">
                     <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(f)}>
                       <Pencil className="h-3.5 w-3.5" />
-                      {t('ویرایش', 'سمول', 'Edit')}
+                      {t('تصحیح', 'سمول', 'Edit')}
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1" onClick={() => setVersionTarget(f)}>
                       <CopyPlus className="h-3.5 w-3.5" />
@@ -400,14 +400,14 @@ export default function FormulasModule() {
         </div>
       )}
 
-      {/* ---------- دیالوگ فرمول ---------- */}
+      {/* ---------- دیالوگ فورمولا ---------- */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? t('ویرایش فرمول', 'د فورمول سمول', 'Edit Formula')
-                : t('فرمول جدید', 'نوی فورمول', 'New Formula')}
+                ? t('تصحیح فورمولا', 'د فورمول سمول', 'Edit Formula')
+                : t('فورمولا جدید', 'نوی فورمول', 'New Formula')}
             </DialogTitle>
           </DialogHeader>
 
@@ -427,8 +427,8 @@ export default function FormulasModule() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{t('نام فرمول', 'د فورمول نوم', 'Formula name')} *</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('مثال: فرمول شیر پاستوریزه', 'بېلګه: د پاستوریزه شیدو فورمول', 'e.g. Pasteurized milk formula')} />
+                  <Label>{t('نام فورمولا', 'د فورمول نوم', 'Formula name')} *</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('مثال: فورمولا شیر پاستوریزه', 'بېلګه: د پاستوریزه شیدو فورمول', 'e.g. Pasteurized milk formula')} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -452,13 +452,13 @@ export default function FormulasModule() {
                 </div>
               </div>
 
-              {/* ویرایشگر مواد */}
+              {/* تصحیحگر مواد */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>{t('مواد اولیه', 'خام مواد', 'Raw materials')} *</Label>
                   <Button type="button" size="sm" variant="outline" className="gap-1 h-8" onClick={addItem}>
                     <Plus className="h-3.5 w-3.5" />
-                    {t('افزودن ماده', 'ماده زیاتول', 'Add material')}
+                    {t('علاوه کردن ماده', 'ماده زیاتول', 'Add material')}
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -499,15 +499,15 @@ export default function FormulasModule() {
 
               <div className="space-y-1.5">
                 <Label>{t('یادداشت', 'یادښت', 'Notes')}</Label>
-                <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('توضیحات فرمول...', 'د فورمول توضیحات...', 'Formula notes...')} />
+                <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('توضیحات فورمولا...', 'د فورمول توضیحات...', 'Formula notes...')} />
               </div>
             </div>
 
-            {/* پنل پیش‌نمایش هزینه */}
+            {/* پنل پیش‌نمایش مصرف */}
             <div className="rounded-xl border bg-muted/40 p-3 space-y-2.5 self-start">
               <p className="text-sm font-semibold flex items-center gap-1.5">
                 <Calculator className="h-4 w-4 text-emerald-600" />
-                {t('پیش‌نمایش هزینه', 'د لګښت مخکتنه', 'Cost preview')}
+                {t('پیش‌نمایش مصرف', 'د لګښت مخکتنه', 'Cost preview')}
               </p>
               <Separator />
               <div className="space-y-1.5 text-sm">
@@ -530,7 +530,7 @@ export default function FormulasModule() {
                 <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatMoney(draftTotal)}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-foreground">{t('هزینه هر واحد', 'د هرې واحدې لګښت', 'Cost per unit')}</span>
+                <span className="text-sm text-muted-foreground">{t('مصرف هر واحد', 'د هرې واحدې لګښت', 'Cost per unit')}</span>
                 <span className="font-semibold">{formatMoney(draftUnitCost)}</span>
               </div>
               <p className="text-[11px] leading-4 text-muted-foreground">
@@ -542,21 +542,21 @@ export default function FormulasModule() {
           <div className="flex items-center justify-start gap-2 pt-2">
             <Button onClick={submit} disabled={saving} className="gap-1.5">
               <Plus className="h-4 w-4" />
-              {saving ? t('در حال ذخیره...', 'په ذخیره کې...', 'Saving...') : editing ? t('ذخیره تغییرات', 'بدلونونه ذخیره', 'Save changes') : t('ثبت فرمول', 'د فورمول ثبت', 'Create formula')}
+              {saving ? t('در حال ذخیره...', 'په ذخیره کې...', 'Saving...') : editing ? t('ذخیره تغییرات', 'بدلونونه ذخیره', 'Save changes') : t('ثبت فورمولا', 'د فورمول ثبت', 'Create formula')}
             </Button>
             <Button variant="outline" onClick={() => setOpen(false)}>{t('انصراف', 'لغوه', 'Cancel')}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ---------- تأیید نسخه جدید ---------- */}
+      {/* ---------- تصدیق نسخه جدید ---------- */}
       <AlertDialog open={!!versionTarget} onOpenChange={(v) => !v && setVersionTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('ساخت نسخه جدید فرمول', 'د فورمول نوی نسخه جوړول', 'Create new formula version?')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('ساخت نسخه جدید فورمولا', 'د فورمول نوی نسخه جوړول', 'Create new formula version?')}</AlertDialogTitle>
             <AlertDialogDescription>
               {t(
-                `نسخه جدیدی از «${versionTarget?.name ?? ''}» ساخته می‌شود و فرمول فعلی غیرفعال خواهد شد. آیا مطمئن هستید؟`,
+                `نسخه جدیدی از «${versionTarget?.name ?? ''}» ساخته می‌شود و فورمولا فعلی غیرفعال خواهد شد. آیا مطمئن هستید؟`,
                 `«${versionTarget?.name ?? ''}» نوی نسخه جوړېږي او اوسنی فورمول غیرفعال کېږي. ډاډه یاست؟`,
                 `A new version of "${versionTarget?.name ?? ''}" will be created and the current formula will be deactivated. Are you sure?`,
               )}
@@ -571,14 +571,14 @@ export default function FormulasModule() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ---------- تأیید حذف ---------- */}
+      {/* ---------- تصدیق حذف ---------- */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('حذف فرمول', 'د فورمول ړنګول', 'Delete formula?')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('حذف فورمولا', 'د فورمول ړنګول', 'Delete formula?')}</AlertDialogTitle>
             <AlertDialogDescription>
               {t(
-                `فرمول «${deleteTarget?.name ?? ''}» برای همیشه حذف می‌شود. این عمل قابل بازگشت نیست.`,
+                `فورمولا «${deleteTarget?.name ?? ''}» برای همیشه حذف می‌شود. این عمل قابل بازگشت نیست.`,
                 `فورمول «${deleteTarget?.name ?? ''}» د تل لپاره ړنګېږي. دا عمل بېرته نه ګرځي.`,
                 `Formula "${deleteTarget?.name ?? ''}" will be permanently deleted. This cannot be undone.`,
               )}
@@ -600,7 +600,7 @@ export default function FormulasModule() {
   )
 }
 
-// مجموع مقادیر مواد یک فرمول (برای درصد نمایشی)
+// مجموع مقادیر مواد یک فورمولا (برای درصد نمایشی)
 function sumOfItems(f: FormulaT): number {
   return f.items.reduce((a, i) => a + i.quantity, 0)
 }

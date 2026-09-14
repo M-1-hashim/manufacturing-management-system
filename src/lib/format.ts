@@ -61,12 +61,12 @@ const MONTHS_FA = [
   'میزان', 'عقرب', 'قوس', 'جدی', 'دلو', 'حوت',
 ]
 
-/** نام ماه شمسی برای نمودارها */
+/** نام ماه شمسی برای چارتها */
 export function jalaliMonthName(jm: number): string {
   return MONTHS_FA[jm - 1] ?? String(jm)
 }
 
-/** برچسب کوتاه برای نمودارها بر اساس تاریخ */
+/** برچسب کوتاه برای چارتها بر اساس تاریخ */
 export function shortDateLabel(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
   try {

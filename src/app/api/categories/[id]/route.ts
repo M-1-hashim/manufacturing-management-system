@@ -28,7 +28,7 @@ export async function PUT(
       return NextResponse.json({ error: 'نام دسته‌بندی تکراری است' }, { status: 400 })
     }
     console.error('category PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش دسته‌بندی' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح دسته‌بندی' }, { status: 500 })
   }
 }
 

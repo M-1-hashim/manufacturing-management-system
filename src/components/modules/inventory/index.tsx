@@ -130,7 +130,7 @@ async function jsonReq(url: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   })
   const json = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(json?.error || `خطا در عملیات (${res.status})`)
+  if (!res.ok) throw new Error(json?.error || `خطا در اجراؤات (${res.status})`)
   return json
 }
 
@@ -171,7 +171,7 @@ export default function InventoryModule() {
     ? matsData
     : (inv?.materials ?? []).map((m) => ({ id: m.id, name: m.name, unit: m.unit }))
 
-  // ---------- فرم حرکت جدید ----------
+  // ---------- فورم حرکت جدید ----------
   const [moveOpen, setMoveOpen] = useState(false)
   const [mType, setMType] = useState('in')
   const [mItemType, setMItemType] = useState('product')
@@ -266,7 +266,7 @@ export default function InventoryModule() {
           name: whName,
           location: whLoc || null,
         })
-        toast.success(t('انبار ویرایش شد', 'انبار سمون شو', 'Warehouse updated'))
+        toast.success(t('انبار تصحیح شد', 'انبار سمون شو', 'Warehouse updated'))
       } else {
         await jsonReq('/api/warehouses', 'POST', { name: whName, location: whLoc || null })
         toast.success(t('انبار ثبت شد', 'انبار ثبت شو', 'Warehouse created'))
@@ -307,9 +307,9 @@ export default function InventoryModule() {
     if (!d) return null
     const time = new Date(d).getTime()
     if (time < Date.now())
-      return { label: t('منقضی', 'ناړه', 'Expired'), cls: EXPIRY_BADGES.expired }
+      return { label: t('ختم شده', 'ناړه', 'Expired'), cls: EXPIRY_BADGES.expired }
     if (time - Date.now() <= 7 * 86400_000)
-      return { label: t('نزدیک انقضا', 'نږدې د پای', 'Expiring soon'), cls: EXPIRY_BADGES.near }
+      return { label: t('نزدیک ختم', 'نږدې د پای', 'Expiring soon'), cls: EXPIRY_BADGES.near }
     return null
   }
 
@@ -573,7 +573,7 @@ export default function InventoryModule() {
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">
                               {t('حداقل', 'لږترلږه', 'Min')}: {formatNumber(m.minStock)} •{' '}
-                              {t('انقضا', 'پای', 'Expiry')}: {toJalaliStr(m.expiryDate)} •{' '}
+                              {t('ختم', 'پای', 'Expiry')}: {toJalaliStr(m.expiryDate)} •{' '}
                               {formatMoney(m.value)}
                             </div>
                             <Progress
@@ -780,7 +780,7 @@ export default function InventoryModule() {
                 dir="ltr"
                 value={mRef}
                 onChange={(e) => setMRef(e.target.value)}
-                placeholder={t('شماره فاکتور / سفارش', 'د بل شمېره', 'Invoice / order no.')}
+                placeholder={t('نمبر فاکتور / سفارش', 'د بل شمېره', 'Invoice / order no.')}
               />
             </div>
             <div className="space-y-1.5">
@@ -801,13 +801,13 @@ export default function InventoryModule() {
         </DialogContent>
       </Dialog>
 
-      {/* ---------- دیالوگ انبار جدید/ویرایش ---------- */}
+      {/* ---------- دیالوگ انبار جدید/تصحیح ---------- */}
       <Dialog open={whOpen} onOpenChange={setWhOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
               {whEditing
-                ? t('ویرایش انبار', 'د انبار سمون', 'Edit Warehouse')
+                ? t('تصحیح انبار', 'د انبار سمون', 'Edit Warehouse')
                 : t('انبار جدید', 'نوی انبار', 'New Warehouse')}
             </DialogTitle>
           </DialogHeader>
@@ -832,7 +832,7 @@ export default function InventoryModule() {
         </DialogContent>
       </Dialog>
 
-      {/* ---------- تأیید حذف انبار ---------- */}
+      {/* ---------- تصدیق حذف انبار ---------- */}
       <AlertDialog open={!!delWh} onOpenChange={(o) => !o && setDelWh(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

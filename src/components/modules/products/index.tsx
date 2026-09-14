@@ -296,12 +296,12 @@ export default function ProductsModule() {
         return
       }
       toast.success(editing
-        ? t('به‌روزرسانی شد', 'تازه شو', 'Updated')
+        ? t('تجدید شد', 'تازه شو', 'Updated')
         : t('ثبت شد', 'ثبت شو', 'Saved'))
       setDialogOpen(false)
       products.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'د هاست سره اتصال خطا', 'Server connection error'))
     } finally {
       setSaving(false)
     }
@@ -320,7 +320,7 @@ export default function ProductsModule() {
       setToDelete(null)
       products.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'د هاست سره اتصال خطا', 'Server connection error'))
     }
   }
 
@@ -361,13 +361,13 @@ export default function ProductsModule() {
       })
       const json = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
-        toast.error(json.error ?? t('خطا در ویرایش', 'خطا په سمون کې', 'Update failed'))
+        toast.error(json.error ?? t('خطا در تصحیح', 'خطا په سمون کې', 'Update failed'))
         return
       }
       setEditingCatId(null)
       categories.refetch()
       products.refetch()
-      toast.success(t('به‌روزرسانی شد', 'تازه شو', 'Updated'))
+      toast.success(t('تجدید شد', 'تازه شو', 'Updated'))
     } finally {
       setCatBusy(false)
     }
@@ -387,7 +387,7 @@ export default function ProductsModule() {
       categories.refetch()
       products.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'د هاست سره اتصال خطا', 'Server connection error'))
     }
   }
 
@@ -569,7 +569,7 @@ export default function ProductsModule() {
                     <TableHead>{t('فروش / عمده', 'پلور / پرچون', 'Sale / Wholesale')}</TableHead>
                     <TableHead>{t('بارکد', 'بارکوډ', 'Barcode')}</TableHead>
                     <TableHead>{t('وضعیت', 'حالت', 'Status')}</TableHead>
-                    <TableHead>{t('عملیات', 'عمليې', 'Actions')}</TableHead>
+                    <TableHead>{t('اجراؤات', 'عمليې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -633,7 +633,7 @@ export default function ProductsModule() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              title={t('ویرایش', 'سمول', 'Edit')}
+                              title={t('تصحیح', 'سمول', 'Edit')}
                               onClick={() => openEdit(p)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -665,7 +665,7 @@ export default function ProductsModule() {
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? t('ویرایش محصول', 'د محصول سمول', 'Edit product')
+                ? t('تصحیح محصول', 'د محصول سمول', 'Edit product')
                 : t('محصول جدید', 'نوی محصول', 'New product')}
             </DialogTitle>
             <DialogDescription>
@@ -840,7 +840,7 @@ export default function ProductsModule() {
           <DialogHeader>
             <DialogTitle>{t('دسته‌بندی محصولات', 'د محصولاتو کټګورۍ', 'Product categories')}</DialogTitle>
             <DialogDescription>
-              {t('افزودن، تغییر نام و حذف دسته‌بندی‌ها', 'اضافه کول، نوم بدلول او پاکول', 'Add, rename and delete categories')}
+              {t('علاوه کردن، تغییر نام و حذف دسته‌بندی‌ها', 'اضافه کول، نوم بدلول او پاکول', 'Add, rename and delete categories')}
             </DialogDescription>
           </DialogHeader>
 
@@ -853,7 +853,7 @@ export default function ProductsModule() {
             />
             <Button onClick={addCategory} disabled={catBusy || !newCat.trim()}>
               <Plus className="h-4 w-4" />
-              {t('افزودن', 'اضافه', 'Add')}
+              {t('علاوه کردن', 'اضافه', 'Add')}
             </Button>
           </div>
 
@@ -925,7 +925,7 @@ export default function ProductsModule() {
         </DialogContent>
       </Dialog>
 
-      {/* تأیید حذف محصول */}
+      {/* تصدیق حذف محصول */}
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -959,7 +959,7 @@ export default function ProductsModule() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* تأیید حذف دسته‌بندی */}
+      {/* تصدیق حذف دسته‌بندی */}
       <AlertDialog open={!!catToDelete} onOpenChange={(o) => !o && setCatToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -990,7 +990,7 @@ export default function ProductsModule() {
   )
 }
 
-// آیکن بارگذاری کوچک داخل دکمه
+// آیکن بارگیری کوچک داخل دکمه
 function LoadingIcon() {
   return (
     <span className="me-1 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent align-[-2px]" />

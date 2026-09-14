@@ -11,6 +11,6 @@ export async function GET(req: Request) {
     return NextResponse.json(rates)
   } catch (e) {
     console.error('exchange-rate GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت نرخ ارز' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت اسعار' }, { status: 500 })
   }
 }

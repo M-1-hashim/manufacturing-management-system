@@ -3,7 +3,7 @@ import path from 'path'
 import { PrismaClient } from '@prisma/client'
 
 /*
- * پشتیبانی دوگانه از دیتابیس + معماری «محلی‌محور» (Local-First) — قلب نسخهٔ دسکتاپ:
+ * کاپی احتیاطیی دوگانه از دیتابیس + معماری «محلی‌محور» (Local-First) — قلب نسخهٔ دسکتاپ:
  *
  * ۱) کلاینت Prisma در زمان build به یک provider قفل می‌شود (sqlite یا mysql).
  *    اسکریپت دسکتاپ (electron/build-desktop.sh) دو کلاینت می‌سازد:
@@ -138,7 +138,7 @@ function wrapDelegateForJournal(table: string, delegate: object): object {
               try {
                 core.journalHook?.(table, args?.where ?? {})
               } catch (e) {
-                // ژورنال هرگز نباید عملیات اصلی را بشکند
+                // ژورنال هرگز نباید اجراؤات اصلی را بشکند
                 console.error('[db] delete journal failed:', e)
               }
             })
@@ -213,7 +213,7 @@ export interface DbInternals {
   mysqlConfigured(): boolean
   /** آیا دیتابیس محلی (SQLite) موجود است؟ */
   hasLocal(): boolean
-  /** آدرس هاست (بدون رمز) برای نمایش */
+  /** آدرس هاست (بدون پاسورد) برای نمایش */
   mysqlInfo(): { host: string; port: string; database: string } | null
   /** ثبت قلاب ژورنال حذف (sync-engine) */
   registerDeleteJournal(fn: (table: string, where: unknown) => void): void

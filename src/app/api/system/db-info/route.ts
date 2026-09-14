@@ -5,7 +5,7 @@ import { APP_VERSION } from '@/lib/app-version'
 
 /*
  * وضعیت اتصال دیتابیس — برای کارت «اتصال برنامه به هاست» در تنظیمات.
- * به کاربر نشان می‌دهد برنامه واقعاً به کدام دیتابیس وصل است، نسخهٔ سرور،
+ * به استفاده‌کننده نشان می‌دهد برنامه واقعاً به کدام دیتابیس وصل است، نسخهٔ هاست،
  * و اینکه ۱۹ جدول سیستم کامل ساخته شده است یا نه.
  *
  * حالت‌ها:
@@ -13,8 +13,8 @@ import { APP_VERSION } from '@/lib/app-version'
  *   host-offline → هاست در دسترس نیست؛ برنامه روی کپی محلی (SQLite) کار
  *                  می‌کند — آخرین خطای هاست + زمان اسنپ‌شات محلی گزارش می‌شود
  *   local-sqlite → حالت محلی بدون هاست
- * در حالت خطا، کد Prisma/MySQL به تشخیص سادهٔ فارسی ترجمه می‌شود تا کاربر
- * بدون دانش فنی بفهمد مشکل کجاست (پورت بسته؟ رمز غلط؟ جدول‌های ناقص؟).
+ * در حالت خطا، کد Prisma/MySQL به تشخیص سادهٔ فارسی ترجمه می‌شود تا استفاده‌کننده
+ * بدون دانش فنی بفهمد مشکل کجاست (پورت بسته؟ پاسورد غلط؟ جدول‌های ناقص؟).
  */
 
 export const dynamic = 'force-dynamic'
@@ -37,7 +37,7 @@ function parseUrl(url: string) {
 
 type ErrorKind =
   | 'UNREACHABLE' // پورت/فایروال/Remote MySQL
-  | 'AUTH' // رمز یا کاربر غلط
+  | 'AUTH' // پاسورد یا استفاده‌کننده غلط
   | 'NO_DATABASE' // نام دیتابیس غلط
   | 'NO_TABLES' // جدول‌ها ساخته نشده
   | 'BAD_URL' // آدرس خراب
@@ -112,7 +112,7 @@ export async function GET() {
       expectedCount: EXPECTED_TABLES.length,
       missingTables: missing,
       schemaComplete: missing.length === 0,
-      // اطلاعات حالت آفلاین
+      // معلومات حالت آفلاین
       lastHostError: mgr.lastError,
       lastHostErrorKind: mgr.lastErrorKind,
       lastHostErrorCode: mgr.lastErrorCode,

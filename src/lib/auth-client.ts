@@ -1,24 +1,24 @@
 'use client'
 
-// مدیریت متمرکز انقضای نشست در سمت کلاینت
-// هر جای برنامه که پاسخ 401 برسد: وضعیت کاربر پاک و پیام مناسب نمایش داده می‌شود
+// مدیریت متمرکز ختم نشست در سمت کلاینت
+// هر جای برنامه که پاسخ 401 برسد: وضعیت استفاده‌کننده پاک و پیام مناسب نمایش داده می‌شود
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import type { Lang } from '@/lib/i18n'
 
 const MESSAGES: Record<Lang, string> = {
-  fa: 'نشست شما منقضی شده است؛ لطفاً دوباره وارد شوید',
+  fa: 'نشست شما ختم شده است؛ لطفاً دوباره داخل شوید',
   ps: 'ستاسو ناسته پای ته رسیدلې؛ مهرباني وکړئ بیا ننوځئ',
   en: 'Your session has expired; please sign in again',
 }
 
 let lastNotify = 0
 
-/** پاک‌سازی کاربر جاری و نمایش پیام انقضای نشست (حداکثر یک‌بار در ۳ ثانیه) */
+/** پاک‌سازی استفاده‌کننده جاری و نمایش پیام ختم نشست (حداکثر یک‌بار در ۳ ثانیه) */
 export function notifyAuthFailure(): void {
   const before = useAppStore.getState().user
   useAppStore.getState().setUser(null)
-  // اگر کاربری وارد نبود، پیام انقضا بی‌معنی است (مثلاً صفحه ورود)
+  // اگر کاربری وارد نبود، پیام ختم بی‌معنی است (مثلاً صفحه ورود)
   if (!before) return
   const now = Date.now()
   if (now - lastNotify < 3000) return

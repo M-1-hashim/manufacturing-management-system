@@ -6,7 +6,7 @@ const ORDER_INCLUDE = {
   product: true,
 } as const
 
-// GET /api/production/[id] — یک سفارش تولید با جزئیات
+// GET /api/production/[id] — یک سفارش تولید با تفصیلات
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
-// PUT /api/production/[id] — به‌روزرسانی محدود: qcStatus، qcNotes، notes و وضعیت
+// PUT /api/production/[id] — تجدید محدود: qcStatus، qcNotes، notes و وضعیت
 // (تکمیل تولید فقط از طریق /complete انجام می‌شود)
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -67,7 +67,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'فیلد قابل به‌روزرسانی ارسال نشده است' }, { status: 400 })
+      return NextResponse.json({ error: 'فیلد قابل تجدید ارسال نشده است' }, { status: 400 })
     }
 
     const updated = await db.productionOrder.update({
@@ -78,7 +78,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(updated)
   } catch (e) {
     console.error('production PUT [id]', e)
-    return NextResponse.json({ error: 'خطا در به‌روزرسانی سفارش' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تجدید سفارش' }, { status: 500 })
   }
 }
 

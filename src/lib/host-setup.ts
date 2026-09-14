@@ -15,11 +15,11 @@ import type { ClientPair } from '@/lib/sync-engine'
  *    (ALTER TABLE ADD COLUMN — بی‌خطر و تکرارپذیر).
  *
  * ۳) بوت‌استرپ: اگر جدول User روی هاست «خالی» باشد ولی دستگاه محلی
- *    کاربر داشته باشد، همان کاربران (از جمله ادمین) + تنظیمات شرکت به
+ *    استفاده‌کننده داشته باشد، همان استفاده‌کنندگان (از جمله ادمین) + تنظیمات شرکت به
  *    هاست کپی می‌شوند تا ورود به سیستم بلافاصله بعد از اتصال به هاست
  *    کار کند.
  *
- * این عملیات در شروع برنامه (بعد از اولین پینگ موفق هاست) و از طریق
+ * این اجراؤات در شروع برنامه (بعد از اولین پینگ موفق هاست) و از طریق
  * API ادمین (/api/system/db-setup) قابل اجراست.
  */
 
@@ -208,7 +208,7 @@ export async function migrateHostSchema(
   return { migratedColumns, failed }
 }
 
-/** تعداد کاربران و تنظیمات روی هاست */
+/** تعداد استفاده‌کنندگان و تنظیمات روی هاست */
 async function hostCounts(client: ClientPair['server']): Promise<{ users: number; settings: number }> {
   const users = await client.$queryRawUnsafe<Array<{ n: number }>>(`SELECT COUNT(*) AS n FROM \`User\``)
   const settings = await client.$queryRawUnsafe<Array<{ n: number }>>(`SELECT COUNT(*) AS n FROM \`Setting\``)
@@ -216,7 +216,7 @@ async function hostCounts(client: ClientPair['server']): Promise<{ users: number
 }
 
 /**
- * راه‌اندازی کامل هاست: جدول‌ها + مهاجرت ستون‌ها + بوت‌استرپ کاربران/تنظیمات.
+ * راه‌اندازی کامل هاست: جدول‌ها + مهاجرت ستون‌ها + بوت‌استرپ استفاده‌کنندگان/تنظیمات.
  */
 export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport> {
   const report: HostSetupReport = {

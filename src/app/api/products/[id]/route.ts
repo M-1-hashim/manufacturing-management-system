@@ -22,7 +22,7 @@ export async function GET(
   }
 }
 
-// PUT /api/products/[id] — ویرایش محصول (فیلدهای ارسال‌شده به‌روزرسانی می‌شوند)
+// PUT /api/products/[id] — تصحیح محصول (فیلدهای ارسال‌شده تجدید می‌شوند)
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -84,11 +84,11 @@ export async function PUT(
       return NextResponse.json({ error: 'کود تکراری است؛ کود دیگری انتخاب کنید' }, { status: 400 })
     }
     console.error('product PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش محصول' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح محصول' }, { status: 500 })
   }
 }
 
-// DELETE /api/products/[id] — حذف محصول (اگر سوابق فروش/فرمول/تولید نداشته باشد)
+// DELETE /api/products/[id] — حذف محصول (اگر سوابق فروش/فورمولا/تولید نداشته باشد)
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

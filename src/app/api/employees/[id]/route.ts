@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// PUT /api/employees/[id] — ویرایش کارمند
+// PUT /api/employees/[id] — تصحیح کارمند
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -16,7 +16,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (body.salary !== undefined) {
       const salary = Number(body.salary)
       if (!salary || isNaN(salary) || salary <= 0)
-        return NextResponse.json({ error: 'حقوق باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+        return NextResponse.json({ error: 'معاش باید بزرگ‌تر از صفر باشد' }, { status: 400 })
       data.salary = salary
     }
     if (body.hireDate !== undefined && body.hireDate !== null && body.hireDate !== '') {
@@ -36,11 +36,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(row)
   } catch (e) {
     console.error('employees PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش کارمند' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح کارمند' }, { status: 500 })
   }
 }
 
-// DELETE /api/employees/[id] — حذف (مسدود اگر سوابق حضور/حقوق داشته باشد)
+// DELETE /api/employees/[id] — حذف (مسدود اگر سوابق حضور/معاش داشته باشد)
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params

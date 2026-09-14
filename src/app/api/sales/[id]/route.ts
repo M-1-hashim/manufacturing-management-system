@@ -38,7 +38,7 @@ export async function PUT(req: Request, { params }: Ctx) {
       const newStatus =
         sale.total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
 
-      // تعدیل بدهی مشتری: کاهش مانده به اندازه اختلاف باقی‌مانده قدیم و جدید
+      // تعدیل بدهی مشتری: کاهش مانده به اندازه اختلاف باقیات قدیم و جدید
       if (sale.customerId) {
         const oldRemaining = Math.max(0, sale.total - sale.paidAmount)
         const newRemaining = Math.max(0, sale.total - paidAmount)

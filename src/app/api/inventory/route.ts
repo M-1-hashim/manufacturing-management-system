@@ -67,7 +67,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/inventory — ثبت حرکت دستی (ورود/خروج/اصلاح) با به‌روزرسانی موجودی
+// POST /api/inventory — ثبت حرکت دستی (ورود/خروج/اصلاح) با تجدید موجودی
 export async function POST(req: Request) {
   try {
     const body = await req.json()

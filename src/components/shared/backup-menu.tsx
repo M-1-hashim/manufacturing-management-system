@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * منوی سریع پشتیبان‌گیری در هدر — فقط برای مدیر سیستم (ادمین)
- * بکاپ فوری / آپلود فایل پشتیبان و بازیابی / تنظیمات پشتیبان‌گیری
+ * منوی سریع کاپی احتیاطی در هدر — فقط برای مدیر سیستم (ادمین)
+ * کاپی احتیاطی فوری / آپلود فایل کاپی احتیاطی و بازیابی / تنظیمات کاپی احتیاطی
  */
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store'
@@ -46,16 +46,16 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
 
   if (user?.role !== 'admin') return null
 
-  // ---------- بکاپ فوری ----------
+  // ---------- کاپی احتیاطی فوری ----------
   async function backupNow() {
     setCreating(true)
     try {
       const created = await apiPost<{ name: string }>('/api/admin/backup', {})
       toast.success(
-        t(`نسخه پشتیبان ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`)
+        t(`نسخه کاپی احتیاطی ${created.name} ایجاد شد`, `بیک اپ ${created.name} جوړ شو`, `Backup ${created.name} created`)
       )
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه پشتیبان', 'د بیک اپ ستونزه', 'Backup failed'))
+      toast.error(e instanceof Error ? e.message : t('خطا در تهیه نسخه کاپی احتیاطی', 'د بیک اپ ستونزه', 'Backup failed'))
     } finally {
       setCreating(false)
     }
@@ -67,7 +67,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
     e.target.value = '' // انتخاب دوباره همان فایل هم کار کند
     if (!f) return
     if (!f.name.toLowerCase().endsWith('.db') && !f.name.toLowerCase().endsWith('.sqlite') && !f.name.toLowerCase().endsWith('.sqlite3')) {
-      toast.error(t('فقط فایل پشتیبان (.db) قابل بازیابی است', 'یوازې د بیک اپ فایل (.db) بیا راغول کېدای شي', 'Only a backup file (.db) can be restored'))
+      toast.error(t('فقط فایل کاپی احتیاطی (.db) قابل بازیابی است', 'یوازې د بیک اپ فایل (.db) بیا راغول کېدای شي', 'Only a backup file (.db) can be restored'))
       return
     }
     setPendingFile(f)
@@ -95,7 +95,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
         setPendingFile(null)
         toast.success(
           t(
-            `بازیابی انجام شد — بکاپ امنیتی ${body.safetyBackup} گرفته شد`,
+            `بازیابی انجام شد — کاپی احتیاطی امنیتی ${body.safetyBackup} گرفته شد`,
             `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
             `Restored — safety backup ${body.safetyBackup} created`
           ),
@@ -131,41 +131,41 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
             size="sm"
             className="h-8 w-8 p-0"
             disabled={creating}
-            aria-label={t('پشتیبان‌گیری', 'بیک اپ', 'Backup')}
-            title={t('پشتیبان‌گیری و بازیابی', 'بیک اپ او بیا رغونه', 'Backup & restore')}
+            aria-label={t('کاپی احتیاطی', 'بیک اپ', 'Backup')}
+            title={t('کاپی احتیاطی و بازیابی', 'بیک اپ او بیا رغونه', 'Backup & restore')}
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <DatabaseBackup className="h-4 w-4" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="text-xs text-muted-foreground">
-            {t('پشتیبان‌گیری دیتابیس', 'د ډاټابیس بیک اپ', 'Database backup')}
+            {t('کاپی احتیاطی دیتابیس', 'د ډاټابیس بیک اپ', 'Database backup')}
           </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => void backupNow()} disabled={creating}>
             <Download className="h-4 w-4" />
             {creating
               ? t('در حال تهیه نسخه…', 'په جوړولو…', 'Creating backup…')
-              : t('بکاپ فوری', 'سمدستي بیک اپ', 'Backup now')}
+              : t('کاپی احتیاطی فوری', 'سمدستي بیک اپ', 'Backup now')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4" />
-            {t('آپلود بکاپ و بازیابی', 'بیک اپ پورته او بیا رغونه', 'Upload backup & restore')}
+            {t('آپلود کاپی احتیاطی و بازیابی', 'بیک اپ پورته او بیا رغونه', 'Upload backup & restore')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onGoSettings}>
             <Settings className="h-4 w-4" />
-            {t('مدیریت و دانلود بکاپ‌ها', 'د بیک اپونو مدیریت', 'Manage & download backups')}
+            {t('مدیریت و دانلود کاپی احتیاطی‌ها', 'د بیک اپونو مدیریت', 'Manage & download backups')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* تأیید بازیابی — عملیات مخرب */}
+      {/* تصدیق بازیابی — اجراؤات مخرب */}
       <AlertDialog open={!!pendingFile} onOpenChange={(o) => !o && !uploading && setPendingFile(null)}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <RotateCcw className="h-4 w-4 text-destructive" />
-              {t('بازیابی نسخه پشتیبان', 'بیک اپ بیا رغونه', 'Restore backup')}
+              {t('بازیابی نسخه کاپی احتیاطی', 'بیک اپ بیا رغونه', 'Restore backup')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 text-sm">
               <span className="block">
@@ -181,7 +181,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
               </span>
               <span className="block text-muted-foreground">
                 {t(
-                  'قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک بکاپ امنیتی گرفته می‌شود.',
+                  'قبل از بازیابی، به‌صورت خودکار از دیتای فعلی یک کاپی احتیاطی امنیتی گرفته می‌شود.',
                   'له بیا رغونې دمخه له اوسني معلوماتو اتوماتیک خوندي بیک اپ اخیستل کېږي.',
                   'A safety backup of current data is created automatically first.'
                 )}

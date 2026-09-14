@@ -1,10 +1,10 @@
 'use client'
 
-// کلاینت API — helper های fetch با مدیریت خطا (پیام خطای سرور به‌صورت تمیز استخراج می‌شود)
+// کلاینت API — helper های fetch با مدیریت خطا (پیام خطای هاست به‌صورت تمیز استخراج می‌شود)
 import { notifyAuthFailure } from '@/lib/auth-client'
 
 async function throwApiError(res: Response, url: string, fallback: string): Promise<never> {
-  // انقضای نشست → خروج خودکار و بازگشت به صفحه ورود (به‌جز مسیرهای auth)
+  // ختم نشست → خروج خودکار و بازگشت به صفحه ورود (به‌جز مسیرهای auth)
   if (res.status === 401 && !url.includes('/api/auth/')) notifyAuthFailure()
   let msg = fallback
   try {
@@ -47,7 +47,7 @@ export async function apiPut<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    await throwApiError(res, url, `خطا در به‌روزرسانی (${res.status})`)
+    await throwApiError(res, url, `خطا در تجدید (${res.status})`)
   }
   return res.json()
 }

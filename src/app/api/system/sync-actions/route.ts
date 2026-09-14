@@ -4,9 +4,9 @@ import { checkNow, triggerSyncNow, triggerSnapshotNow, getState } from '@/lib/co
 /*
  * اکشن‌های دستی همگام‌سازی/اتصال — از کارت تنظیمات:
  *   { action: 'check' }        → بررسی فوری اتصال به هاست
- *   { action: 'sync-now' }     → آفلاین: تلاش برای اتصال + همگام‌سازی
- *                                آنلاین: اسنپ‌شات تازه از سرور به محلی
- *   { action: 'snapshot-now' } → کپی کامل دیتای سرور روی دستگاه (فقط آنلاین)
+ *   { action: 'sync-now' }     → آفلاین: کوشش برای اتصال + همگام‌سازی
+ *                                آنلاین: اسنپ‌شات تازه از هاست به محلی
+ *   { action: 'snapshot-now' } → کپی کامل دیتای هاست روی دستگاه (فقط آنلاین)
  */
 
 export const dynamic = 'force-dynamic'

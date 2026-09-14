@@ -59,7 +59,7 @@ async function hmac(data: string): Promise<Uint8Array> {
   return new Uint8Array(sig)
 }
 
-/** ساخت توکن نشست از payload کاربر */
+/** ساخت توکن نشست از payload استفاده‌کننده */
 export async function signSession(
   user: { id: string; username: string; fullName: string; role: string; department: string }
 ): Promise<string> {

@@ -28,7 +28,7 @@ export const DEPARTMENT_LABELS: Record<Department, { fa: string; ps: string; en:
   sales: { fa: 'فروش', ps: 'پلورنه', en: 'Sales' },
   inventory: { fa: 'انبار', ps: 'ګدام', en: 'Warehouse' },
   finance: { fa: 'مالی', ps: 'مالي', en: 'Finance' },
-  hr: { fa: 'منابع انسانی', ps: 'منابع انساني', en: 'HR' },
+  hr: { fa: 'منابع بشری', ps: 'منابع انساني', en: 'HR' },
 }
 
 export function isRole(v: unknown): v is Role {
@@ -47,9 +47,9 @@ export interface AccessUser {
 const ADMIN_MGR = ['admin', 'manager']
 
 /**
- * آیا کاربر به ماژول دسترسی دارد؟
+ * آیا استفاده‌کننده به ماژول دسترسی دارد؟
  * - admin: همه چیز (دسترسی کامل)
- * - manager: همه ماژول‌های کاری + فعالیت‌ها (بدون مدیریت کاربران)
+ * - manager: همه ماژول‌های کاری + فعالیت‌ها (بدون مدیریت استفاده‌کنندگان)
  * - operator: داشبورد + ماژول‌های بخش خود
  * - viewer: داشبورد + گزارشات (فقط خواندن)
  */

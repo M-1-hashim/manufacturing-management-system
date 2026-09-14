@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// PUT /api/attendance/[id] — ویرایش رکورد حضور
+// PUT /api/attendance/[id] — تصحیح رکورد حضور
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -38,7 +38,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(row)
   } catch (e) {
     console.error('attendance PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش رکورد حضور' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح رکورد حضور' }, { status: 500 })
   }
 }
 

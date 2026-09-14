@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// PUT /api/suppliers/[id] — ویرایش تأمین‌کننده
+// PUT /api/suppliers/[id] — تصحیح تأمین‌کننده
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -31,7 +31,7 @@ export async function PUT(
     return NextResponse.json(updated)
   } catch (e) {
     console.error('supplier PUT', e)
-    return NextResponse.json({ error: 'خطا در ویرایش تأمین‌کننده' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در تصحیح تأمین‌کننده' }, { status: 500 })
   }
 }
 

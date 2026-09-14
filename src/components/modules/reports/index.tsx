@@ -101,7 +101,7 @@ function downloadCSV(filename: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(url)
 }
 
-// اعداد فشرده برای محور نمودار
+// اعداد فشرده برای محور چارت
 function compact(n: number): string {
   if (Math.abs(n) >= 1000000) return `${formatNumber(Math.round(n / 100000) / 10)}م`
   if (Math.abs(n) >= 1000) return `${formatNumber(Math.round(n / 100) / 10)}k`
@@ -150,7 +150,7 @@ export default function ReportsModule() {
             </p>
             <Button variant="outline" size="sm" onClick={refetch}>
               <RotateCcw className="me-2 h-4 w-4" />
-              {t('تلاش مجدد', 'بیا هڅه', 'Retry')}
+              {t('کوشش مجدد', 'بیا هڅه', 'Retry')}
             </Button>
           </CardContent>
         </Card>

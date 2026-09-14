@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/formulas — لیست تمام فرمول‌ها با محصول و مواد
+// GET /api/formulas — لیست تمام فورمولاها با محصول و مواد
 export async function GET() {
   try {
     const rows = await db.formula.findMany({
@@ -14,11 +14,11 @@ export async function GET() {
     return NextResponse.json(rows)
   } catch (e) {
     console.error('formulas GET', e)
-    return NextResponse.json({ error: 'خطا در دریافت فرمول‌ها' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در دریافت فورمولاها' }, { status: 500 })
   }
 }
 
-// POST /api/formulas — ایجاد فرمول جدید همراه با مواد
+// POST /api/formulas — ایجاد فورمولا جدید همراه با مواد
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const items = Array.isArray(body.items) ? body.items : []
 
     if (!productId || !name) {
-      return NextResponse.json({ error: 'محصول و نام فرمول الزامی است' }, { status: 400 })
+      return NextResponse.json({ error: 'محصول و نام فورمولا الزامی است' }, { status: 400 })
     }
     if (items.length === 0) {
       return NextResponse.json({ error: 'حداقل یک ماده اولیه لازم است' }, { status: 400 })
@@ -71,6 +71,6 @@ export async function POST(req: Request) {
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error('formulas POST', e)
-    return NextResponse.json({ error: 'خطا در ایجاد فرمول' }, { status: 500 })
+    return NextResponse.json({ error: 'خطا در ایجاد فورمولا' }, { status: 500 })
   }
 }

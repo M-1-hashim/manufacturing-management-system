@@ -34,7 +34,7 @@ interface AppState {
   user: SessionUser | null
   sidebarOpen: boolean // برای موبایل
   online: boolean
-  pendingOps: number // تعداد عملیات در صف همگام‌سازی آفلاین
+  pendingOps: number // تعداد اجراؤات در صف همگام‌سازی آفلاین
 
   setLang: (l: Lang) => void
   setActiveTab: (t: TabId) => void

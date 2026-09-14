@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول گزارش فعالیت‌ها — رخدادهای ورود، ایجاد، ویرایش و حذف سیستم (ادمین/مدیر)
+// ماژول گزارش فعالیت‌ها — رخدادهای ورود، ایجاد، تصحیح و حذف سیستم (ادمین/مدیر)
 import { useMemo, useState } from 'react'
 import {
   CalendarDays,
@@ -46,22 +46,22 @@ interface AuditEvent {
 
 // برچسب رخدادها: [دری، پشتو، انگلیسی]
 const ACTION_LABELS: Record<string, [string, string, string]> = {
-  login: ['ورود', 'ننوتل', 'Login'],
-  login_failed: ['ورود ناموفق', 'ناکام ننوتل', 'Failed login'],
-  logout: ['خروج', 'وتل', 'Logout'],
+  login: ['داخل شدن', 'ننوتل', 'Login'],
+  login_failed: ['داخل شدن ناکام', 'ناکام ننوتل', 'Failed login'],
+  logout: ['خارج شدن', 'وتل', 'Logout'],
   create: ['ایجاد', 'جوړول', 'Create'],
-  update: ['ویرایش', 'سمون', 'Update'],
+  update: ['تصحیح', 'سمون', 'Update'],
   delete: ['حذف', 'ړنګول', 'Delete'],
   complete: ['تکمیل تولید', 'د تولید بشپړول', 'Production complete'],
   payment: ['دریافت پرداخت', 'د پیسو ترلاسه کول', 'Payment received'],
   adjust: ['حرکت انبار', 'د ګدام حرکت', 'Stock adjustment'],
-  change_password: ['تغییر رمز', 'د پټ نوم بدلون', 'Password change'],
+  change_password: ['تغییر پاسورد', 'د پټ نوم بدلون', 'Password change'],
 }
 
 // برچسب بخش‌ها (entity): [دری، پشتو، انگلیسی]
 const ENTITY_LABELS: Record<string, [string, string, string]> = {
   auth: ['احراز هویت', 'تصدیق هویت', 'Auth'],
-  user: ['کاربران', 'کاروونکي', 'Users'],
+  user: ['استفاده‌کنندگان', 'کاروونکي', 'Users'],
   sale: ['فروش', 'پلورنه', 'Sales'],
   production: ['تولید', 'تولید', 'Production'],
   inventory: ['انبار', 'ګدام', 'Inventory'],
@@ -146,10 +146,10 @@ export default function AuditModule() {
     downloadCSV('audit-log.csv', [
       [
         t('زمان', 'وخت', 'Time'),
-        t('کاربر', 'کاروونکی', 'User'),
+        t('استفاده‌کننده', 'کاروونکی', 'User'),
         t('رخداد', 'پیښه', 'Action'),
         t('بخش', 'برخه', 'Entity'),
-        t('جزئیات', 'تفصیلات', 'Details'),
+        t('تفصیلات', 'تفصیلات', 'Details'),
       ],
       ...events.map((e) => [
         e.createdAt,
@@ -166,7 +166,7 @@ export default function AuditModule() {
       <PageHeader
         title={t('گزارش فعالیت‌ها', 'د فعالیتونو راپور', 'Activity Log')}
         subtitle={t(
-          'ثبت تمام رخدادهای ورود، ایجاد، ویرایش و حذف در سیستم',
+          'ثبت تمام رخدادهای داخل شدن، ایجاد، تصحیح و حذف در سیستم',
           'د ننوتل، جوړول، سمون او ړنګولو ټولې پیښې ثبتې دي',
           'All login, create, update and delete events in the system'
         )}
@@ -189,7 +189,7 @@ export default function AuditModule() {
           tone="green"
         />
         <StatCard
-          title={t('ورودهای ناموفق', 'ناکام ننوتلې', 'Failed Logins')}
+          title={t('داخل شدن‌های ناکام', 'ناکام ننوتلې', 'Failed Logins')}
           value={formatNumber(failedLogins)}
           icon={ShieldAlert}
           tone="red"
@@ -268,7 +268,7 @@ export default function AuditModule() {
             <div className="flex flex-col items-center gap-2 py-8">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               <Button variant="outline" size="sm" onClick={refetch}>
-                {t('تلاش مجدد', 'بیا هڅه', 'Retry')}
+                {t('کوشش مجدد', 'بیا هڅه', 'Retry')}
               </Button>
             </div>
           ) : data === null ? (
@@ -283,10 +283,10 @@ export default function AuditModule() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('زمان', 'وخت', 'Time')}</TableHead>
-                    <TableHead>{t('کاربر', 'کاروونکی', 'User')}</TableHead>
+                    <TableHead>{t('استفاده‌کننده', 'کاروونکی', 'User')}</TableHead>
                     <TableHead>{t('رخداد', 'پیښه', 'Action')}</TableHead>
                     <TableHead>{t('بخش', 'برخه', 'Entity')}</TableHead>
-                    <TableHead>{t('جزئیات', 'تفصیلات', 'Details')}</TableHead>
+                    <TableHead>{t('تفصیلات', 'تفصیلات', 'Details')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

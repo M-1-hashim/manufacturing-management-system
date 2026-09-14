@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (!name) return NextResponse.json({ error: 'نام کارمند الزامی است' }, { status: 400 })
     if (!position) return NextResponse.json({ error: 'وظیفه الزامی است' }, { status: 400 })
     if (!salary || isNaN(salary) || salary <= 0)
-      return NextResponse.json({ error: 'حقوق باید بزرگ‌تر از صفر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'معاش باید بزرگ‌تر از صفر باشد' }, { status: 400 })
     if (hireDate && isNaN(hireDate.getTime()))
       return NextResponse.json({ error: 'تاریخ استخدام نامعتبر است' }, { status: 400 })
 

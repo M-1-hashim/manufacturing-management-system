@@ -6,26 +6,26 @@ import { dbInternal } from '@/lib/db'
  * موتور همگام‌سازی لحظه‌ای دوسویه بین هاست (MySQL) و دیتابیس محلی (SQLite)
  * — معماری «محلی‌محور» نسخهٔ ۱.۰.۱۰:
  *
- * برنامه همیشه روی دیتابیس محلی کار می‌کند (پاسخ فوری حتی وقتی اینترنت
+ * برنامه همیشه روی دیتابیس محلی کار می‌کند (پاسخ فوری حتی وقتی انترنت
  * کند است). این موتور هر چند ثانیه یک «تیک» می‌زند و فقط «تفاوت‌ها» را
  * جابه‌جا می‌کند:
  *
  *   ۱) push  — سطرهای محلی که updatedAt شان از آخرین ارسال (نشانِ آبی
- *      جلوتر) تازه‌تر است → روی سرور درج/به‌روز می‌شوند (LWW: نسخهٔ
+ *      جلوتر) تازه‌تر است → روی هاست درج/تجدید می‌شوند (LWW: نسخهٔ
  *      جدیدتر برنده است)
- *   ۲) pull  — سطرهای سرور که updatedAt شان از آخرین دریافت تازه‌تر است
- *      → روی محلی درج/به‌روز می‌شوند؛ فرزندان (FormulaItem/SaleItem)
+ *   ۲) pull  — سطرهای هاست که updatedAt شان از آخرین دریافت تازه‌تر است
+ *      → روی محلی درج/تجدید می‌شوند؛ فرزندان (FormulaItem/SaleItem)
  *      با «مطابق‌سازی دامنهٔ والد» همگام می‌شوند تا حذف‌وایجاد دوباره
- *      در سرور هم روی دستگاه‌های دیگر اعمال شود
- *   ۳) ژورنال حذف — حذف‌های این دستگاه (_SyncJournal) روی سرور تکرار و
+ *      در هاست هم روی دستگاه‌های دیگر اعمال شود
+ *   ۳) ژورنال حذف — حذف‌های این دستگاه (_SyncJournal) روی هاست تکرار و
  *      به‌صورت «سنگ‌قبر» (_SyncTombstones) ثبت می‌شوند
- *   ۴) سنگ‌قبرها — حذف‌های سایر دستگاه‌ها از سرور خوانده و روی محلی
+ *   ۴) سنگ‌قبرها — حذف‌های سایر دستگاه‌ها از هاست خوانده و روی محلی
  *      اعمال می‌شوند (با احترام به LWW)
  *
  * تشخیص تغییر با یک کوئری UNION ALL سبک (MAX(updatedAt) هر ۱۹ جدول)
  * انجام می‌شود — تیک بی‌کار فقط ۲ رفت‌وبرگشت شبکه دارد.
  *
- * همهٔ عملیات idempotent هستند: اگر تیک وسط کار قطع شود، تیک بعدی
+ * همهٔ اجراؤات idempotent هستند: اگر تیک وسط کار قطع شود، تیک بعدی
  * همان تغییرها را دوباره می‌فرستد و LWW تکرار را بی‌ضرر می‌کند.
  */
 
@@ -96,8 +96,8 @@ function idKeyOf(table: string): string {
 }
 
 /**
- * createMany امن — کلاینت SQLite از skipDuplicates پشتیبانی نمی‌کند
- * (فقط MySQL/Postgres). اول با skipDuplicates تلاش می‌شود؛ اگر پذیرفته
+ * createMany امن — کلاینت SQLite از skipDuplicates کاپی احتیاطیی نمی‌کند
+ * (فقط MySQL/Postgres). اول با skipDuplicates کوشش می‌شود؛ اگر پذیرفته
  * نشد بدون آن، و اگر تداخل یونیک پیش آمد سطر‌به‌سطر با گذشتن از تکراری‌ها.
  */
 async function createManySafe(d: Delegate, data: Row[]): Promise<void> {
@@ -169,9 +169,9 @@ export async function setMeta(pair: ClientPair, key: string, value: string): Pro
 /* --------------------------- نشان‌های آبی (watermark) --------------------------- */
 
 interface Watermarks {
-  /** آخرین ارسال موفق هر جدول به سرور (ISO — ساعت دستگاه محلی) */
+  /** آخرین ارسال موفق هر جدول به هاست (ISO — ساعت دستگاه محلی) */
   push: Map<string, string>
-  /** آخرین دریافت موفق از سرور (ISO — ساعتِ مقادیر سرور) */
+  /** آخرین دریافت موفق از هاست (ISO — ساعتِ مقادیر هاست) */
   pull: Map<string, string>
   /** آخرین سنگ‌قبر دریافت‌شده */
   tomb: string | null
@@ -239,11 +239,11 @@ async function maxUpdatedAtMap(
   return map
 }
 
-/* ------------------------------ جدول سنگ‌قبر سرور ------------------------------ */
+/* ------------------------------ جدول سنگ‌قبر هاست ------------------------------ */
 
 let tombstoneReady = false
 
-/** ساخت جدول _SyncTombstones روی سرور (اگر نبود) — یک‌بار در هر پروسه */
+/** ساخت جدول _SyncTombstones روی هاست (اگر نبود) — یک‌بار در هر پروسه */
 export async function ensureServerTombstones(pair: ClientPair): Promise<void> {
   if (tombstoneReady) return
   try {
@@ -261,7 +261,7 @@ export async function ensureServerTombstones(pair: ClientPair): Promise<void> {
     )
     tombstoneReady = true
   } catch {
-    // SQLite (تست/سرور شبیه‌سازی‌شده) — بدون پسوند MySQL
+    // SQLite (تست/هاست شبیه‌سازی‌شده) — بدون پسوند MySQL
     try {
       await pair.server.$executeRawUnsafe(
         `CREATE TABLE IF NOT EXISTS "${TOMBSTONE_TABLE}" (\n` +
@@ -323,7 +323,7 @@ export async function ensureJournalTable(pair: ClientPair): Promise<void> {
   journalReady = true
 }
 
-/** قلاب را روی db.ts نصب می‌کند — همهٔ حذف‌های کاربر ژورنال می‌شوند (آنلاین و آفلاین) */
+/** قلاب را روی db.ts نصب می‌کند — همهٔ حذف‌های استفاده‌کننده ژورنال می‌شوند (آنلاین و آفلاین) */
 export function installOfflineJournaling(): void {
   const { sqlite } = dbInternal.getClients()
   if (!sqlite) return
@@ -401,7 +401,7 @@ async function countPendingJournal(pair: ClientPair): Promise<number> {
   }
 }
 
-/* ------------------------------ push: محلی → سرور ------------------------------ */
+/* ------------------------------ push: محلی → هاست ------------------------------ */
 
 function stripMetaSetting(row: Row): boolean {
   // جدول Setting — کلیدهای sync.* هرگز سینک نمی‌شوند
@@ -409,7 +409,7 @@ function stripMetaSetting(row: Row): boolean {
 }
 
 /**
- * ارسال دلتای یک جدول به سرور. since=null یعنی همهٔ سطرها.
+ * ارسال دلتای یک جدول به هاست. since=null یعنی همهٔ سطرها.
  * برخورد: نسخهٔ جدیدتر برنده (LWW بر اساس updatedAt).
  */
 async function pushTableDelta(pair: ClientPair, table: string, since: Date | null): Promise<number> {
@@ -424,7 +424,7 @@ async function pushTableDelta(pair: ClientPair, table: string, since: Date | nul
   const ids = rows.map((r) => String(r[ik])).filter((x) => x && x !== 'undefined' && x !== 'null')
   if (ids.length === 0) return 0
 
-  // نسخهٔ سرور فقط برای همین idها خوانده می‌شود (نه کل جدول)
+  // نسخهٔ هاست فقط برای همین idها خوانده می‌شود (نه کل جدول)
   const serverRows = await serverDel.findMany({
     where: { [ik]: { in: ids } },
     select: { [ik]: true, updatedAt: true },
@@ -465,7 +465,7 @@ async function pushTableDelta(pair: ClientPair, table: string, since: Date | nul
   return toCreate.length + toUpdate.length
 }
 
-/* ------------------------------ pull: سرور → محلی ------------------------------ */
+/* ------------------------------ pull: هاست → محلی ------------------------------ */
 
 async function pullTableDelta(pair: ClientPair, table: string, since: Date | null): Promise<number> {
   const serverDel = del(pair.server, table)
@@ -517,8 +517,8 @@ async function pullTableDelta(pair: ClientPair, table: string, since: Date | nul
   }
 
   // فرزندان والدِ تغییرکرده — مطابق‌سازی دامنهٔ والد:
-  // حذف‌وایجاد دوبارهٔ آیتم‌ها در سرور (مثلاً ویرایش فرمول) روی محلی هم
-  // اعمال می‌شود؛ آیتم‌های یتیم محلی که دیگر در سرور نیستند حذف می‌شوند.
+  // حذف‌وایجاد دوبارهٔ آیتم‌ها در هاست (مثلاً تصحیح فورمولا) روی محلی هم
+  // اعمال می‌شود؛ آیتم‌های یتیم محلی که دیگر در هاست نیستند حذف می‌شوند.
   const meta = TABLES.find((t) => t.name === table)
   if (meta?.childOf && CHILD_TABLES.has(table)) {
     const fk = meta.childOf.fk
@@ -542,7 +542,7 @@ async function pullTableDelta(pair: ClientPair, table: string, since: Date | nul
   return toCreate.length + toUpdate.length
 }
 
-/* --------------------------- سنگ‌قبرهای سرور → محلی --------------------------- */
+/* --------------------------- سنگ‌قبرهای هاست → محلی --------------------------- */
 
 async function pullTombstones(pair: ClientPair, wm: Watermarks): Promise<number> {
   await ensureServerTombstones(pair)
@@ -570,7 +570,7 @@ async function pullTombstones(pair: ClientPair, wm: Watermarks): Promise<number>
         removed++
         continue // از قبل حذف شده
       }
-      // LWW: اگر محلی بعد از سنگ‌قبر ویرایش شده → نگه داشته می‌شود (بازگشت)
+      // LWW: اگر محلی بعد از سنگ‌قبر تصحیح شده → نگه داشته می‌شود (بازگشت)
       const localAt = asDate((local as Row).updatedAt)
       if (localAt && d && localAt > d) continue
       await del(pair.local, entry.name).deleteMany({ where: { id: rid } })
@@ -618,7 +618,7 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
     await ensureServerTombstones(pair)
     const wm = await readWatermarks(pair)
 
-    // ۱) حذف‌های محلی → سرور + سنگ‌قبر
+    // ۱) حذف‌های محلی → هاست + سنگ‌قبر
     deleted += await replayJournal(pair)
 
     // ۲) push — فقط جداولی که MAX(updatedAt) محلی از نشان جلوتر است
@@ -640,7 +640,7 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
       }
     }
 
-    // ۳) pull — فقط جداولی که MAX(updatedAt) سرور از نشان جلوتر است
+    // ۳) pull — فقط جداولی که MAX(updatedAt) هاست از نشان جلوتر است
     const serverMax = await maxUpdatedAtMap(pair.server, 'mysql')
     for (const t of TABLES) {
       const cur = serverMax.get(t.name)
@@ -696,12 +696,12 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
   }
 }
 
-/* --------------------------- اسنپ‌شات کامل سرور → محلی --------------------------- */
+/* --------------------------- اسنپ‌شات کامل هاست → محلی --------------------------- */
 
 let snapshotBusy = false
 
 /**
- * کپی کامل دیتای سرور روی دیتابیس محلی — اتمیک.
+ * کپی کامل دیتای هاست روی دیتابیس محلی — اتمیک.
  * بعد از موفقیت، نشان‌های push/pull بر اساس سطرهای کپی‌شده تنظیم می‌شوند
  * تا دلتای تکراری ارسال نشود (جلوگیری از چرخش بی‌پایان echo).
  * کلیدهای sync.* در جدول Setting محلی حفظ می‌شوند.
@@ -710,7 +710,7 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
   if (snapshotBusy) throw new Error('اسنپ‌شات قبلی هنوز در حال اجراست')
   snapshotBusy = true
   try {
-    // ۱) خواندن کامل از سرور
+    // ۱) خواندن کامل از هاست
     const data = new Map<string, Row[]>()
     for (const t of TABLES) {
       data.set(t.name, await del(pair.server, t.name).findMany({ take: TAKE_LIMIT }))
@@ -799,7 +799,7 @@ let reconnectBusy = false
 
 /**
  * بعد از وصل شدن دوباره به هاست: حذف‌ها → push دلتا → اسنپ‌شات کامل.
- * اسنپ‌شات تضمین می‌کند بعد از دورهٔ آفلاین، دستگاه دقیقاً هم‌سان سرور شود.
+ * اسنپ‌شات تضمین می‌کند بعد از دورهٔ آفلاین، دستگاه دقیقاً هم‌سان هاست شود.
  */
 export async function runReconnectSync(pair: ClientPair, _offlineSince?: string | null): Promise<SyncSummary> {
   if (reconnectBusy) throw new Error('همگام‌سازی از قبل در حال اجراست')
@@ -871,7 +871,7 @@ export async function pendingPushCount(pair: ClientPair): Promise<number> {
   return total
 }
 
-/* --------------------------- انتقال کامل محلی → سرور --------------------------- */
+/* --------------------------- انتقال کامل محلی → هاست --------------------------- */
 
 let migrateBusy = false
 
@@ -957,8 +957,8 @@ export async function migrateLocalToServer(pair: ClientPair): Promise<MigrateRes
 /* --------------------------- مطابق‌سازی دوره‌ای (تور ایمنی) --------------------------- */
 
 /**
- * مقایسهٔ تعداد سطرها بین سرور و محلی — اگر ناهم‌خوانی باشد اسنپ‌شات
- * کامل لازم می‌شود (حالت‌های نادر: حذف مستقیم روی سرور، خطای تاریخی).
+ * مقایسهٔ تعداد سطرها بین هاست و محلی — اگر ناهم‌خوانی باشد اسنپ‌شات
+ * کامل لازم می‌شود (حالت‌های نادر: حذف مستقیم روی هاست، خطای تاریخی).
  * خروجی: نام جداول ناهم‌خوان (خالی = سالم).
  */
 export async function countMismatchTables(pair: ClientPair): Promise<string[]> {
@@ -976,7 +976,7 @@ export async function countMismatchTables(pair: ClientPair): Promise<string[]> {
   return mismatched
 }
 
-/** پاک‌سازی سنگ‌قبرهای قدیمی سرور (بیش از ۳۰ روز) */
+/** پاک‌سازی سنگ‌قبرهای قدیمی هاست (بیش از ۳۰ روز) */
 export async function pruneServerTombstones(pair: ClientPair): Promise<void> {
   try {
     await ensureServerTombstones(pair)

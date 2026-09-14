@@ -1,6 +1,6 @@
 'use client'
 
-// ماژول مواد خام — CRUD، تأمین‌کننده‌ها، موجودی زنده، هشدار کم‌موجودی و انقضا
+// ماژول مواد خام — CRUD، تأمین‌کننده‌ها، موجودی زنده، هشدار کم‌موجودی و تاریخ ختم
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -146,7 +146,7 @@ function toDateInput(iso?: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-// روزهای باقی‌مانده تا انقضا (null = بدون تاریخ)
+// روزهای باقیات تا ختم (null = بدون تاریخ)
 function daysUntil(iso?: string | null): number | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -158,7 +158,7 @@ function daysUntil(iso?: string | null): number | null {
   return Math.round((target.getTime() - today.getTime()) / 86400000)
 }
 
-// دکمه بارگذاری کوچک
+// دکمه بارگیری کوچک
 function LoadingIcon() {
   return (
     <span className="me-1 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent align-[-2px]" />
@@ -292,12 +292,12 @@ export default function MaterialsModule() {
         return
       }
       toast.success(editing
-        ? t('به‌روزرسانی شد', 'تازه شو', 'Updated')
+        ? t('تجدید شد', 'تازه شو', 'Updated')
         : t('ثبت شد', 'ثبت شو', 'Saved'))
       setDialogOpen(false)
       materials.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'له هوسټ سره د اتصال ستونزه', 'Server connection error'))
     } finally {
       setSaving(false)
     }
@@ -316,7 +316,7 @@ export default function MaterialsModule() {
       setToDelete(null)
       materials.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'له هوسټ سره د اتصال ستونزه', 'Server connection error'))
     }
   }
 
@@ -359,7 +359,7 @@ export default function MaterialsModule() {
         return
       }
       toast.success(editingSup
-        ? t('به‌روزرسانی شد', 'تازه شو', 'Updated')
+        ? t('تجدید شد', 'تازه شو', 'Updated')
         : t('ثبت شد', 'ثبت شو', 'Saved'))
       setSupFormOpen(false)
       suppliers.refetch()
@@ -383,7 +383,7 @@ export default function MaterialsModule() {
       suppliers.refetch()
       materials.refetch()
     } catch {
-      toast.error(t('خطای ارتباط با سرور', 'د سرور سره اتصال خطا', 'Server connection error'))
+      toast.error(t('خطای ارتباط با هاست', 'له هوسټ سره د اتصال ستونزه', 'Server connection error'))
     }
   }
 
@@ -395,7 +395,7 @@ export default function MaterialsModule() {
       <PageHeader
         title={t('مواد خام', 'خام مواد', 'Raw materials')}
         subtitle={t(
-          'مدیریت مواد اولیه، تأمین‌کنندگان و انقضا',
+          'مدیریت مواد اولیه، تأمین‌کنندگان و تاریخ ختم',
           'د خامو موادو، تأمین‌کونکو او د پای نېټې مدیریت',
           'Manage materials, suppliers and expiry'
         )}
@@ -437,7 +437,7 @@ export default function MaterialsModule() {
           hint={t('در یا زیر حداقل موجودی', 'په یا تر لږترلږه موجودي', 'At or below minimum')}
         />
         <StatCard
-          title={t('نزدیک انقضا', 'د پای نېټې نږدې', 'Near expiry')}
+          title={t('نزدیک ختم', 'د پای نېټې نږدې', 'Near expiry')}
           value={formatNumber(stats.expiring)}
           icon={CalendarClock}
           tone={stats.expiring > 0 ? 'amber' : 'green'}
@@ -509,8 +509,8 @@ export default function MaterialsModule() {
                     <TableHead>{t('موجودی', 'موجودي', 'Stock')}</TableHead>
                     <TableHead>{t('قیمت خرید', 'د اخیستو قیمت', 'Purchase price')}</TableHead>
                     <TableHead>{t('تأمین‌کننده', 'تأمین‌کونکی', 'Supplier')}</TableHead>
-                    <TableHead>{t('انقضا', 'پای نېټه', 'Expiry')}</TableHead>
-                    <TableHead>{t('عملیات', 'عمليې', 'Actions')}</TableHead>
+                    <TableHead>{t('ختم', 'پای نېټه', 'Expiry')}</TableHead>
+                    <TableHead>{t('اجراؤات', 'عمليې', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -554,12 +554,12 @@ export default function MaterialsModule() {
                             <span>{toJalaliStr(m.expiryDate)}</span>
                             {d !== null && d < 0 && (
                               <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
-                                {t('منقضی', 'پای شوی', 'Expired')}
+                                {t('ختم شده', 'پای شوی', 'Expired')}
                               </Badge>
                             )}
                             {d !== null && d >= 0 && d <= 7 && (
                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                                {t('نزدیک انقضا', 'د پای نږدې', 'Near expiry')}
+                                {t('نزدیک ختم', 'د پای نږدې', 'Near expiry')}
                               </Badge>
                             )}
                           </div>
@@ -570,7 +570,7 @@ export default function MaterialsModule() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              title={t('ویرایش', 'سمول', 'Edit')}
+                              title={t('تصحیح', 'سمول', 'Edit')}
                               onClick={() => openEdit(m)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -602,7 +602,7 @@ export default function MaterialsModule() {
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? t('ویرایش ماده خام', 'د خامې مادې سمول', 'Edit material')
+                ? t('تصحیح ماده خام', 'د خامې مادې سمول', 'Edit material')
                 : t('ماده خام جدید', 'نوی خام ماده', 'New material')}
             </DialogTitle>
             <DialogDescription>
@@ -695,7 +695,7 @@ export default function MaterialsModule() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('تاریخ انقضا', 'د پای نېټه', 'Expiry date')}</Label>
+              <Label>{t('تاریخ ختم', 'د پای نېټه', 'Expiry date')}</Label>
               <Input
                 type="date"
                 value={form.expiryDate}
@@ -763,7 +763,7 @@ export default function MaterialsModule() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>{t('تلفن', 'تلیفون', 'Phone')}</Label>
+                <Label>{t('تیلیفون', 'تلیفون', 'Phone')}</Label>
                 <Input
                   value={supForm.phone}
                   onChange={(e) => setSupF({ phone: e.target.value })}
@@ -790,7 +790,7 @@ export default function MaterialsModule() {
                 </Button>
                 <Button onClick={saveSupplier} disabled={supBusy}>
                   {supBusy && <LoadingIcon />}
-                  {editingSup ? t('ذخیره تغییرات', 'بدلونونه خوندي کړئ', 'Save changes') : t('افزودن', 'اضافه کول', 'Add')}
+                  {editingSup ? t('ذخیره تغییرات', 'بدلونونه خوندي کړئ', 'Save changes') : t('علاوه کردن', 'اضافه کول', 'Add')}
                 </Button>
               </div>
             </div>
@@ -826,7 +826,7 @@ export default function MaterialsModule() {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
-                  title={t('ویرایش', 'سمول', 'Edit')}
+                  title={t('تصحیح', 'سمول', 'Edit')}
                   onClick={() => openSupEdit(s)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -846,7 +846,7 @@ export default function MaterialsModule() {
         </DialogContent>
       </Dialog>
 
-      {/* تأیید حذف ماده */}
+      {/* تصدیق حذف ماده */}
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -859,7 +859,7 @@ export default function MaterialsModule() {
               )}{' '}
               <span className="font-bold text-foreground">«{toDelete?.name}»</span>{' '}
               {t(
-                'مطمئن هستید؟ اگر ماده در فرمول‌ها استفاده شده باشد، حذف ممکن نیست.',
+                'مطمئن هستید؟ اگر ماده در فورمولاها استفاده شده باشد، حذف ممکن نیست.',
                 'یاست؟ که ماده په فورمولونو کې کارېدلې وي، پاکول ناشونې ده.',
                 '? Deletion is blocked if the material is used in formulas.'
               )}
@@ -880,7 +880,7 @@ export default function MaterialsModule() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* تأیید حذف تأمین‌کننده */}
+      {/* تصدیق حذف تأمین‌کننده */}
       <AlertDialog open={!!supToDelete} onOpenChange={(o) => !o && setSupToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
