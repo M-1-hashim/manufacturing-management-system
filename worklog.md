@@ -855,3 +855,19 @@ Work Log:
 
 Stage Summary:
 - تست مرورگری: فونت document.fonts.check('B Nazanin')=true؛ لاگین/داشبورد/تولید/کارکنان همه با دری افغانی خالص؛ سه زبان fa/ps/en سوییچ زنده سالم (پشتو با فال‌بک وزیرمتن درست رندر شد؛ انگلیسی LTR)؛ موبایل 390px بدون overflow؛ فوتر طبیعی؛ صفر خطای کنسول
+
+---
+Task ID: 6
+Agent: coordinator (main)
+Task: ریلیز v1.0.11
+
+Work Log:
+- bump نسخه: APP_VERSION=1.0.11 / package.json / installer.nsi (1.0.11.0)
+- بیلد کامل: Next standalone + دو کلاینت Prisma + win-unpacked (591MB) — فونت B-Nazanin.ttf داخل resources/server/public/fonts تأیید شد
+- NSIS 3.11 از debs (نصب دوباره چون /tmp پاک شده بود) — Setup.exe 168MB (PE32، 1.0.11.0) + Portable 254MB
+- Release v1.0.11 (id 388590031): Setup.exe + Portable-win64.zip + RELEASE-NOTES — هر ۳ asset state=uploaded
+- push: rebase روی origin (۵ کامیت) → 3b1a3d7
+
+Stage Summary:
+- https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.11
+- فونت بی نازنین + دری خالص افغانستانی در همهٔ ۱۳ ماژول شامل نصب‌کنندهٔ ویندوز
