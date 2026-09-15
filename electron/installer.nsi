@@ -16,7 +16,7 @@ Unicode true
 
 !define APPNAME "ManufacturingERP"
 !define COMPANY "Afghan Manufacturing ERP"
-!define VERSION "1.0.15.0"
+!define VERSION "1.0.16.0"
 
 Name "${APPNAME}"
 OutFile "..\download\ManufacturingERP-Setup.exe"

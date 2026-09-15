@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — معلومات شرکت، اسعار، مالیات پیش‌فرض + کاپی احتیاطی خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput, MonitorDown } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -223,6 +223,19 @@ export default function SettingsModule() {
   const [hostSetupBusy, setHostSetupBusy] = useState<'create' | 'migrate' | null>(null)
   const [hostSetupResult, setHostSetupResult] = useState<string | null>(null)
   const [migrateConfirm, setMigrateConfirm] = useState(false)
+
+  // ---------- دانلود عمومی سِتب ویندوز (فقط اگر فایل نصب‌کننده روی سرور موجود باشد) ----------
+  const [setupDl, setSetupDl] = useState<{ sizeHuman: string | null } | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/download/setup?info=1', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { setup?: { available?: boolean; sizeHuman?: string | null } } | null) => {
+        if (alive && j?.setup?.available) setSetupDl({ sizeHuman: j.setup.sizeHuman ?? null })
+      })
+      .catch(() => { /* فایل موجود نیست — دکمه پنهان می‌ماند */ })
+    return () => { alive = false }
+  }, [])
 
   async function runHostSetup(action: 'create' | 'migrate') {
     setHostSetupBusy(action)
@@ -1630,6 +1643,18 @@ export default function SettingsModule() {
                     <Download className="h-4 w-4" />
                     {t('دانلود فایل تنظیم خودکار هاست', 'د اتوماتیک هوسټ فایل ښکته کول', 'Download auto host-setup file')}
                   </Button>
+                  {setupDl && (
+                    <Button asChild variant="outline" className="gap-2">
+                      <a
+                        href="/api/download/setup"
+                        download
+                        title={setupDl.sizeHuman ? `ManufacturingERP-Setup.exe (${setupDl.sizeHuman})` : 'ManufacturingERP-Setup.exe'}
+                      >
+                        <MonitorDown className="h-4 w-4" />
+                        {t('دانلود سِتب ویندوز', 'د ویندوز سېټ ښکته کول', 'Download Windows setup')}
+                      </a>
+                    </Button>
+                  )}
                   {connApi && connForm.mode === 'ssh' && (
                     <Button variant="outline" onClick={testSshConnection} disabled={connTesting} className="gap-2">
                       <ShieldCheck className={'h-4 w-4' + (connTesting ? ' animate-pulse' : '')} />

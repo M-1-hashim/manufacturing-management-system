@@ -1030,3 +1030,16 @@ Stage Summary:
 - Settings module: "دانلود فایل تنظیم خودکار هاست" button (admin) in host card; host form now visible in web mode too (Save/Test/OpenFolder/Reset remain desktop-only); explanation + password-security note; manual-instructions text updated
 - Verified with bun: base64 round-trip, electron-format parse, ASCII/CRLF checks; browser: button renders, empty-form validation toast, real download decoded OK (ssh + direct modes)
 - installer.nsi VERSION bumped to 1.0.15.0 (exe rebuild needed only for the button to appear inside desktop builds; the .bat itself works with already-installed apps)
+
+## v1.0.16 — Public setup download link (/api/download/setup)
+- New src/app/api/download/setup/route.ts (public, no session needed):
+  - GET → streams download/ManufacturingERP-Setup.exe (168MB, Node fs.createReadStream → Readable.toWeb, never buffered in memory)
+  - GET ?variant=portable → ManufacturingERP-Windows-Portable.zip (254MB)
+  - GET ?info=1 → JSON metadata {version, setup:{available,size,sizeHuman,updatedAt}, portable:{...}} (Cache-Control: no-store)
+  - Range requests supported (206/Content-Range/416) → resumable downloads for weak networks + download managers; HEAD probe
+  - 404 with Dari message if installer not built yet (desktop package prunes download/ → buttons auto-hide there)
+- middleware.ts PUBLIC_PATHS += '/api/download/setup' → anyone with the link can download without login (هر فردی)
+- Login page (page.tsx): download card under the sign-in form — icon, "نسخهٔ ویندوز (سِتب)", size shown via info fetch, primary "دانلود سِتب" + secondary "نسخهٔ پرتابل" anchors (Button asChild, download attr); hidden when file unavailable (desktop-local mode)
+- Settings module: "دانلود سِتب ویندوز" button next to host-setup .bat button in host card (admin distributes installer from inside the app)
+- Version bump: package.json/app-version.ts → 1.0.16, installer.nsi → 1.0.16.0
+- Verified: curl info=1 (160.6 MB / 254.1 MB, both available), headers (attachment, content-length, accept-ranges), Range 0-1 & resume from offset (206 + md5 of first 1MB identical to source file), no-session 200; agent-browser: login card renders (desktop 1280 + mobile 390), hrefs correct, digits Latin (ALL-LATIN-OK), settings button visible with href/download attrs, zero console/page errors; lint ✓ tsc(src) ✓

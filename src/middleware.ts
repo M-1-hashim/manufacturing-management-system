@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 
 // مسیرهای عمومی (بدون نشست)
-const PUBLIC_PATHS = ['/api/auth/login']
+// /api/download/setup → دانلود عمومی نصب‌کنندهٔ ویندوز — هر فردی با لینک می‌تواند دانلود کند
+const PUBLIC_PATHS = ['/api/auth/login', '/api/download/setup']
 
 // مسیرهای محدود به نقش خاص: [prefix, roles مجاز]
 const ROLE_RULES: { prefix: string; roles: string[]; methods?: string[] }[] = [

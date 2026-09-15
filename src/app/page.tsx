@@ -24,7 +24,7 @@ import {
   LayoutDashboard, Package, FlaskConical, Boxes, Factory, ShoppingCart,
   Warehouse, Wallet, Users, BarChart3, Settings, LogOut, Menu, X,
   Wifi, WifiOff, Languages, Sun, Moon, Lock, UserCog, History, KeyRound, RefreshCw, Palette, Check,
-  Cloud, CloudOff, Database,
+  Cloud, CloudOff, Database, Download, MonitorDown,
 } from 'lucide-react'
 
 import DashboardModule from '@/components/modules/dashboard'
@@ -163,6 +163,13 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
 // برای toast — import در سطح بالا (sonner)
 import { toast } from 'sonner'
 
+// معلومات دانلود سِتب ویندوز (پاسخ GET /api/download/setup?info=1 — عمومی)
+interface SetupDlInfoT {
+  version: string
+  setup: { available: boolean; sizeHuman: string | null }
+  portable: { available: boolean; sizeHuman: string | null }
+}
+
 // وضعیت اتصال دیتابیس (پاسخ GET /api/system/connection-status)
 interface DbStatusT {
   ok: boolean
@@ -185,6 +192,17 @@ function LoginView() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // دانلود عمومی سِتب — حتی بدون داخل شدن (هر فردی که لینک صفحه را باز کند)
+  const [dlInfo, setDlInfo] = useState<SetupDlInfoT | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/download/setup?info=1', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: SetupDlInfoT | null) => { if (alive && j?.setup?.available) setDlInfo(j) })
+      .catch(() => { /* فایل موجود نیست — کارت نمایش داده نمی‌شود */ })
+    return () => { alive = false }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -277,6 +295,42 @@ function LoginView() {
               {loading ? t('در حال داخل شدن...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
             </Button>
           </form>
+
+          {/* دانلود عمومی نصب‌کنندهٔ ویندوز — برای همه (بدون نیاز به حساب) */}
+          {dlInfo?.setup.available && (
+            <div className="mt-6 pt-5 border-t">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <MonitorDown className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">{t('نسخهٔ ویندوز (سِتب)', 'د ویندوز نسخه (سېټ)', 'Windows version (Setup)')}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-5">
+                    {t(
+                      `برای نصب روی کمپیوتر — ویندوز 10/11 (64 بیت) · ${dlInfo.setup.sizeHuman ?? ''}`,
+                      `د کمپیوټر لپاره نصب — ویندوز 10/11 (64 بټ) · ${dlInfo.setup.sizeHuman ?? ''}`,
+                      `For computer installation — Windows 10/11 (64-bit) · ${dlInfo.setup.sizeHuman ?? ''}`
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button asChild size="sm" className="h-9">
+                      <a href="/api/download/setup" download>
+                        <Download className="h-4 w-4 me-2" />
+                        {t('دانلود سِتب', 'سېټ ښکته کول', 'Download setup')}
+                      </a>
+                    </Button>
+                    {dlInfo.portable.available && (
+                      <Button asChild size="sm" variant="outline" className="h-9">
+                        <a href="/api/download/setup?variant=portable" download>
+                          {t('نسخهٔ پرتابل (بدون نصب)', 'پرتابل نسخه (پرته له نصب)', 'Portable (no install)')}
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
