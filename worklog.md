@@ -1043,3 +1043,10 @@ Stage Summary:
 - Settings module: "دانلود سِتب ویندوز" button next to host-setup .bat button in host card (admin distributes installer from inside the app)
 - Version bump: package.json/app-version.ts → 1.0.16, installer.nsi → 1.0.16.0
 - Verified: curl info=1 (160.6 MB / 254.1 MB, both available), headers (attachment, content-length, accept-ranges), Range 0-1 & resume from offset (206 + md5 of first 1MB identical to source file), no-session 200; agent-browser: login card renders (desktop 1280 + mobile 390), hrefs correct, digits Latin (ALL-LATIN-OK), settings button visible with href/download attrs, zero console/page errors; lint ✓ tsc(src) ✓
+
+## v1.0.16 (add) — GitHub Release v1.0.16 با نصب‌کننده + لینک‌های گیت‌هاب
+- GitHub Release «v1.0.16 — لینک عمومی دانلود سِتب» ساخته شد (API، tag روی main، release id 388963154)
+- Assets آپلود شد: ManufacturingERP-Setup.exe (168,410,564 B)، ManufacturingERP-Windows-Portable.zip (266,443,452 B)، RELEASE-NOTES-v1.0.16.md — همه state=uploaded
+- صحت دانلود با API (Accept: octet-stream) تست شد: 200، 168MB در ۲۴ ثانیه، MD5 یکسان با فایل اصلی
+- ⚠️ ریپو private است → لینک‌های releases/download فقط برای افراد لاگین‌شده با دسترسی به ریپو کار می‌کنند؛ برای «هر فردی» لینک عمومی برنامه (/api/download/setup) راه اصلی است (یا public کردن ریپو توسط مالک)
+- download/RELEASE-NOTES-v1.0.16.md ساخته و کامیت شد
