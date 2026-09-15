@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useI18n } from '@/lib/i18n'
 import { formatNumber, toGregorianStr } from '@/lib/format'
+import { downloadHostSetupFile, validateHostSetupConfig, type HostSetupConfig } from '@/lib/host-setup-file'
 import { useAppStore } from '@/lib/store'
 import { useFetch } from '@/lib/hooks'
 import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
@@ -455,6 +456,38 @@ export default function SettingsModule() {
       toast.error(e instanceof Error ? e.message : t('خطا در تغییر حالت', 'د بدلون ستونزه', 'Switch failed'))
     } finally {
       setConnResetting(false)
+    }
+  }
+
+  /* فایل تنظیم خودکار هاست — دانلود و پخش بین کمپیوترهای کارکنان */
+  function handleDownloadHostSetup() {
+    const cfg: HostSetupConfig = {
+      mode: connForm.mode,
+      host: connForm.host.trim(),
+      port: connForm.port.trim() || '3306',
+      database: connForm.database.trim(),
+      user: connForm.user.trim(),
+      password: connForm.password,
+      sshHost: connForm.sshHost.trim(),
+      sshPort: connForm.sshPort.trim() || '21098',
+      sshUser: connForm.sshUser.trim(),
+      sshPassword: connForm.sshPassword,
+    }
+    const err = validateHostSetupConfig(cfg)
+    if (err) {
+      toast.error(
+        err === 'MISSING_SSH_PASSWORD'
+          ? t('پسورد SSH (همان پسورد cPanel) الزامی است', 'د SSH پسورد (همان د cPanel) اړین دی', 'SSH password (same as cPanel) is required')
+          : t('اول معلومات هاست را در همین فرم کامل کنید (حالت، آدرس، دیتابیس، کاربر و پسورد)', 'لومړی د هوسټ معلومات په دې فورم کې بشپړ کړئ', 'Fill the host details in this form first (mode, address, database, user and password)')
+      )
+      return
+    }
+    if (downloadHostSetupFile(cfg)) {
+      toast.success(
+        t('فایل ManufacturingERP-HostSetup.bat دانلود شد — آن را برای کارکنان بفرستید', 'فایل دانلود شو — د کارکوونکو ته یې ولېږئ', 'ManufacturingERP-HostSetup.bat downloaded — send it to staff')
+      )
+    } else {
+      toast.error(t('خطا در ساخت فایل', 'د فایل جوړولو ستونزه', 'Could not build the file'))
     }
   }
 
@@ -1450,13 +1483,12 @@ export default function SettingsModule() {
                 )}
               </div>
             </div>
-            {connApi ? (
-              <>
+            <>
                 <p className="text-sm text-muted-foreground">
                   {t(
-                    'نیازی به جستجوی فایل تنظیمات نیست — معلومات هاست خود را همین‌جا وارد کنید؛ برنامه فایل db-connection.txt را خودکار می‌نویسد و دوباره باز می‌شود.',
-                    'له فایل پلټنې ته اړتیا نشته — د هوسټ معلومات دلته داخل کړئ؛ پروګرام فایل اتوماتیک لیکي او بیا پرانیستل کېږي.',
-                    'No need to hunt for the config file — enter your host details here; the app writes db-connection.txt automatically and restarts.'
+                    'معلومات هاست خود را همین‌جا وارد کنید. در نسخه ویندوز دکمه «ذخیره» فایل db-connection.txt را خودکار می‌نویسد و برنامه دوباره باز می‌شود؛ و دکمه «دانلود فایل تنظیم خودکار» فایلی می‌سازد که با یک دابل‌کلیک، هاست را روی هر کمپیوتر نصب‌شده تنظیم می‌کند.',
+                    'د هوسټ معلومات دلته داخل کړئ. په وینډوز نسخه کې د «خوندي کولو» تڼۍ فایل اتوماتیک لیکي او پروګرام بیا پرانیستل کېږي؛ او د «فایل ښکته کولو» تڼۍ داسې فایل جوړوي چې په یوه کلیک، هوسټ په هر نصب شوي کمپیوټر کې تنظېږي.',
+                    'Enter your host details here. In the Windows app, Save writes db-connection.txt automatically and restarts the app; the "Download auto-setup file" button creates a file that configures the host on any installed computer with one double-click.'
                   )}
                 </p>
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
@@ -1588,26 +1620,54 @@ export default function SettingsModule() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={saveHostConnection} disabled={connSaving} className="gap-2">
-                    <Save className="h-4 w-4" />
-                    {connSaving ? t('در حال ذخیره…', 'خوندي کول…', 'Saving…') : t('ذخیره و اتصال به هاست', 'خوندي او نښلول', 'Save & connect to host')}
+                  {connApi && (
+                    <Button onClick={saveHostConnection} disabled={connSaving} className="gap-2">
+                      <Save className="h-4 w-4" />
+                      {connSaving ? t('در حال ذخیره…', 'خوندي کول…', 'Saving…') : t('ذخیره و اتصال به هاست', 'خوندي او نښلول', 'Save & connect to host')}
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={handleDownloadHostSetup} className="gap-2 border-primary/40">
+                    <Download className="h-4 w-4" />
+                    {t('دانلود فایل تنظیم خودکار هاست', 'د اتوماتیک هوسټ فایل ښکته کول', 'Download auto host-setup file')}
                   </Button>
-                  {connForm.mode === 'ssh' && (
+                  {connApi && connForm.mode === 'ssh' && (
                     <Button variant="outline" onClick={testSshConnection} disabled={connTesting} className="gap-2">
                       <ShieldCheck className={'h-4 w-4' + (connTesting ? ' animate-pulse' : '')} />
                       {connTesting ? t('در حال تست SSH…', 'د SSH ازمویل…', 'Testing SSH…') : t('تست اتصال SSH', 'د SSH نښلول ازمویل', 'Test SSH connection')}
                     </Button>
                   )}
-                  <Button variant="outline" className="gap-2" onClick={() => { void connApi.openFolder() }}>
-                    <FolderOpen className="h-4 w-4" />
-                    {t('باز کردن پوشه تنظیمات', 'د امستنې فولډر پرانیستل', 'Open settings folder')}
-                  </Button>
-                  {connInfo?.active && (
+                  {connApi && (
+                    <Button variant="outline" className="gap-2" onClick={() => { void connApi.openFolder() }}>
+                      <FolderOpen className="h-4 w-4" />
+                      {t('باز کردن پوشه تنظیمات', 'د امستنې فولډر پرانیستل', 'Open settings folder')}
+                    </Button>
+                  )}
+                  {connApi && connInfo?.active && (
                     <Button variant="ghost" className="gap-2 text-destructive hover:text-destructive" onClick={resetToLocalDb} disabled={connResetting}>
                       <RotateCcw className="h-4 w-4" />
                       {connResetting ? t('در حال تغییر…', 'په بدلون…', 'Switching…') : t('بازگشت به دیتابیس محلی', 'ځایی ډاټابیس ته بیرته‌ګرځېدل', 'Back to local database')}
                     </Button>
                   )}
+                </div>
+                {/* فایل تنظیم خودکار هاست — یک دابل‌کلیک روی کمپیوتر کارمند */}
+                <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-6 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+                  <p className="font-semibold">
+                    {t('فایل تنظیم خودکار هاست (برای کمپیوترهای کارکنان):', 'د اتوماتیک هوسټ فایل (د کارکوونکو کمپیوټرونه):', 'Auto host-setup file (for staff computers):')}
+                  </p>
+                  <p>
+                    {t(
+                      'دکمه «دانلود فایل تنظیم خودکار هاست» را بزنید — فایل ManufacturingERP-HostSetup.bat دانلود می‌شود. آن را برای کارکنان بفرستید (فلش، ایمیل، واتساپ). کارمند روی کمپیوتر خود دابل‌کلیک می‌کند: معلومات هاست خودکار ذخیره، برنامه بسته و دوباره باز می‌شود — بدون هیچ تنظیم دستی.',
+                      'د «دانلود فایل تنظیم خودکار هاست» تڼۍ کېکاږئ — فایل دانلودېږي. دا د کارکوونکو ته ولېږئ (فلاشي، برېښنالیک، واټساپ). کارکوونکی په خپل کمپیوټر کې دوه ځلې کلیک کوي: د هوسټ معلومات اتوماتیک خوندي، پروګرام بند او بیا پرانیستل کېږي — پرته له هېڅ لاسي تنظیم.',
+                      'Press "Download auto host-setup file" — ManufacturingERP-HostSetup.bat is downloaded. Send it to staff (USB, email, WhatsApp). They double-click it on their computer: host details are saved automatically, the app closes and reopens — no manual setup at all.'
+                    )}
+                  </p>
+                  <p className="mt-1 opacity-80">
+                    {t(
+                      'نکته: این فایل شامل پسورد هاست است — فقط به افراد مورد اعتماد بدهید. اگر پسورد هاست را تغییر دادید، یک فایل جدید بسازید و بفرستید.',
+                      'یادونه: دا فایل د هوسټ پسورد لري — یوازې باوري کسانو ته یې ورکړئ. که د هوسټ پسورد بدل شو، نوی فایل جوړ او ولېږئ.',
+                      'Note: this file contains your host password — give it only to trusted people. If the host password changes, generate and send a new file.'
+                    )}
+                  </p>
                 </div>
                 {connInfo?.sshMode && connInfo.tunnelStatus && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5" dir="ltr">
@@ -1637,14 +1697,14 @@ export default function SettingsModule() {
                     )}
                   </p>
                 )}
-              </>
-            ) : (
+            </>
+            {!connApi && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
                   {t(
-                    'این بخش فقط در نسخه ویندوز (اپلیکیشن دسکتاپ) فعال است. روش دستی پیدا کردن فایل db-connection.txt:',
-                    'دا برخه یوازې په د وینډوز نسخه کې فعال دی. لاسي لار:',
-                    'This section only works in the Windows desktop app. Manual way to find db-connection.txt:'
+                    'دکمه «ذخیره و اتصال به هاست» فقط در نسخه ویندوز (اپلیکیشن دسکتاپ) کار می‌کند — در مرورگر از دکمه «دانلود فایل تنظیم خودکار هاست» استفاده کنید تا فایل را برای کارکنان بسازید. روش دستی پیدا کردن فایل db-connection.txt:',
+                    'د «خوندي او نښلول» تڼۍ یوازې په وینډوز نسخه کې کار کوي — په براوزر کې د «فایل ښکته کولو» تڼۍ وکاروئ. لاسي لار:',
+                    'The "Save & connect" button only works in the Windows desktop app — in the browser use the "Download auto host-setup file" button to create the file for staff. Manual way to find db-connection.txt:'
                   )}
                 </p>
                 <ol className="list-decimal ms-5 space-y-1.5 text-sm">

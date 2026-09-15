@@ -1021,3 +1021,12 @@ Stage Summary:
 - settings fmtDate: toLocaleString('fa-AF') → toGregorianStr(iso, true) (Latin-digit Gregorian)
 - Verified in browser: login page has no hint text; dashboard/sales/finance/settings show Latin digits + "X AFG"; no page errors. Old audit-log rows keep historical wording (DB data)
 - lint ✓ tsc(src) ✓
+
+## v1.0.15 — One-click host setup file (ManufacturingERP-HostSetup.bat)
+- New src/lib/host-setup-file.ts: builds a Windows .bat that auto-configures the host on any installed desktop app
+  - db-connection.txt content embedded as Base64 → decoded via certutil (special chars in passwords safe, .bat stays pure ASCII/CRLF)
+  - Writes %APPDATA%\ManufacturingERP\db-connection.txt (+ legacy nextjs_tailwind_shadcn_ts folder if present), taskkills + relaunches the app from Program Files paths
+  - Same sanitize/validate rules as electron main.js; ssh mode writes 127.0.0.1:5522 tunnel URL + ssh-* keys
+- Settings module: "دانلود فایل تنظیم خودکار هاست" button (admin) in host card; host form now visible in web mode too (Save/Test/OpenFolder/Reset remain desktop-only); explanation + password-security note; manual-instructions text updated
+- Verified with bun: base64 round-trip, electron-format parse, ASCII/CRLF checks; browser: button renders, empty-form validation toast, real download decoded OK (ssh + direct modes)
+- installer.nsi VERSION bumped to 1.0.15.0 (exe rebuild needed only for the button to appear inside desktop builds; the .bat itself works with already-installed apps)
