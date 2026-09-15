@@ -259,6 +259,130 @@ body::before {
   }
 }
 
+/* ---- کارت‌های آماری دولایه — گوشهٔ بریده + آیکون شناور (طراحی card.html) ----
+   لایهٔ ۱: کارت سفید زیرین | لایهٔ ۲: آیکون خطی شناور | لایهٔ ۳: گرادیان تم با گوشهٔ بریده
+   آیکون و گوشهٔ بریده هر دو در سمت inline-end (RTL: چپ | LTR: راست) — متن در سمت مقابل */
+.stat-card {
+  --cut-x: 45%;
+  --cut-y: 72%;
+  position: relative;
+  min-height: 118px;
+  margin-top: 28px; /* فضای آیکون شناور بالای کارت */
+  transition: transform .2s;
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-card:hover .stat-icon { animation-duration: 1.4s; }
+
+/* لایهٔ ۱ — کارت زیرین */
+.stat-bottom {
+  position: absolute;
+  inset: 0;
+  background: var(--card);
+  border-radius: 15px;
+  box-shadow: 0 14px 26px -16px oklch(0.45 0.06 calc(var(--theme-h, 165) + 30) / 0.45);
+  z-index: 1;
+}
+.dark .stat-bottom {
+  box-shadow: 0 14px 26px -14px oklch(0 0 0 / 0.55);
+}
+
+/* لایهٔ ۲ — آیکون شناور (انیمیشن float) */
+.stat-icon {
+  position: absolute;
+  top: -24px;
+  inset-inline-end: 14px;
+  z-index: 2;
+  line-height: 0;
+  color: oklch(0.36 0.015 160);
+  animation: stat-float 3.5s ease-in-out infinite;
+}
+.dark .stat-icon { color: oklch(0.9 0.01 160); }
+.stat-icon svg { transform-box: fill-box; transform-origin: 50% 88%; }
+.stat-anim-shake svg { animation: stat-shake 4s ease-in-out infinite; }
+.stat-anim-sway  svg { animation: stat-sway 3.2s ease-in-out infinite; }
+.stat-anim-swing svg { animation: stat-swing 3s ease-in-out infinite; transform-origin: 50% 12%; }
+
+@keyframes stat-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes stat-shake {
+  0%, 14%, 100% { transform: rotate(0deg); }
+  3%  { transform: rotate(-7deg); }
+  6%  { transform: rotate(6deg); }
+  9%  { transform: rotate(-4deg); }
+  12% { transform: rotate(2deg); }
+}
+@keyframes stat-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50%      { transform: rotate(2.5deg); }
+}
+@keyframes stat-swing {
+  0%, 100% { transform: rotate(-7deg); }
+  50%      { transform: rotate(7deg); }
+}
+
+/* تأخیر پلکانی آیکون‌ها — موج در ردیف کارت‌ها */
+.stat-card:nth-child(4n+2) .stat-icon { animation-delay: .45s; }
+.stat-card:nth-child(4n+3) .stat-icon { animation-delay: .9s; }
+.stat-card:nth-child(4n+4) .stat-icon { animation-delay: 1.35s; }
+
+/* لایهٔ ۳ — گرادیان رویی با گوشهٔ بریده (رنگ از تم فعلی برنامه) */
+.stat-top-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  overflow: hidden;
+  filter: drop-shadow(-3px -3px 3px oklch(0.45 0.06 calc(var(--theme-h, 165) + 30) / 0.3));
+  z-index: 3;
+}
+.stat-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(225deg,
+    color-mix(in oklab, var(--primary) 30%, white) 0%,
+    color-mix(in oklab, var(--primary) 14%, white) 40%,
+    color-mix(in oklab, var(--primary) 5%, white) 55%,
+    white 92%);
+  clip-path: polygon(var(--cut-x) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut-y));
+}
+.dark .stat-top {
+  background: linear-gradient(225deg,
+    color-mix(in oklab, var(--primary) 34%, var(--card)) 0%,
+    color-mix(in oklab, var(--primary) 18%, var(--card)) 40%,
+    color-mix(in oklab, var(--primary) 7%, var(--card)) 55%,
+    var(--card) 92%);
+}
+.dark .stat-top-clip { filter: drop-shadow(0 -3px 3px oklch(0 0 0 / 0.4)); }
+
+/* حالت LTR (انگلیسی) — گوشهٔ بریده به سمت دیگر آینه می‌شود */
+[dir='ltr'] .stat-top {
+  clip-path: polygon(0 0, calc(100% - var(--cut-x)) 0, 100% var(--cut-y), 100% 100%, 0 100%);
+}
+
+/* متن‌ها — عنوان درشت (سلسله‌مراتب طراحی جدید) */
+.stat-content {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 20px;
+  /* متن هرگز زیر ناحیهٔ آیکون/گوشهٔ بریده نمی‌رود */
+  padding-inline-end: 64px;
+  text-align: start;
+}
+.stat-content .stat-title { font-size: 16px; font-weight: 800; color: var(--card-foreground); line-height: 1.35; }
+.stat-content .stat-value { font-size: 15px; font-weight: 700; color: var(--card-foreground); line-height: 1.3; }
+.stat-content .stat-hint  { font-size: 11.5px; color: var(--muted-foreground); line-height: 1.3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-icon, .stat-icon svg { animation: none !important; }
+}
+
 /* اسکرول‌بار سفارشی و ظریف برای لیست‌های بلند */
 ::-webkit-scrollbar {
   width: 6px;

@@ -41,33 +41,43 @@ export function StatCard({
   icon: Icon,
   hint,
   tone = 'green',
+  className,
 }: {
   title: string
   value: string
   icon?: LucideIcon
   hint?: string
   tone?: 'green' | 'blue' | 'amber' | 'red' | 'slate'
+  className?: string
 }) {
-  const tones: Record<string, string> = {
-    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    blue: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    red: 'bg-red-500/10 text-red-600 dark:text-red-400',
-    slate: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  // انیمیشن اختصاصی هر لحن (مطابق طراحی card.html):
+  // سبز/پول → تاب خوردن | آبی/جعبه → تکان آرام | کهربایی/سرخ/هشدار → لرزش
+  const anims: Record<string, string> = {
+    green: 'stat-anim-swing',
+    blue: 'stat-anim-sway',
+    amber: 'stat-anim-shake',
+    red: 'stat-anim-shake',
+    slate: '',
   }
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground truncate">{title}</p>
-          <p className="text-lg md:text-xl font-bold tracking-tight mt-1 truncate" title={value}>{value}</p>
-          {hint && <p className="text-[11px] text-muted-foreground mt-1 truncate">{hint}</p>}
+    <div className={cn('stat-card', className)}>
+      {/* لایهٔ ۱ — کارت سفید زیرین */}
+      <div className="stat-bottom" aria-hidden="true" />
+      {/* لایهٔ ۲ — آیکون شناور بالای گوشهٔ بریده */}
+      {Icon && (
+        <div className={cn('stat-icon', anims[tone])} aria-hidden="true">
+          <Icon className="h-11 w-11" strokeWidth={1.75} />
         </div>
-        {Icon && (
-          <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center shrink-0', tones[tone])}>
-            <Icon className="h-4.5 w-4.5" />
-          </div>
-        )}
+      )}
+      {/* لایهٔ ۳ — گرادیان تم با گوشهٔ بریده */}
+      <div className="stat-top-clip" aria-hidden="true">
+        <div className="stat-top" />
+      </div>
+      {/* متن‌ها */}
+      <div className="stat-content">
+        <h2 className="stat-title truncate">{title}</h2>
+        <p className="stat-value truncate" title={value}>{value}</p>
+        {hint && <p className="stat-hint truncate">{hint}</p>}
       </div>
     </div>
   )

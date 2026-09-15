@@ -1050,3 +1050,16 @@ Stage Summary:
 - صحت دانلود با API (Accept: octet-stream) تست شد: 200، 168MB در ۲۴ ثانیه، MD5 یکسان با فایل اصلی
 - ⚠️ ریپو private است → لینک‌های releases/download فقط برای افراد لاگین‌شده با دسترسی به ریپو کار می‌کنند؛ برای «هر فردی» لینک عمومی برنامه (/api/download/setup) راه اصلی است (یا public کردن ریپو توسط مالک)
 - download/RELEASE-NOTES-v1.0.16.md ساخته و کامیت شد
+
+## v1.0.17 — طراحی جدید کارت‌های آماری (دولایه، گوشهٔ بریده، آیکون شناور — مطابق card.html)
+- کاربر فایل upload/card.html فرستاد و خواست کارت‌ها همین‌طور دیزاین شوند
+- StatCard در src/components/shared/common.tsx بازنویسی شد (همهٔ ۱۰ ماژول خودکار می‌گیرند: dashboard/products/sales/inventory/audit/reports/materials/finance/production/users):
+  - لایهٔ ۱: کارت زیرین (var(--card)) با سایهٔ لطیف تم‌محور
+  - لایهٔ ۲: آیکون خطی lucide شناور (float 3.5s + تأخیر پلکانی nth-child 0/.45/.9/1.35s، hover سریع‌تر 1.4s)
+  - لایهٔ ۳: گرادیان رویی با گوشهٔ بریده (clip-path polygon --cut-x:45% --cut-y:72%) — رنگ گرادیان از color-mix(var(--primary)) پیروی تم فعلی (۱۱ تم) + حالت تیره اختصاصی
+  - انیمیشن اختصاصی بر اساس tone: green→swing، blue→sway، amber/red→shake (مثل طراحی نمونه: ۱ دلار/جعبه/هشدار)
+  - RTL: آیکون+برش در چپ، متن راست | LTR: آینه (clip-path [dir='ltr'] جابه‌جا، آیکون inset-inline-end)
+  - متن‌ها: title درشت 16px/800 (سلسله‌مراتب جدید مثل نمونه)، value 15px/700، hint 11.5px؛ padding-inline-end:64px تا متن زیر آیکون نرود
+- globals.css: بخش کامل stat-card (keyframes stat-float/shake/sway/swing + prefers-reduced-motion guard)
+- تایید مرورگر: داشبورد ۸ کارت، محصولات (hint دار)، تیره/روشن، تم بنفش (گرادیان عوض شد)، موبایل 390px، EN/LTR آینه — صفر خطا؛ lint ✓ tsc ✓
+- نکته: رقم‌های ظاهری فارسی‌شکل از گلیف‌های فونت B Nazanin است (ASCII در داده لاتین است) — رفتار پیش‌سازماندهٔ فونت انتخابی v1.0.11

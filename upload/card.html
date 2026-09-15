@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>کارت‌های دولایه با آیکون انیمیشنی</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cut-x: 45%;
+    --cut-y: 78%;
+  }
+
+  body {
+    font-family: "Vazirmatn", Tahoma, sans-serif;
+    background: #ededed;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 30px 50px;
+  }
+
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 42px; /* قبلاً 56 بود */
+  }
+
+  .card-wrap {
+    position: relative;
+    width: 258px;    /* قبلاً 310 بود */
+    height: 126px;   /* قبلاً 152 بود */
+    margin-top: 30px;
+    transition: transform .2s;
+  }
+  .card-wrap:hover { transform: translateY(-3px); }
+
+  /* ── لایه ۱: کارت سفید زیرین ── */
+  .layer-bottom {
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 14px 26px -16px rgba(80, 135, 150, .45);
+    z-index: 1;
+  }
+
+  /* ── لایه ۲: آیکون ── */
+  .icon {
+    position: absolute;
+    left: 10px;
+    z-index: 2;
+    line-height: 0;
+    animation: float 3.5s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+  }
+
+  .cards .card-wrap:nth-child(1) .icon { animation-delay: 0s;   }
+  .cards .card-wrap:nth-child(2) .icon { animation-delay: .45s; }
+  .cards .card-wrap:nth-child(3) .icon { animation-delay: .9s;  }
+  .cards .card-wrap:nth-child(4) .icon { animation-delay: 1.35s;}
+
+  /* انیمیشن اختصاصی هر آیکون */
+  .knob-on { animation: toggle 3s ease-in-out infinite; }
+  @keyframes toggle {
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(-28px); }
+  }
+
+  .icon-warn svg {
+    transform-box: fill-box;
+    transform-origin: 50% 88%;
+    animation: shake 4s ease-in-out infinite;
+  }
+  @keyframes shake {
+    0%, 14%, 100% { transform: rotate(0deg); }
+    3%  { transform: rotate(-7deg); }
+    6%  { transform: rotate(6deg); }
+    9%  { transform: rotate(-4deg); }
+    12% { transform: rotate(2deg); }
+  }
+
+  .icon-box svg {
+    transform-box: fill-box;
+    transform-origin: 50% 90%;
+    animation: sway 3.2s ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-2.5deg); }
+    50%      { transform: rotate(2.5deg); }
+  }
+
+  .icon-dollar svg {
+    transform-box: fill-box;
+    transform-origin: 50% 12%;
+    animation: swing 3s ease-in-out infinite;
+  }
+  @keyframes swing {
+    0%, 100% { transform: rotate(-7deg); }
+    50%      { transform: rotate(7deg); }
+  }
+
+  .card-wrap:hover .icon { animation-duration: 1.4s; }
+
+  /* ── لایه ۳: کارت گرادیان رویی با گوشه‌ی بریده ── */
+  .layer-top-clip {
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    overflow: hidden;
+    filter: drop-shadow(-3px -3px 3px rgba(100, 145, 160, .35));
+    z-index: 3;
+  }
+  .layer-top {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(225deg, #a9d9ec 0%, #cfeaf5 40%, #eef9fc 55%, #ffffff 92%);
+    clip-path: polygon(var(--cut-x) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut-y));
+  }
+
+  /* ── متن‌ها ── */
+  .content {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 24px;
+  }
+  .content h2 { font-size: 18px; font-weight: 800; color: #262626; }
+  .value { font-size: 16px; font-weight: 700; color: #262626; }
+  .hint  { font-size: 11.5px; color: #9b9b9b; }
+  .split { display: flex; gap: 24px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icon, .icon svg, .knob-on { animation: none !important; }
+  }
+</style>
+</head>
+
+<body>
+
+<div class="cards">
+
+  <!-- ۱) فعال / غیرفعال -->
+  <div class="card-wrap">
+    <div class="layer-bottom"></div>
+
+    <div class="icon" style="top:-28px;">
+      <svg width="94" height="89" viewBox="0 0 97 93" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="21" y="5" width="68" height="31" rx="15.5" stroke="#3a3a3a" stroke-width="5"/>
+        <circle class="knob-on" cx="71" cy="20.5" r="10" fill="#fff" stroke="#3a3a3a" stroke-width="5"/>
+        <text x="31" y="25" font-family="Arial" font-size="13" font-weight="bold" fill="#3a3a3a">ON</text>
+        <rect x="5" y="47" width="68" height="31" rx="15.5" stroke="#3a3a3a" stroke-width="5"/>
+        <circle cx="23" cy="62.5" r="10" fill="#fff" stroke="#3a3a3a" stroke-width="5"/>
+        <text x="41" y="67" font-family="Arial" font-size="13" font-weight="bold" fill="#3a3a3a">OFF</text>
+      </svg>
+    </div>
+
+    <div class="layer-top-clip"><div class="layer-top"></div></div>
+
+    <div class="content">
+      <h2>فعال / غیرفعال</h2>
+      <div class="value">0 / 4</div>
+    </div>
+  </div>
+
+  <!-- ۲) کمبود جدی -->
+  <div class="card-wrap">
+    <div class="layer-bottom"></div>
+
+    <div class="icon icon-warn" style="top:-23px;">
+      <svg width="94" height="87" viewBox="0 0 100 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 7 L93 84 H7 Z" stroke="#3a3a3a" stroke-width="7" stroke-linejoin="round"/>
+        <line x1="50" y1="33" x2="50" y2="58" stroke="#3a3a3a" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="50" cy="70" r="4.5" fill="#3a3a3a"/>
+      </svg>
+    </div>
+
+    <div class="layer-top-clip"><div class="layer-top"></div></div>
+
+    <div class="content">
+      <h2>کمبود جدی</h2>
+      <div class="value">7</div>
+      <div class="hint">دارای زیر حداقل موجودی</div>
+    </div>
+  </div>
+
+  <!-- ۳) محمولات -->
+  <div class="card-wrap">
+    <div class="layer-bottom"></div>
+
+    <div class="icon icon-box" style="top:-26px;">
+      <svg width="94" height="89" viewBox="0 0 106 100" fill="none" xmlns="http://www.w3.org/2000/svg"
+           stroke="#3a3a3a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 46 L12 34 L28 24 L50 36"/>
+        <path d="M82 46 L102 34 L86 24 L64 36"/>
+        <path d="M32 46 L50 36 H64 L82 46"/>
+        <path d="M32 46 V86 H82 V46"/>
+        <rect x="6" y="54" width="38" height="40" rx="5" fill="#fff"/>
+        <path d="M14 65 l4.5 4.5 l8 -8.5"/><line x1="32" y1="64" x2="38" y2="64"/>
+        <path d="M14 75 l4.5 4.5 l8 -8.5"/><line x1="32" y1="74" x2="38" y2="74"/>
+        <path d="M14 85 l4.5 4.5 l8 -8.5"/><line x1="32" y1="84" x2="38" y2="84"/>
+      </svg>
+    </div>
+
+    <div class="layer-top-clip"><div class="layer-top"></div></div>
+
+    <div class="content">
+      <h2>محمولات</h2>
+      <div class="value split"><span>تعداد :</span><span>23</span></div>
+    </div>
+  </div>
+
+  <!-- ۴) ارزش موجودی -->
+  <div class="card-wrap">
+    <div class="layer-bottom"></div>
+
+    <div class="icon icon-dollar" style="top:-30px;">
+      <svg width="86" height="86" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="46" cy="46" r="39" stroke="#3a3a3a" stroke-width="6"/>
+        <text x="46" y="62" text-anchor="middle" font-family="Arial" font-size="50" font-weight="bold" fill="#3a3a3a">$</text>
+      </svg>
+    </div>
+
+    <div class="layer-top-clip"><div class="layer-top"></div></div>
+
+    <div class="content">
+      <h2>ارزش موجودی</h2>
+      <div class="value">AFG 230800</div>
+      <div class="hint">بر اساس قیمت تمام‌شده</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
