@@ -8,6 +8,7 @@ import { useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { useI18n } from '@/lib/i18n'
 import { apiPost } from '@/lib/api'
+import { LOCAL_MODE } from '@/lib/local-api'
 import { clearOfflineCache } from '@/lib/offline-client'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -66,18 +67,77 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
     const f = e.target.files?.[0] || null
     e.target.value = '' // انتخاب دوباره همان فایل هم کار کند
     if (!f) return
-    if (!f.name.toLowerCase().endsWith('.db') && !f.name.toLowerCase().endsWith('.sqlite') && !f.name.toLowerCase().endsWith('.sqlite3')) {
+    if (LOCAL_MODE) {
+      // حالت محلی — بازیابی از خروجی JSON (فایل دیتابیس SQLite معنا ندارد)
+      if (!f.name.toLowerCase().endsWith('.json')) {
+        toast.error(
+          t('فقط فایل کاپی احتیاطی (.json) قابل بازیابی است', 'یوازې د بیک اپ فایل (.json) بیا راغول کېدای شي', 'Only a backup file (.json) can be restored')
+        )
+        return
+      }
+    } else if (
+      !f.name.toLowerCase().endsWith('.db') &&
+      !f.name.toLowerCase().endsWith('.sqlite') &&
+      !f.name.toLowerCase().endsWith('.sqlite3')
+    ) {
       toast.error(t('فقط فایل کاپی احتیاطی (.db) قابل بازیابی است', 'یوازې د بیک اپ فایل (.db) بیا راغول کېدای شي', 'Only a backup file (.db) can be restored'))
       return
     }
     setPendingFile(f)
   }
 
-  // ---------- آپلود و بازیابی (XHR — از لایه آفلاین عبور می‌کند + درصد پیشرفت) ----------
+  // ---------- آپلود و بازیابی ----------
+  // حالت محلی: فایل JSON → FileReader → POST {import} (موتور محلی multipart نمی‌گیرد)
+  // هاست: XHR با FormData — از لایهٔ آفلاین عبور می‌کند + درصد پیشرفت
   function uploadAndRestore() {
     if (!pendingFile || uploading) return
     setUploading(true)
     setProgress(0)
+
+    if (LOCAL_MODE) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        let parsed: unknown
+        try {
+          parsed = JSON.parse(String(reader.result ?? ''))
+        } catch {
+          setUploading(false)
+          toast.error(
+            t('فایل JSON قابل خواندن نیست', 'د JSON فایل نه لوستل کېږي', 'File is not readable JSON'),
+            { duration: 7000 }
+          )
+          return
+        }
+        setProgress(100)
+        apiPost<{ safetyBackup?: string }>('/api/admin/backup', { import: parsed })
+          .then((body) => {
+            setPendingFile(null)
+            toast.success(
+              t(
+                `بازیابی انجام شد — کاپی احتیاطی ${body.safetyBackup} گرفته شد`,
+                `بیا رغونه ترسره شوه — خوندي بیک اپ ${body.safetyBackup}`,
+                `Restored — safety backup ${body.safetyBackup} created`
+              ),
+              { duration: 6000 }
+            )
+            clearOfflineCache()
+            setTimeout(() => window.location.reload(), 900)
+          })
+          .catch((err) => {
+            toast.error(
+              err instanceof Error ? err.message : t('بازیابی ناموفق بود', 'بیا رغونه ناکامې شوه', 'Restore failed'),
+              { duration: 7000 }
+            )
+          })
+          .finally(() => setUploading(false))
+      }
+      reader.onerror = () => {
+        setUploading(false)
+        toast.error(t('خواندن فایل ناموفق بود', 'لوستل د فایل ناکام شو', 'Could not read the file'))
+      }
+      reader.readAsText(pendingFile)
+      return
+    }
 
     const form = new FormData()
     form.append('file', pendingFile)
@@ -122,7 +182,7 @@ export default function BackupMenu({ onGoSettings }: BackupMenuProps) {
 
   return (
     <>
-      <input ref={fileInputRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={handleFilePicked} />
+      <input ref={fileInputRef} type="file" accept={LOCAL_MODE ? '.json' : '.db,.sqlite,.sqlite3'} className="hidden" onChange={handleFilePicked} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

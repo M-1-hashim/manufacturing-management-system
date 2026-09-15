@@ -12,6 +12,7 @@ import { DirectionProvider } from '@radix-ui/react-direction'
 import { apiGet, apiPost } from '@/lib/api'
 import { installAuthInterceptor } from '@/lib/auth-client'
 import { installOfflineInterceptor, trySync, refreshPendingCount, clearOfflineCache } from '@/lib/offline-client'
+import { LOCAL_MODE, installLocalApi } from '@/lib/local-api'
 import { canAccess, roleLabel, departmentLabel } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -42,6 +43,10 @@ import ReportsModule from '@/components/modules/reports'
 import SettingsModule from '@/components/modules/settings'
 import UsersModule from '@/components/modules/users'
 import AuditModule from '@/components/modules/audit'
+
+// حالت محلی (نسخهٔ اندروید مستقل) — موتور API محلی قبل از هر رندری نصب می‌شود
+// تا تمام درخواست‌های /api/* بدون هاست، در داخل خود برنامه پاسخ بگیرند
+if (LOCAL_MODE) installLocalApi()
 
 const NAV = [
   { id: 'dashboard', fa: 'داشبورد', ps: 'معلوماتي پاڼه', en: 'Dashboard', icon: LayoutDashboard },
@@ -444,7 +449,8 @@ function Shell() {
   useEffect(() => {
     // رهگیری سراسری 401 + لایه آفلاین/همگام‌سازی — همه fetch های مستقیم ماژول‌ها را هم پوشش می‌دهد
     installAuthInterceptor()
-    installOfflineInterceptor()
+    // حالت محلی (APK اندروید): موتور API محلی فعال است — لایهٔ صف/همگام‌سازی لازم نیست
+    if (!LOCAL_MODE) installOfflineInterceptor()
     if (!user) return
     let cancelled = false
     const raf = requestAnimationFrame(() => {
@@ -781,8 +787,8 @@ function FirstRunGate() {
   useEffect(() => {
     let alive = true
     async function decide() {
-      // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
-      const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
+      // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد (غیر از حالت محلی)
+      const forceSetup = !LOCAL_MODE && new URLSearchParams(window.location.search).get('setup') === '1'
       if (!forceSetup && localStorage.getItem(SETUP_FLAG) === '1') {
         if (alive) setState('app')
         return

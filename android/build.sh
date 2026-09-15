@@ -18,17 +18,22 @@ echo "[1/6] aapt2 compile resources"
 "$BT/aapt2" compile --dir res -o "$OUT/res.zip"
 
 echo "[2/6] aapt2 link"
+ASSETS_ARG=""
+if [ -d assets ]; then ASSETS_ARG="-A assets"; fi   # باندل وب استاتیک (نسخهٔ مستقل) — اگر موجود باشد
 "$BT/aapt2" link -o "$OUT/base.apk" \
   -I "$PLATFORM" \
   --manifest AndroidManifest.xml \
   --min-sdk-version 24 --target-sdk-version 34 \
+  --java "$OUT/gen" \
   --auto-add-overlay \
+  $ASSETS_ARG \
   "$OUT/res.zip"
 
 echo "[3/6] javac"
 javac --release 8 -encoding UTF-8 -Xlint:-options \
   -classpath "$PLATFORM" \
-  -d "$OUT/classes" src/com/setab/erp/MainActivity.java
+  -d "$OUT/classes" \
+  src/com/setab/erp/MainActivity.java "$OUT/gen/com/setab/erp/R.java"
 
 echo "[4/6] d8 (dex)"
 "$BT/d8" --release --lib "$PLATFORM" --min-api 24 \

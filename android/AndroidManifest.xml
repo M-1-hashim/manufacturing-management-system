@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- سِتب — نسخهٔ اندروید: WebView مستقل که به سرور وصل می‌شود (بدون نیاز به نسخهٔ ویندوز) -->
+<!-- سِتب — نسخهٔ اندروید «کاملاً مستقل»: کل برنامه داخل APK است، دیتا روی خود دستگاه، بدون سرور -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.setab.erp"
-    android:versionCode="1"
-    android:versionName="1.0.17">
+    android:versionCode="3"
+    android:versionName="1.0.18">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <!-- فقط برای اندروید ۷ تا ۹ (دانلود به گالری/Downloads) -->
+    <!-- فقط برای اندروید ۷ تا ۹ (ذخیرهٔ کاپی احتیاطی در Downloads) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 
     <application

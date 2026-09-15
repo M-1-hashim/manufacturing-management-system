@@ -40,7 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
+/local-*
 .claude
 .z-ai-config
 *.log
@@ -74,3 +74,9 @@ tool-results/
 android/build/
 android/app.apk
 .verify/
+
+# APK standalone web bundle build artifacts
+.apk-build-stash/
+.next-apk/
+out-apk/
+android/assets/

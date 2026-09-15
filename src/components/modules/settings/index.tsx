@@ -29,6 +29,8 @@ import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
 import { clearOfflineCache } from '@/lib/offline-client'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
+import { LOCAL_MODE } from '@/lib/local-api'
+import { saveFileLocal } from '@/lib/local-api/bridge'
 
 // ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخهٔ 1.0.3 به بعد) ----------
 interface DbConnInfoT {
@@ -546,6 +548,23 @@ export default function SettingsModule() {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || t('خطا در دانلود', 'د ښکته کولو ستونزه', 'Download failed'))
       }
+      // حالت محلی (اندروید): JSON مستقیم در Downloads دستگاه ذخیره می‌شود — blob در WebView کار نمی‌کند
+      if (LOCAL_MODE) {
+        const json: unknown = await res.json()
+        const text = JSON.stringify(json)
+        if (saveFileLocal(name, text)) {
+          toast.success(t('فایل کاپی احتیاطی در پوشهٔ Downloads ذخیره شد', 'د بیک اپ فایل په Downloads کې خوندي شو', 'Backup file saved to Downloads'))
+          return
+        }
+        // پل اندروید در دسترس نیست (مرورگر) → دانلود blob مثل قبل
+        const blob = new Blob([text], { type: 'application/json' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = name
+        a.click()
+        URL.revokeObjectURL(a.href)
+        return
+      }
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
@@ -563,6 +582,29 @@ export default function SettingsModule() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || t('خطا در تهیه خروجی', 'د صادرولو ستونزه', 'Export failed'))
+      }
+      // حالت محلی (اندروید): خروجی JSON مستقیم در Downloads دستگاه ذخیره می‌شود
+      if (LOCAL_MODE) {
+        const json: unknown = await res.json()
+        const text = JSON.stringify(json)
+        const name = `backup-${new Date().toISOString().slice(0, 10)}.json`
+        if (saveFileLocal(name, text)) {
+          toast.success(
+            t('خروجی JSON آماده شد — برای انتقال دیتا به هاست استفاده کنید', 'د JSON خپلوونکی چمتو شو', 'JSON export ready')
+          )
+          return
+        }
+        // پل اندروید در دسترس نیست (مرورگر) → دانلود blob مثل قبل
+        const blob = new Blob([text], { type: 'application/json' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = name
+        a.click()
+        URL.revokeObjectURL(a.href)
+        toast.success(
+          t('خروجی JSON آماده شد — برای انتقال دیتا به هاست استفاده کنید', 'د JSON خپلوونکی چمتو شو', 'JSON export ready')
+        )
+        return
       }
       const blob = await res.blob()
       const a = document.createElement('a')
@@ -607,7 +649,21 @@ export default function SettingsModule() {
     setRestoring(true)
     try {
       let res: Response
-      if (payload.file) {
+      if (payload.file && LOCAL_MODE) {
+        // حالت محلی: FormData در موتور محلی پشتیبانی نمی‌شود — فایل JSON خوانده و با { import: … } فرستاده می‌شود
+        const text = await payload.file.text()
+        let parsed: unknown
+        try {
+          parsed = JSON.parse(text)
+        } catch {
+          throw new Error(t('فایل انتخاب‌شده معتبر نیست — فایل خروجی JSON (.json) را انتخاب کنید', 'فایل غلط دی — د JSON فایل انتخاب کړئ', 'Invalid file — pick a JSON export file (.json)'))
+        }
+        res = await fetch('/api/admin/backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ import: parsed }),
+        })
+      } else if (payload.file) {
         const fd = new FormData()
         fd.append('file', payload.file)
         res = await fetch('/api/admin/backup', { method: 'POST', body: fd })
@@ -947,35 +1003,37 @@ export default function SettingsModule() {
         </CardContent>
       </Card>
 
-      {/* نسخه اندروید */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Smartphone className="h-4 w-4 text-primary" />
-            {t('نسخه اندروید (APK)', 'د اندروید نسخه (APK)', 'Android app (APK)')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <p className="text-sm text-muted-foreground flex-1">
-              {t(
-                'برای نصب روی گوشی، فایل APK را دانلود کنید. کارکنان می‌توانند با باز کردن همین آدرس در مرورگر گوشی (همان شبکه وای‌فای) فایل را دانلود و نصب کنند.',
-                'د په ټیلیفون نصبولو لپاره APK فایل ښکته کړئ. کارکوونکي کولی شي په ورته پته د ټیلیفون په براوزر کې فایل ښکته او نصب کړي.',
-                'Download the APK to install on phones. Staff can open the same address in their phone browser (same Wi-Fi) to download and install.'
-              )}
+      {/* نسخه اندروید — فقط روی سرور (در حالت محلی APK مستقل، دانلود APK بی‌معناست) */}
+      {!LOCAL_MODE && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Smartphone className="h-4 w-4 text-primary" />
+              {t('نسخه اندروید (APK)', 'د اندروید نسخه (APK)', 'Android app (APK)')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="text-sm text-muted-foreground flex-1">
+                {t(
+                  'برای نصب روی گوشی، فایل APK را دانلود کنید. کارکنان می‌توانند با باز کردن همین آدرس در مرورگر گوشی (همان شبکه وای‌فای) فایل را دانلود و نصب کنند.',
+                  'د په ټیلیفون نصبولو لپاره APK فایل ښکته کړئ. کارکوونکي کولی شي په ورته پته د ټیلیفون په براوزر کې فایل ښکته او نصب کړي.',
+                  'Download the APK to install on phones. Staff can open the same address in their phone browser (same Wi-Fi) to download and install.'
+                )}
+              </p>
+              <a href="/mfg-erp.apk" download className="shrink-0">
+                <Button className="gap-2 w-full sm:w-auto">
+                  <Download className="h-4 w-4" />
+                  {t('دانلود فایل APK', 'APK فایل ښکته کړئ', 'Download APK')}
+                </Button>
+              </a>
+            </div>
+            <p className="text-xs text-muted-foreground" dir="ltr" >
+              http://&lt;server-ip&gt;:3000/mfg-erp.apk
             </p>
-            <a href="/mfg-erp.apk" download className="shrink-0">
-              <Button className="gap-2 w-full sm:w-auto">
-                <Download className="h-4 w-4" />
-                {t('دانلود فایل APK', 'APK فایل ښکته کړئ', 'Download APK')}
-              </Button>
-            </a>
-          </div>
-          <p className="text-xs text-muted-foreground" dir="ltr" >
-            http://&lt;server-ip&gt;:3000/mfg-erp.apk
-          </p>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* کاپی احتیاطی — فقط ادمین */}
       {isAdmin && (
@@ -997,29 +1055,31 @@ export default function SettingsModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* فایل‌های هاست اشتراکی — ذخیره دیتا در MySQL هاست */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-              <Server className="h-4 w-4 shrink-0 text-amber-600" />
-              <p className="flex-1 text-xs leading-5 text-amber-900 dark:text-amber-200">
-                {t(
-                  'برای ذخیره دیتا در هاست اشتراکی: فایل SQL را در phpMyAdmin هاست ایمپورت کنید، سپس طبق راهنما برنامه را به دیتابیس هاست وصل کرده و کاپی احتیاطی JSON را بازیابی کنید.',
-                  'د ډاټا د هوسټ کې ساتلو لپاره: د SQL فایل په phpMyAdmin کې داخل کړئ، بیا د لارښود له مخې پروګرام وصل او بیک اپ بیا رغوئ.',
-                  'To store data on your shared host: import the SQL file in phpMyAdmin, then connect the app to the host database and restore the JSON backup.'
-                )}
-              </p>
-              <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
-                <a href="/mysql-schema.sql" download>
-                  <FileDown className="h-3.5 w-3.5" />
-                  {t('فایل SQL هاست', 'د SQL فایل', 'Host SQL file')}
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
-                <a href="/hosting-guide.md" download>
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {t('راهنمای گام‌به‌گام', 'ګام په ګام لارښود', 'Step-by-step guide')}
-                </a>
-              </Button>
-            </div>
+            {/* فایل‌های هاست اشتراکی — ذخیره دیتا در MySQL هاست (در حالت محلی پنهان) */}
+            {!LOCAL_MODE && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+                <Server className="h-4 w-4 shrink-0 text-amber-600" />
+                <p className="flex-1 text-xs leading-5 text-amber-900 dark:text-amber-200">
+                  {t(
+                    'برای ذخیره دیتا در هاست اشتراکی: فایل SQL را در phpMyAdmin هاست ایمپورت کنید، سپس طبق راهنما برنامه را به دیتابیس هاست وصل کرده و کاپی احتیاطی JSON را بازیابی کنید.',
+                    'د ډاټا د هوسټ کې ساتلو لپاره: د SQL فایل په phpMyAdmin کې داخل کړئ، بیا د لارښود له مخې پروګرام وصل او بیک اپ بیا رغوئ.',
+                    'To store data on your shared host: import the SQL file in phpMyAdmin, then connect the app to the host database and restore the JSON backup.'
+                  )}
+                </p>
+                <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                  <a href="/mysql-schema.sql" download>
+                    <FileDown className="h-3.5 w-3.5" />
+                    {t('فایل SQL هاست', 'د SQL فایل', 'Host SQL file')}
+                  </a>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                  <a href="/hosting-guide.md" download>
+                    <BookOpen className="h-3.5 w-3.5" />
+                    {t('راهنمای گام‌به‌گام', 'ګام په ګام لارښود', 'Step-by-step guide')}
+                  </a>
+                </Button>
+              </div>
+            )}
 
             {/* تنظیمات خودکار */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
@@ -1136,7 +1196,7 @@ export default function SettingsModule() {
             </p>
 
             {/* اینپوت مخفی آپلود کاپی احتیاطی */}
-            <input ref={uploadInputRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={pickRestoreFile} />
+            <input ref={uploadInputRef} type="file" accept={LOCAL_MODE ? '.json,.db,.sqlite,.sqlite3' : '.db,.sqlite,.sqlite3'} className="hidden" onChange={pickRestoreFile} />
 
             {/* تصدیق بازیابی — از فایل موجود یا آپلودی */}
             <AlertDialog open={!!restoreTarget || !!restoreFile} onOpenChange={(o) => { if (!o && !restoring) { setRestoreTarget(null); setRestoreFile(null) } }}>
@@ -1188,8 +1248,8 @@ export default function SettingsModule() {
         </Card>
       )}
 
-      {/* اتصال برنامه به هاست اشتراکی — بدون جستجوی دستی فایل db-connection.txt */}
-      {isAdmin && (
+      {/* اتصال برنامه به هاست اشتراکی — بدون جستجوی دستی فایل db-connection.txt (در حالت محلی پنهان) */}
+      {isAdmin && !LOCAL_MODE && (
         <Card className="border-amber-200 dark:border-amber-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
