@@ -264,7 +264,7 @@ body::before {
    آیکون و گوشهٔ بریده هر دو در سمت inline-end (RTL: چپ | LTR: راست) — متن در سمت مقابل */
 .stat-card {
   --cut-x: 45%;
-  --cut-y: 72%;
+  --cut-y: 60%; /* برش کمتر — لبهٔ مورب بالاتر می‌نشیند (تنظیم ۱.۰.۱۷) */
   position: relative;
   min-height: 118px;
   margin-top: 28px; /* فضای آیکون شناور بالای کارت */
@@ -286,12 +286,12 @@ body::before {
   box-shadow: 0 14px 26px -14px oklch(0 0 0 / 0.55);
 }
 
-/* لایهٔ ۲ — آیکون شناور (انیمیشن float) */
+/* لایهٔ ۲ — آیکون شناور (انیمیشن float) — top هماهنگ با برش ۶۰٪ */
 .stat-icon {
   position: absolute;
-  top: -24px;
+  top: -26px;
   inset-inline-end: 14px;
-  z-index: 2;
+  z-index: 4; /* بالاتر از گرادیان — با برش کوچک‌تر، آیکون هرگز زیر لایهٔ رویی نمی‌رود */
   line-height: 0;
   color: oklch(0.36 0.015 160);
   animation: stat-float 3.5s ease-in-out infinite;
