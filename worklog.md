@@ -1091,3 +1091,10 @@ Stage Summary:
 - UI: کارت «نسخهٔ اندروید (سِتب)» در صفحهٔ ورود (پنهان در UA اپ) + دکمهٔ «دانلود سِتب اندروید» در تنظیمات (کنار ستب ویندوز)
 - تأیید: apksigner verify ✓، aapt2 badging ✓ (label/آیکون/activity)، دانلود از route → MD5 یکسان با منبع؛ login/settings در مرورگر ✓؛ lint ✓ tsc(src) ✓؛ صفر خطای کنسول
 - نکتهٔ استقرار: app.apk باید مثل Setup.exe در download/ سرور کپی شود؛ روی گوشی «نصب از منابع ناشناس» لازم است
+
+## v1.0.17 (add) — app.apk در گیت‌هاب ریلیز شد
+- GitHub Release «v1.0.17 — نسخهٔ اندروید (app.apk) + طراحی جدید کارت‌ها» ساخته شد (id 389192042، tag روی main)
+- Asset آپلود شد: app.apk (62,771 B) — state=uploaded
+- صحت دانلود با API (Accept: octet-stream) تست شد: 200، MD5 یکسان با فایل اصلی (f264e76c…)
+- لینک مستقیم: https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.17/app.apk
+- ⚠️ ریپو private است — این لینک فقط برای اکانت‌های دارای دسترسی کار می‌کند؛ لینک عمومی برای همه: /api/download/setup?variant=apk
