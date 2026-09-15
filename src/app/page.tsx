@@ -24,7 +24,7 @@ import {
   LayoutDashboard, Package, FlaskConical, Boxes, Factory, ShoppingCart,
   Warehouse, Wallet, Users, BarChart3, Settings, LogOut, Menu, X,
   Wifi, WifiOff, Languages, Sun, Moon, Lock, UserCog, History, KeyRound, RefreshCw, Palette, Check,
-  Cloud, CloudOff, Database, Download, MonitorDown,
+  Cloud, CloudOff, Database, Download, MonitorDown, Smartphone,
 } from 'lucide-react'
 
 import DashboardModule from '@/components/modules/dashboard'
@@ -168,6 +168,7 @@ interface SetupDlInfoT {
   version: string
   setup: { available: boolean; sizeHuman: string | null }
   portable: { available: boolean; sizeHuman: string | null }
+  apk?: { available: boolean; sizeHuman: string | null }
 }
 
 // وضعیت اتصال دیتابیس (پاسخ GET /api/system/connection-status)
@@ -195,11 +196,13 @@ function LoginView() {
 
   // دانلود عمومی سِتب — حتی بدون داخل شدن (هر فردی که لینک صفحه را باز کند)
   const [dlInfo, setDlInfo] = useState<SetupDlInfoT | null>(null)
+  const [isApp, setIsApp] = useState(false) // داخل اپ اندروید (UA: SetabAndroid) — کارت‌های ویندوز پنهان می‌شوند
   useEffect(() => {
     let alive = true
+    try { setIsApp(/SetabAndroid/.test(navigator.userAgent)) } catch { /* noop */ }
     fetch('/api/download/setup?info=1', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j: SetupDlInfoT | null) => { if (alive && j?.setup?.available) setDlInfo(j) })
+      .then((j: SetupDlInfoT | null) => { if (alive && (j?.setup?.available || j?.apk?.available)) setDlInfo(j) })
       .catch(() => { /* فایل موجود نیست — کارت نمایش داده نمی‌شود */ })
     return () => { alive = false }
   }, [])
@@ -296,8 +299,8 @@ function LoginView() {
             </Button>
           </form>
 
-          {/* دانلود عمومی نصب‌کنندهٔ ویندوز — برای همه (بدون نیاز به حساب) */}
-          {dlInfo?.setup.available && (
+          {/* دانلود عمومی نصب‌کنندهٔ ویندوز — برای همه (بدون نیاز به حساب) — در اپ اندروید پنهان */}
+          {!isApp && dlInfo?.setup.available && (
             <div className="mt-6 pt-5 border-t">
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
@@ -326,6 +329,35 @@ function LoginView() {
                         </a>
                       </Button>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* دانلود نسخهٔ اندروید (APK) — مستقل از ویندوز، وصل به سرور */}
+          {!isApp && dlInfo?.apk?.available && (
+            <div className="mt-4 pt-5 border-t">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">{t('نسخهٔ اندروید (سِتب)', 'د اندروید نسخه (سېټ)', 'Android version (Setup)')}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-5">
+                    {t(
+                      `برای موبایل و تبلت — بدون نیاز به کمپیوتر (اندروید ۷ به بالا) · ${dlInfo.apk.sizeHuman ?? ''}`,
+                      `د موبایل او ټابلیټ لپاره — له کمپیوټر پرته (اندروید ۷ او وروسته) · ${dlInfo.apk.sizeHuman ?? ''}`,
+                      `For phones & tablets — no computer needed (Android 7+) · ${dlInfo.apk.sizeHuman ?? ''}`
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button asChild size="sm" variant="outline" className="h-9">
+                      <a href="/api/download/setup?variant=apk" download>
+                        <Smartphone className="h-4 w-4 me-2" />
+                        {t('دانلود APK', 'APK ښکته کول', 'Download APK')}
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </div>

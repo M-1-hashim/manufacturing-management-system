@@ -70,3 +70,7 @@ server.log
 tool-results/
 .zscripts/
 .tmp-tests/
+/download/*.apk
+android/build/
+android/app.apk
+.verify/

@@ -224,14 +224,16 @@ export default function SettingsModule() {
   const [hostSetupResult, setHostSetupResult] = useState<string | null>(null)
   const [migrateConfirm, setMigrateConfirm] = useState(false)
 
-  // ---------- دانلود عمومی سِتب ویندوز (فقط اگر فایل نصب‌کننده روی سرور موجود باشد) ----------
+  // ---------- دانلود عمومی سِتب ویندوز + APK اندروید (فقط اگر فایل روی سرور موجود باشد) ----------
   const [setupDl, setSetupDl] = useState<{ sizeHuman: string | null } | null>(null)
+  const [apkDl, setApkDl] = useState<{ sizeHuman: string | null } | null>(null)
   useEffect(() => {
     let alive = true
     fetch('/api/download/setup?info=1', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j: { setup?: { available?: boolean; sizeHuman?: string | null } } | null) => {
+      .then((j: { setup?: { available?: boolean; sizeHuman?: string | null }; apk?: { available?: boolean; sizeHuman?: string | null } } | null) => {
         if (alive && j?.setup?.available) setSetupDl({ sizeHuman: j.setup.sizeHuman ?? null })
+        if (alive && j?.apk?.available) setApkDl({ sizeHuman: j.apk.sizeHuman ?? null })
       })
       .catch(() => { /* فایل موجود نیست — دکمه پنهان می‌ماند */ })
     return () => { alive = false }
@@ -1652,6 +1654,18 @@ export default function SettingsModule() {
                       >
                         <MonitorDown className="h-4 w-4" />
                         {t('دانلود سِتب ویندوز', 'د ویندوز سېټ ښکته کول', 'Download Windows setup')}
+                      </a>
+                    </Button>
+                  )}
+                  {apkDl && (
+                    <Button asChild variant="outline" className="gap-2">
+                      <a
+                        href="/api/download/setup?variant=apk"
+                        download
+                        title={apkDl.sizeHuman ? `app.apk (${apkDl.sizeHuman})` : 'app.apk'}
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        {t('دانلود سِتب اندروید', 'د اندروید سېټ ښکته کول', 'Download Android app')}
                       </a>
                     </Button>
                   )}

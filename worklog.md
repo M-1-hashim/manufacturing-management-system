@@ -1075,3 +1075,19 @@ Stage Summary:
 - globals.css: .stat-icon top از ‎-26px → ‎-20px (۶px پایین‌تر — آیکون نزدیک‌تر به بدنهٔ کارت می‌نشیند؛ ~۲۰px بالای کارت / ~۲۴px داخل کارت)
 - آیکون از قبل z-index ۴ (بالای گرادیان) است → پایین آمدن آن هیچ بریدگی ایجاد نمی‌کند
 - تایید مرورگری: computed top ‎-20px در CSS سرو‌شده ✓؛ اسکرین‌شات دسکتاپ ۱۲۸۰ + موبایل ۳۹۰ — آیکون‌ها پایین‌تر، کامل و شناور؛ صفر خطا؛ lint ✓
+
+## v1.0.17 — نسخهٔ اندروید (app.apk) — مستقل از نسخهٔ ویندوز
+- APK هندساخت شد بدون Gradle، با build-tools خام (aapt2 + javac + d8 + zipalign + apksigner) در پوشهٔ android/
+  - محیط: JDK21 (Temurin ~/jdk21) + build-tools 36 (~/android-sdk/android-16) + platform android-34 — d8 8.2 (BT34) با خروجی javac21 کرش می‌کرد → BT36 (d8 8.10.9)
+- com.setab.erp v1.0.17 (versionCode 1)، minSdk 24 / target 34، label «سِتب»، مجوز INTERNET (+WRITE_EXTERNAL_STORAGE فقط ≤API28)
+- MainActivity.java: WebView تمام‌صفحه (JS+DOM storage) که به آدرس سرور وصل می‌شود:
+  - اولین اجرا → دیالوگ «آدرس سرور» (ذخیرهٔ دائمی SharedPreferences) + دکمهٔ ⚙ شناور برای تغییر آدرس هر زمان
+  - UA پسوند SetabAndroid/1.0 → برنامهٔ وب دکمه‌های دانلود ویندوز را در اپ پنهان می‌کند
+  - دانلود فایل‌ها با DownloadManager (بل/خروجی‌ها به Downloads) + آپلود فایل (onShowFileChooser)
+  - SSL self-signed قبول (شبکهٔ محلی) + cleartext http مجاز + صفحهٔ خطای فارسی با راهنمایی + برگشت دو مرحله‌ای برای خروج
+- آیکون: سبز گرادیانی + «س» سفید (B Nazanin) — legacy rounded + adaptive (anydpi-v26) در همهٔ کثافت‌ها (make_icons.py)
+- امضا: keystore/setab.jks (alias setab, pass setab2024) — برای آپدیت‌های بعدی همان کلید لازم است؛ در ریپو ذخیره شد
+- توزیع: /api/download/setup?variant=apk (عمومی، قبلاً whitelist بود) + info=1 حالا apk:{available,sizeHuman} برمی‌گرداند
+- UI: کارت «نسخهٔ اندروید (سِتب)» در صفحهٔ ورود (پنهان در UA اپ) + دکمهٔ «دانلود سِتب اندروید» در تنظیمات (کنار ستب ویندوز)
+- تأیید: apksigner verify ✓، aapt2 badging ✓ (label/آیکون/activity)، دانلود از route → MD5 یکسان با منبع؛ login/settings در مرورگر ✓؛ lint ✓ tsc(src) ✓؛ صفر خطای کنسول
+- نکتهٔ استقرار: app.apk باید مثل Setup.exe در download/ سرور کپی شود؛ روی گوشی «نصب از منابع ناشناس» لازم است

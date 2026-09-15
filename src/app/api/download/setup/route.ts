@@ -10,6 +10,7 @@ import { APP_VERSION } from '@/lib/app-version'
  *
  *   GET /api/download/setup                  → ManufacturingERP-Setup.exe   (نصب‌کننده NSIS)
  *   GET /api/download/setup?variant=portable → ManufacturingERP-Windows-Portable.zip
+ *   GET /api/download/setup?variant=apk      → app.apk (نسخهٔ اندروید — مستقل از ویندوز)
  *   GET /api/download/setup?info=1           → متادیتا (موجودیت/حجم/تاریخ ساخت) به‌صورت JSON
  *
  * - بدون نیاز به نشست: هر فردی که لینک را دارد می‌تواند دانلود کند.
@@ -23,6 +24,7 @@ const DOWNLOAD_DIR = path.join(process.cwd(), 'download')
 const FILES = {
   setup: { filename: 'ManufacturingERP-Setup.exe' },
   portable: { filename: 'ManufacturingERP-Windows-Portable.zip' },
+  apk: { filename: 'app.apk' },
 } as const
 
 type Variant = keyof typeof FILES
@@ -36,7 +38,8 @@ interface DlFileInfo {
 }
 
 function resolveVariant(url: URL): Variant {
-  return url.searchParams.get('variant') === 'portable' ? 'portable' : 'setup'
+  const v = url.searchParams.get('variant')
+  return v === 'portable' ? 'portable' : v === 'apk' ? 'apk' : 'setup'
 }
 
 function humanSize(bytes: number): string {
@@ -78,9 +81,9 @@ export async function GET(req: Request) {
 
   // متادیتا برای رابط کاربری (نمایش حجم/موجودیت)
   if (url.searchParams.get('info') === '1') {
-    const [setup, portable] = await Promise.all([fileInfo('setup'), fileInfo('portable')])
+    const [setup, portable, apk] = await Promise.all([fileInfo('setup'), fileInfo('portable'), fileInfo('apk')])
     return NextResponse.json(
-      { version: APP_VERSION, setup, portable },
+      { version: APP_VERSION, setup, portable, apk },
       { headers: { 'Cache-Control': 'no-store' } }
     )
   }
@@ -95,7 +98,7 @@ export async function GET(req: Request) {
     size = st.size
   } catch {
     return NextResponse.json(
-      { error: 'فایل نصب‌کننده هنوز ساخته نشده است — با مدیر سیستم تماس بگیرید' },
+      { error: 'فایل درخواستی هنوز ساخته نشده است — با مدیر سیستم تماس بگیرید' },
       { status: 404 }
     )
   }
