@@ -598,8 +598,8 @@ function Shell() {
               <Factory className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-[15px] tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
-              <p className="text-[12px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
+              <p className="font-bold text-[15.5px] tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
+              <p className="text-[12.5px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
             </div>
             <button className="ms-auto lg:hidden p-1" onClick={() => setSidebarOpen(false)} aria-label="بستن منو">
               <X className="h-5 w-5" />
@@ -623,7 +623,7 @@ function Shell() {
                           key={item.id}
                           onClick={() => { setActiveTab(item.id as never); setSidebarOpen(false) }}
                           className={cn(
-                            'relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[14.5px] font-medium transition-colors',
+                            'relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15.5px] font-semibold transition-colors',
                             active
                               ? 'bg-primary/10 text-primary font-semibold'
                               : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -648,8 +648,8 @@ function Shell() {
                 {user.fullName.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-medium truncate">{user.fullName}</p>
-                <p className="text-[12px] text-muted-foreground truncate">
+                <p className="text-[14.5px] font-semibold truncate">{user.fullName}</p>
+                <p className="text-[12.5px] text-muted-foreground truncate">
                   {roleLabel(user.role, lang)}
                   {user.department && user.department !== 'general' ? ` · ${departmentLabel(user.department, lang)}` : ''}
                 </p>

@@ -1245,3 +1245,19 @@ Stage Summary:
 ## v1.0.18 (add) — APK با دو تازگی UI دوباره بیلد شد
 - چون هر دو تغییر (آیکون بین دو لایه + padding موبایل) دقیقاً موبایلی‌اند، export وب + APK دوباره ساخته شد: build_web_export.sh (2.6M) + build.sh → app.apk 1,096,488 B — MD5 جدید 42c69b1b… (CSS باندل .stat-icon z-index:2 را دارد)
 - توزیع: download/app.apk جایگزین شد؛ GitHub Release v1.0.18 — asset قبلی حذف (204) و asset جدید آپلود شد (state=uploaded)؛ دانلود تست → MD5 یکسان ✓؛ /api/download/setup?info=1 → 1.0 MB با updatedAt جدید
+
+---
+Task ID: 12
+Agent: coordinator (main)
+Task: «متن‌های side bar را یکم بزرگتر کن و یکم bold کن»
+
+Work Log:
+- page.tsx (سایدبار): آیتم‌های منو text-[14.5px] font-medium → text-[15.5px] font-semibold؛ عنوان برند text-[15px] semibold → text-[15.5px] bold؛ زیرعنوان 12 → 12.5px؛ نام کاربر 14/medium → 14.5/semibold؛ نقش 12 → 12.5px — همه «یکم» (subtle)
+- globals.css: .nav-label font-size 12 → 12.5px
+- باگ تکرارشوندهٔ Turbopack stale CSS دوباره ظاهر شد (chunk سرو‌شده 12px قدیمی را می‌داد) — با یک تغییر واقعی محتوا (کامنت داخل .nav-label) فورس‌ری‌کامپایل شد؛ served CSS → font-size: 12.5px تأیید
+- صحت‌سنجی مرورگری: computed navItem 15.5px/600، navLabel 12.5px/700، brand 15.5px/700، userName 14.5px/600 ✓؛ اسکرین‌شات سایدبار — متن‌ها بزرگ‌تر و توپُرتر، بدون truncate مشکل‌ساز؛ صفر خطا؛ lint پاک
+- APK دوباره بیلد شد (تغییر موبایلی است): export 2.6M + app.apk (MD5 جدید fdee2e49…) → download/app.apk؛ GitHub Release v1.0.18 asset حذف/آپلود مجدد — دانلود تست MD5 یکسان ✓
+
+Stage Summary:
+- سایدبار (برند + برچسب گروه‌ها + ۱۳ آیتم منو + نام کاربر) کمی بزرگ‌تر و کمی توپُرتر شد — تمایز آیتم فعال با رنگ/پس‌زمینه/نوار فعال حفظ شد
+- فایل‌ها: src/app/page.tsx، src/app/globals.css، android/app.apk (gitignored)، download/app.apk، worklog.md
