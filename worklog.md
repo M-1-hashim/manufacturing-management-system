@@ -1241,3 +1241,7 @@ Work Log:
 Stage Summary:
 - هر دو درخواست کاربر اعمال و تأیید بصری شد (روشن/تیره × دسکتاپ/موبایل)
 - فایل‌ها: src/app/globals.css، src/app/page.tsx، eslint.config.mjs، worklog.md
+
+## v1.0.18 (add) — APK با دو تازگی UI دوباره بیلد شد
+- چون هر دو تغییر (آیکون بین دو لایه + padding موبایل) دقیقاً موبایلی‌اند، export وب + APK دوباره ساخته شد: build_web_export.sh (2.6M) + build.sh → app.apk 1,096,488 B — MD5 جدید 42c69b1b… (CSS باندل .stat-icon z-index:2 را دارد)
+- توزیع: download/app.apk جایگزین شد؛ GitHub Release v1.0.18 — asset قبلی حذف (204) و asset جدید آپلود شد (state=uploaded)؛ دانلود تست → MD5 یکسان ✓؛ /api/download/setup?info=1 → 1.0 MB با updatedAt جدید
