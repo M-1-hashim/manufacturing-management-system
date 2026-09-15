@@ -1226,3 +1226,18 @@ Stage Summary:
 - لینک مستقیم: https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.18/app.apk
 - /api/download/setup?info=1 حالا apk 1.0 MB را نشان می‌دهد؛ کارت اندروید صفحهٔ ورود تأیید مرورگری شد
 - نکتهٔ گیت: ریموت یک کامیت تکراری قدیمی (29b6c93 — همان پیام v1.0.17 v2 ولی با محتوای host-setup) داشت که با force-with-lease با تاریخچهٔ درست محلی (f5573c6 آفلاین + 755746e) جایگزین شد — هیچ کامیونیک محتوایی از دست نرفت (diff تأیید شد: local superset با +5458 خط)
+
+---
+Task ID: 11
+Agent: coordinator (main)
+Task: «در کارت‌ها آیکون‌ها باید در بین اون دو لایه قرار بگیرد» + «در نسخهٔ موبایل padding صفحه از دو طرف باید کم شود»
+
+Work Log:
+- globals.css: .stat-icon z-index از ۴ → ۲ — آیکون اکنون «بین دو لایه» است: بالای کارت زیرین (z-1) و زیر گرادیان گوشهٔ بریده (z-3)؛ آیکون از گوشهٔ بریده بیرون می‌زند و لبهٔ گرادیان رویش را می‌پوشاند (دقیقاً مثل طراحی مرجع card.html)
+- page.tsx: کاهش padding موبایل — main از p-4 → p-2.5 (۱۶px → ۱۰px هر طرف)، header از px-4 → px-2.5، footer از px-4 → px-2.5 (هم‌ترازی عمودی حفظ شد)؛ دسکتاپ بدون تغییر (md:p-6 / md:px-6)
+- eslint.config.mjs: ignores += .next-apk/**، out-apk/**، .apk-build-stash/**، android/** — خروجی بیلد استاتیک APK (باندل‌های minify) دیگر lint نمی‌شوند (۵۶۸۴ خطای کاذب → صفر)
+- صحت‌سنجی مرورگری: computed iconZ=2 / gradZ=3 ✓؛ موبایل 390px: main/header padding = ۱۰px ✓؛ دسکتاپ 1280px: p-6 دست‌نخورده ✓؛ اسکرین‌شات روشن + تیره + موبایل — آیکون‌ها از گوشهٔ بریده بیرون زده و زیر لایهٔ گرادیان می‌روند؛ صفر خطای کنسول؛ lint پاک
+
+Stage Summary:
+- هر دو درخواست کاربر اعمال و تأیید بصری شد (روشن/تیره × دسکتاپ/موبایل)
+- فایل‌ها: src/app/globals.css، src/app/page.tsx، eslint.config.mjs، worklog.md

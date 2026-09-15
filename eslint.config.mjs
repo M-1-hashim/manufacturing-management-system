@@ -44,7 +44,7 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-useless-escape": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", ".next-electron/**", "desktop-dist/**", "desktop-assets/**", "download/**", "electron/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  ignores: ["node_modules/**", ".next/**", ".next-apk/**", ".next-electron/**", "desktop-dist/**", "desktop-assets/**", "download/**", "electron/**", "out/**", "out-apk/**", "build/**", ".apk-build-stash/**", "android/**", "next-env.d.ts", "examples/**", "skills"]
 }];
 
 export default eslintConfig;

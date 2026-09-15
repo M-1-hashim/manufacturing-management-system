@@ -676,7 +676,7 @@ function Shell() {
 
         {/* محتوای اصلی */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-30 h-14 border-b bg-background/80 backdrop-blur flex items-center gap-2 px-4 md:px-6 no-print">
+          <header className="sticky top-0 z-30 h-14 border-b bg-background/80 backdrop-blur flex items-center gap-2 px-2.5 md:px-6 no-print">
             <button className="lg:hidden p-2 -ms-2 rounded-md hover:bg-accent transition-colors" onClick={() => setSidebarOpen(true)} aria-label={t('باز کردن منو', 'مینو پرانول', 'Open menu')}>
               <Menu className="h-5 w-5" />
             </button>
@@ -745,12 +745,12 @@ function Shell() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto" key={activeTab}>
+          <main className="flex-1 p-2.5 md:p-6 w-full max-w-[1400px] mx-auto" key={activeTab}>
             {moduleEl}
           </main>
 
           {/* فوتر ثابت — پایین صفحه */}
-          <footer className="mt-auto border-t py-3 px-4 text-center text-[11px] text-muted-foreground bg-background no-print">
+          <footer className="mt-auto border-t py-3 px-2.5 text-center text-[11px] text-muted-foreground bg-background no-print">
             <p>
               {t(
                 'سیستم مدیریتی جامع تولید — ساخته‌شده برای صنایع افغانستان',
