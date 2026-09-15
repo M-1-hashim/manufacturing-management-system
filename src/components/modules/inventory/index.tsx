@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Printer,
   Trash2,
   Warehouse,
 } from 'lucide-react'
@@ -24,6 +25,13 @@ import {
   StatCard,
   TableSkeleton,
 } from '@/components/shared/common'
+import {
+  PrintDocDialog,
+  DocTable,
+  DocRow,
+  DocCell,
+  DocTotals,
+} from '@/components/shared/print-doc'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -152,6 +160,10 @@ export default function InventoryModule() {
   const [fType, setFType] = useState('all')
   const [fItemType, setFItemType] = useState('all')
   const [fDays, setFDays] = useState('30')
+
+  // ---------- چاپ گزارش‌ها ----------
+  const [stockPrintOpen, setStockPrintOpen] = useState(false)
+  const [txPrintOpen, setTxPrintOpen] = useState(false)
 
   const invUrl = `/api/inventory?days=${fDays}${fType !== 'all' ? `&type=${fType}` : ''}${
     fItemType !== 'all' ? `&itemType=${fItemType}` : ''
@@ -324,10 +336,16 @@ export default function InventoryModule() {
         )}
         icon={Warehouse}
         actions={
-          <Button onClick={() => setMoveOpen(true)}>
-            <Plus className="h-4 w-4" />
-            {t('ثبت حرکت جدید', 'نوی حرکت ثبت کړه', 'New Movement')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-1.5" onClick={() => setStockPrintOpen(true)}>
+              <Printer className="h-4 w-4" />
+              {t('گزارش موجودی انبار', 'د انبار موجودي راپور', 'Inventory Report')}
+            </Button>
+            <Button onClick={() => setMoveOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t('ثبت حرکت جدید', 'نوی حرکت ثبت کړه', 'New Movement')}
+            </Button>
+          </div>
         }
       />
 
@@ -402,6 +420,16 @@ export default function InventoryModule() {
                       <SelectItem value="90">{t('۹۰ روز', '۹۰ ورځې', '90 days')}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={txs.length === 0}
+                    onClick={() => setTxPrintOpen(true)}
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    {t('گزارش ورود و خروج', 'د راتګ او راوتلو راپور', 'Movements Report')}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -853,6 +881,236 @@ export default function InventoryModule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ---------- چاپ گزارش موجودی انبار ---------- */}
+      <InventoryReportDialog
+        open={stockPrintOpen}
+        onClose={() => setStockPrintOpen(false)}
+        products={products}
+        materials={materials}
+        totalValue={totalValue}
+      />
+
+      {/* ---------- چاپ گزارش ورود و خروج ---------- */}
+      <MovementsReportDialog
+        open={txPrintOpen}
+        onClose={() => setTxPrintOpen(false)}
+        txs={txs}
+        fType={fType}
+        fItemType={fItemType}
+        fDays={fDays}
+      />
     </div>
+  )
+}
+
+// ================= دیالوگ چاپ گزارش موجودی انبار =================
+function InventoryReportDialog({
+  open,
+  onClose,
+  products,
+  materials,
+  totalValue,
+}: {
+  open: boolean
+  onClose: () => void
+  products: StockProduct[]
+  materials: StockMaterial[]
+  totalValue: number
+}) {
+  const { t } = useI18n()
+  const lowProducts = products.filter((p) => p.stock <= p.minStock)
+  const lowMaterials = materials.filter((m) => m.stock <= m.minStock)
+  const lowCount = lowProducts.length + lowMaterials.length
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('گزارش موجودی انبار', 'د انبار موجودي راپور', 'Inventory Stock Report')}
+      docTypeEn="INVENTORY REPORT"
+      date={new Date()}
+    >
+      {/* محصولات */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-extrabold text-emerald-700">{t('محصولات', 'محصولات', 'Products')}</h3>
+        {products.length === 0 ? (
+          <p className="text-xs text-neutral-500">{t('محصولی ثبت نشده', 'محصول نه دی ثبت شوی', 'No products')}</p>
+        ) : (
+          <DocTable
+            minWidth={480}
+            head={[
+              { label: t('نام محصول', 'د محصول نوم', 'Product') },
+              { label: t('واحد', 'واحد', 'Unit') },
+              { label: t('موجودی', 'موجودی', 'Stock') },
+              { label: t('حداقل', 'لږترلږه', 'Min') },
+              { label: t('وضعیت', 'وضعیت', 'Status') },
+            ]}
+          >
+            {products.map((p, i) => {
+              const low = p.stock <= p.minStock
+              return (
+                <DocRow key={p.id} index={i}>
+                  <DocCell className="font-medium">{p.name}</DocCell>
+                  <DocCell className="text-neutral-500">{p.unit}</DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{formatNumber(p.stock)}</span></DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{formatNumber(p.minStock)}</span></DocCell>
+                  <DocCell>
+                    {low ? (
+                      <span className="font-bold text-red-600">{t('کمبود', 'کمبود', 'Low')}</span>
+                    ) : (
+                      <span className="text-emerald-700">{t('کافی', 'کافي', 'OK')}</span>
+                    )}
+                  </DocCell>
+                </DocRow>
+              )
+            })}
+          </DocTable>
+        )}
+      </div>
+
+      {/* مواد خام */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-extrabold text-emerald-700">{t('مواد خام', 'خام مواد', 'Raw Materials')}</h3>
+        {materials.length === 0 ? (
+          <p className="text-xs text-neutral-500">{t('ماده‌ای ثبت نشده', 'ماده نه ده ثبت شوې', 'No materials')}</p>
+        ) : (
+          <DocTable
+            minWidth={480}
+            head={[
+              { label: t('نام ماده', 'د مادې نوم', 'Material') },
+              { label: t('واحد', 'واحد', 'Unit') },
+              { label: t('موجودی', 'موجودی', 'Stock') },
+              { label: t('حداقل', 'لږترلږه', 'Min') },
+              { label: t('وضعیت', 'وضعیت', 'Status') },
+            ]}
+          >
+            {materials.map((m, i) => {
+              const low = m.stock <= m.minStock
+              return (
+                <DocRow key={m.id} index={i}>
+                  <DocCell className="font-medium">{m.name}</DocCell>
+                  <DocCell className="text-neutral-500">{m.unit}</DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{formatNumber(m.stock)}</span></DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{formatNumber(m.minStock)}</span></DocCell>
+                  <DocCell>
+                    {low ? (
+                      <span className="font-bold text-red-600">{t('کمبود', 'کمبود', 'Low')}</span>
+                    ) : (
+                      <span className="text-emerald-700">{t('کافی', 'کافي', 'OK')}</span>
+                    )}
+                  </DocCell>
+                </DocRow>
+              )
+            })}
+          </DocTable>
+        )}
+      </div>
+
+      <DocTotals
+        rows={[
+          { label: t('تعداد محصولات', 'د محصولاتو شمېر', 'Products count'), value: formatNumber(products.length) },
+          { label: t('تعداد مواد خام', 'د خامو موادو شمېر', 'Materials count'), value: formatNumber(materials.length) },
+          { label: t('اقلام با کمبود', 'کمبود لرونکي اقلام', 'Low-stock items'), value: formatNumber(lowCount), tone: 'danger' },
+        ]}
+        grandLabel={t('ارزش کل موجودی', 'د ټولې موجودي ارزښت', 'Total stock value')}
+        grandValue={formatMoney(totalValue)}
+      />
+    </PrintDocDialog>
+  )
+}
+
+// ================= دیالوگ چاپ گزارش ورود و خروج =================
+const TX_DAYS_LABELS: Record<string, [string, string, string]> = {
+  '7': ['۷ روز اخیر', 'وروستي ۷ ورځې', 'Last 7 days'],
+  '30': ['۳۰ روز اخیر', 'وروستي ۳۰ ورځې', 'Last 30 days'],
+  '90': ['۹۰ روز اخیر', 'وروستي ۹۰ ورځې', 'Last 90 days'],
+}
+
+function MovementsReportDialog({
+  open,
+  onClose,
+  txs,
+  fType,
+  fItemType,
+  fDays,
+}: {
+  open: boolean
+  onClose: () => void
+  txs: InvTx[]
+  fType: string
+  fItemType: string
+  fDays: string
+}) {
+  const { t } = useI18n()
+  const sumIn = txs.filter((x) => x.type === 'in').reduce((a, x) => a + x.quantity, 0)
+  const sumOut = txs.filter((x) => x.type === 'out').reduce((a, x) => a + x.quantity, 0)
+  const daysLabel = TX_DAYS_LABELS[fDays] ?? [`${fDays} روز`, `${fDays} ورځې`, `${fDays} days`]
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('گزارش ورود و خروج', 'د راتګ او راوتلو راپور', 'Stock Movements Report')}
+      docTypeEn="STOCK MOVEMENTS REPORT"
+      date={new Date()}
+      meta={[
+        [
+          {
+            label: t('نوع حرکت', 'د حرکت ډول', 'Movement type'),
+            value: fType === 'all' ? t('همه انواع', 'ټول ډولونه', 'All types') : (TYPE_LABELS[fType] ?? fType),
+          },
+          {
+            label: t('نوع قلم', 'د قلم ډول', 'Item type'),
+            value:
+              fItemType === 'all'
+                ? t('همه اقلام', 'ټول اقلام', 'All items')
+                : fItemType === 'product'
+                  ? t('محصول', 'محصول', 'Product')
+                  : t('ماده‌خام', 'خام ماده', 'Raw Material'),
+          },
+          { label: t('دوره', 'موده', 'Period'), value: t(daysLabel[0], daysLabel[1], daysLabel[2]) },
+        ],
+      ]}
+    >
+      <DocTable
+        minWidth={560}
+        head={[
+          { label: t('تاریخ', 'نېټه', 'Date') },
+          { label: t('نوع', 'ډول', 'Type') },
+          { label: t('قلم', 'قلم', 'Item') },
+          { label: t('نوع قلم', 'د قلم ډول', 'Item type') },
+          { label: t('مقدار', 'اندازه', 'Qty') },
+          { label: t('انبار', 'انبار', 'Warehouse') },
+          { label: t('حواله', 'حواله', 'Reference') },
+        ]}
+      >
+        {txs.map((x, i) => (
+          <DocRow key={x.id} index={i}>
+            <DocCell className="whitespace-nowrap">{toJalaliStr(x.date)}</DocCell>
+            <DocCell>{TYPE_LABELS[x.type] ?? x.type}</DocCell>
+            <DocCell className="font-medium">{x.itemName}</DocCell>
+            <DocCell className="text-neutral-500">
+              {x.itemType === 'product' ? t('محصول', 'محصول', 'Product') : t('ماده‌خام', 'خام ماده', 'Material')}
+            </DocCell>
+            <DocCell className="font-mono whitespace-nowrap">
+              <span dir="ltr">{formatNumber(x.quantity)}</span> {x.unit}
+            </DocCell>
+            <DocCell className="text-neutral-500">{x.warehouse?.name ?? '—'}</DocCell>
+            <DocCell className="font-mono"><span dir="ltr">{x.reference ?? '—'}</span></DocCell>
+          </DocRow>
+        ))}
+      </DocTable>
+
+      <DocTotals
+        rows={[
+          { label: t('مجموع ورود', 'ټول راتګ', 'Total in'), value: formatNumber(sumIn) },
+          { label: t('مجموع خروج', 'ټول راوتل', 'Total out'), value: formatNumber(sumOut) },
+          { label: t('تعداد حرکت‌ها', 'د حرکتونو شمېر', 'Movements count'), value: formatNumber(txs.length) },
+        ]}
+        grandLabel={t('مجموع خالص (ورود − خروج)', 'ټول خالص (راتګ − راوتل)', 'Net total (in − out)')}
+        grandValue={formatNumber(sumIn - sumOut)}
+      />
+    </PrintDocDialog>
   )
 }

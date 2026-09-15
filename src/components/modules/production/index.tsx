@@ -6,6 +6,7 @@ import { useI18n } from '@/lib/i18n'
 import { toast } from 'sonner'
 import { formatMoney, formatNumber, toJalaliStr, STATUS_COLORS } from '@/lib/format'
 import { PageHeader, StatCard, LoadingBlock, EmptyState } from '@/components/shared/common'
+import { PrintDocDialog, DocTotals, DocNotes } from '@/components/shared/print-doc'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Factory, Plus, CheckCircle2, Play, Ban, Trash2, AlertTriangle, Boxes, ClipboardList, Loader2, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Factory, Plus, CheckCircle2, Play, Ban, Trash2, AlertTriangle, Boxes, ClipboardList, Loader2, ChevronRight, ChevronLeft, Printer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ---------- انواع ----------
@@ -78,6 +79,9 @@ export default function ProductionModule() {
   const [cancelTarget, setCancelTarget] = useState<ProductionOrderT | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProductionOrderT | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // ---------- چاپ ورک‌آردر ----------
+  const [printTarget, setPrintTarget] = useState<ProductionOrderT | null>(null)
 
   const list = orders ?? []
 
@@ -388,9 +392,15 @@ export default function ProductionModule() {
                               </Button>
                             </>
                           )}
-                          {(o.status === 'completed' || o.status === 'cancelled') && (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            title={t('چاپ ورک‌آردر', 'د ورک‌آردر چاپ', 'Print work order')}
+                            onClick={() => setPrintTarget(o)}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -775,6 +785,80 @@ export default function ProductionModule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ---------- چاپ ورک‌آردر ---------- */}
+      <WorkOrderPrintDialog
+        order={printTarget}
+        statusLabel={statusLabel}
+        qcLabel={qcLabel}
+        onClose={() => setPrintTarget(null)}
+      />
     </div>
+  )
+}
+
+// ================= دیالوگ چاپ ورک‌آردر تولید =================
+function WorkOrderPrintDialog({
+  order,
+  statusLabel,
+  qcLabel,
+  onClose,
+}: {
+  order: ProductionOrderT | null
+  statusLabel: (s: string) => string
+  qcLabel: (q: string | null) => string
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const o = order
+  const unit = o?.product?.unit ?? ''
+  const done = !!o && o.status === 'completed'
+
+  return (
+    <PrintDocDialog
+      open={!!o}
+      onClose={onClose}
+      docType={t('ورک‌آردر تولید', 'د تولید ورک‌آردر', 'Production Work Order')}
+      docTypeEn="PRODUCTION WORK ORDER"
+      docNumber={o?.orderNumber}
+      date={o?.startDate}
+      meta={
+        o
+          ? [
+              [
+                { label: t('محصول', 'محصول', 'Product'), value: o.product?.name ?? '—' },
+                { label: t('فورمولا', 'فورمول', 'Formula'), value: o.formula ? `v${o.formula.version} — ${o.formula.name}` : '—' },
+                { label: t('مقدار پلان‌شده', 'پلان شوی مقدار', 'Planned qty'), value: `${fmtQty(o.quantity)} ${unit}` },
+                { label: t('وضعیت', 'وضعیت', 'Status'), value: statusLabel(o.status) },
+                { label: t('مقدار تولیدشده', 'تولید شوی مقدار', 'Produced qty'), value: done ? `${fmtQty(o.producedQty)} ${unit}` : '—' },
+                { label: t('ضایعات', 'ضایعات', 'Waste'), value: done ? `${fmtQty(o.wasteQty)} ${unit}` : '—' },
+                { label: t('کنترل کیفیت', 'کیفیت کنټرول', 'QC'), value: qcLabel(o.qcStatus) },
+              ],
+              [
+                { label: t('مصرف مواد', 'د موادو لګښت', 'Material cost'), value: formatMoney(o.materialCost) },
+                { label: t('اجرت', 'مزد', 'Labor'), value: formatMoney(o.laborCost) },
+                { label: t('سربار', 'سربار', 'Overhead'), value: formatMoney(o.overheadCost) },
+                { label: t('تاریخ شروع', 'د پیل نېټه', 'Start date'), value: toJalaliStr(o.startDate) },
+                { label: t('تاریخ ختم', 'د پای نېټه', 'End date'), value: o.endDate ? toJalaliStr(o.endDate) : '—' },
+              ],
+            ]
+          : []
+      }
+    >
+      {o && (
+        <>
+          <DocTotals
+            rows={[
+              { label: t('مصرف مواد', 'د موادو لګښت', 'Material cost'), value: formatMoney(o.materialCost) },
+              { label: t('اجرت', 'مزد', 'Labor'), value: formatMoney(o.laborCost) },
+              { label: t('سربار', 'سربار', 'Overhead'), value: formatMoney(o.overheadCost) },
+            ]}
+            grandLabel={t('مصرف کل', 'ټول لګښت', 'Total cost')}
+            grandValue={formatMoney(o.totalCost, 'AFN')}
+          />
+          <DocNotes>{o.notes}</DocNotes>
+        </>
+      )}
+    </PrintDocDialog>
   )
 }

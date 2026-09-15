@@ -42,6 +42,15 @@ import {
   CURRENCY_LABELS,
 } from '@/lib/format'
 import type { Currency } from '@/lib/format'
+import { amountToWords } from '@/lib/amount-words'
+import {
+  PrintDocDialog,
+  DocTable,
+  DocRow,
+  DocCell,
+  DocTotals,
+  DocAmountWords,
+} from '@/components/shared/print-doc'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -468,6 +477,7 @@ export default function SalesModule() {
         open={customersOpen}
         onOpenChange={setCustomersOpen}
         customers={customerList}
+        sales={list}
         onChanged={customers.refetch}
       />
 
@@ -991,102 +1001,7 @@ function NewSaleDialog({
   )
 }
 
-// ================= تبدیل مبلغ به حروف (دری/پشتو/انگلیسی) =================
-type NumLang = 'fa' | 'ps' | 'en'
 
-const NUM_WORDS: Record<
-  NumLang,
-  { ones: string[]; teens: string[]; tens: string[]; hundreds: string[]; scales: string[]; zero: string; join: string }
-> = {
-  fa: {
-    ones: ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'],
-    teens: ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'],
-    tens: ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'],
-    hundreds: ['', 'صد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'],
-    scales: ['', 'هزار', 'میلیون', 'میلیارد'],
-    zero: 'صفر',
-    join: ' و ',
-  },
-  ps: {
-    ones: ['', 'یو', 'دوه', 'درې', 'څلور', 'پنځه', 'شپږ', 'اووه', 'اته', 'نهه'],
-    teens: ['لس', 'یوولس', 'دولس', 'دیارلس', 'څوارلس', 'پنځلس', 'شپاړلس', 'اوه لس', 'اتلس', 'نولس'],
-    tens: ['', '', 'شل', 'دېرش', 'څلویښت', 'پنځوس', 'شپېته', 'اویا', 'اتیا', 'نوي'],
-    hundreds: ['', 'سل', 'دوه سوه', 'درې سوه', 'څلور سوه', 'پنځه سوه', 'شپږ سوه', 'اوه سوه', 'اته سوه', 'نهه سوه'],
-    scales: ['', 'زره', 'میلیون', 'میلیارد'],
-    zero: 'صفر',
-    join: ' او ',
-  },
-  en: {
-    ones: ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
-    teens: ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'],
-    tens: ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'],
-    hundreds: [
-      '', 'one hundred', 'two hundred', 'three hundred', 'four hundred',
-      'five hundred', 'six hundred', 'seven hundred', 'eight hundred', 'nine hundred',
-    ],
-    scales: ['', 'thousand', 'million', 'billion'],
-    zero: 'zero',
-    join: ' ',
-  },
-}
-
-const CURRENCY_WORDS: Record<Currency, { fa: string; ps: string; en: string }> = {
-  AFN: { fa: 'افغانی', ps: 'افغانی', en: 'Afghani' },
-  USD: { fa: 'دالر امریکایی', ps: 'امریکایی ډالر', en: 'US Dollar' },
-  PKR: { fa: 'کلدار پاکستانی', ps: 'پاکستاني کلدار', en: 'Pakistani Rupee' },
-}
-
-/** تبدیل عدد ۱ تا ۹۹۹ به حروف */
-function threeDigitWords(lang: NumLang, n: number): string {
-  const w = NUM_WORDS[lang]
-  const parts: string[] = []
-  const h = Math.floor(n / 100)
-  const rest = n % 100
-  if (h) parts.push(w.hundreds[h])
-  if (rest >= 10 && rest < 20) {
-    parts.push(w.teens[rest - 10])
-  } else {
-    const tn = Math.floor(rest / 10)
-    const on = rest % 10
-    if (tn) parts.push(w.tens[tn])
-    if (on) parts.push(w.ones[on])
-  }
-  return parts.join(w.join)
-}
-
-/** تبدیل عدد صحیح به حروف */
-function intWords(lang: NumLang, n: number): string {
-  const w = NUM_WORDS[lang]
-  if (n <= 0) return w.zero
-  const groups: string[] = []
-  let i = 0
-  while (n > 0 && i < w.scales.length) {
-    const g = n % 1000
-    if (g > 0) groups.unshift(threeDigitWords(lang, g) + (w.scales[i] ? ` ${w.scales[i]}` : ''))
-    n = Math.floor(n / 1000)
-    i++
-  }
-  return groups.join(w.join)
-}
-
-/** مبلغ به حروف — «پنج هزار و دویست افغانی فقط» */
-function amountToWords(amount: number, currency: Currency, lang: NumLang): string {
-  const w = NUM_WORDS[lang]
-  const abs = Math.abs(amount)
-  let int = Math.floor(abs)
-  let dec = Math.round((abs - int) * 100)
-  if (dec >= 100) {
-    int += 1
-    dec = 0
-  }
-  let s = `${intWords(lang, int)} ${CURRENCY_WORDS[currency][lang]}`
-  if (dec > 0) {
-    const unit = lang === 'fa' ? 'سنت' : lang === 'ps' ? 'پیسې' : 'cent'
-    s += `${w.join}${intWords(lang, dec)} ${unit}`
-  }
-  s += lang === 'en' ? ' only' : ' فقط'
-  return amount < 0 ? `${lang === 'en' ? 'minus ' : 'منفی '}${s}` : s
-}
 
 // ================= دیالوگ بل (پیش‌نمایش و چاپ حرفه‌ای) =================
 function InvoiceDialog({
@@ -1463,15 +1378,18 @@ function CustomersDialog({
   open,
   onOpenChange,
   customers,
+  sales,
   onChanged,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   customers: CustomerRow[]
+  sales: SaleRow[]
   onChanged: () => void
 }) {
   const { t } = useI18n()
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [statementCustomer, setStatementCustomer] = useState<CustomerRow | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -1529,8 +1447,9 @@ function CustomersDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('مشتریان', 'پیرودونکي', 'Customers')}</DialogTitle>
           <DialogDescription>
@@ -1614,6 +1533,14 @@ function CustomersDialog({
                     <TableCell>{formatNumber(c._count?.sales ?? 0)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-start gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={t('چاپ صورت‌حساب مشتری', 'د مشتري صورت‌حساب چاپ', 'Print customer statement')}
+                          onClick={() => setStatementCustomer(c)}
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" title={t('تصحیح', 'سمول', 'Edit')} onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -1633,7 +1560,141 @@ function CustomersDialog({
             </Table>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* دیالوگ صورت‌حساب مشتری */}
+      <CustomerStatementDialog
+        customer={statementCustomer}
+        sales={sales}
+        onClose={() => setStatementCustomer(null)}
+      />
+    </>
+  )
+}
+
+// ================= دیالوگ صورت‌حساب مشتری (چاپ) =================
+function CustomerStatementDialog({
+  customer,
+  sales,
+  onClose,
+}: {
+  customer: CustomerRow | null
+  sales: SaleRow[]
+  onClose: () => void
+}) {
+  const { t, lang } = useI18n()
+  if (!customer) return null
+
+  // بل‌های همین مشتری — مرتب بر اساس تاریخ (قدیمی به جدید)
+  const rows = sales
+    .filter((s) => s.customerId === customer.id)
+    .slice()
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  // بل‌ها ممکن است ارزهای مختلف داشته باشند → مجموع‌ها با نرخ هر بل به افغانی تبدیل می‌شود
+  const sumTotal = rows.reduce((acc, s) => acc + (s.total || 0) * (s.exchangeRate || 1), 0)
+  const sumPaid = rows.reduce((acc, s) => acc + (s.paidAmount || 0) * (s.exchangeRate || 1), 0)
+  const remaining = Math.round((sumTotal - sumPaid) * 100) / 100
+
+  const statusLabel = (st: string) =>
+    st === 'paid'
+      ? t('پرداخت‌شده', 'پرداخت شوی', 'Paid')
+      : st === 'partial'
+        ? t('جزئی', 'نیمه', 'Partial')
+        : t('پرداخت‌نشده', 'ناپرداخت', 'Unpaid')
+
+  return (
+    <PrintDocDialog
+      open
+      onClose={onClose}
+      docType={t('صورت‌حساب مشتری', 'د مشتري صورت‌حساب', 'Customer Statement')}
+      docTypeEn="CUSTOMER STATEMENT"
+      docNumber={`CS-${customer.id.slice(-6).toUpperCase()}`}
+      meta={[
+        [
+          { label: t('نام مشتری', 'د پیرودونکي نوم', 'Customer name'), value: customer.name },
+          { label: t('تیلیفون', 'تیلیفون', 'Phone'), value: customer.phone || '—', ltr: true },
+          { label: t('آدرس', 'پته', 'Address'), value: customer.address || '—' },
+          {
+            label: t('نوع مشتری', 'د پیرودونکي ډول', 'Customer type'),
+            value:
+              customer.type === 'wholesale'
+                ? t('عمده', 'پرچونۍ', 'Wholesale')
+                : t('خرده', 'لږ', 'Retail'),
+          },
+        ],
+        [
+          {
+            label: t('قرض باقیات فعلی (دفتر)', 'اوسنی پور (دفتر)', 'Current book balance'),
+            value: formatMoney(customer.balance),
+          },
+          { label: t('تعداد بل‌ها', 'د بلونو شمېر', 'Invoices count'), value: formatNumber(rows.length) },
+        ],
+      ]}
+    >
+      <DocTable
+        head={[
+          { label: t('بل', 'بل', 'Invoice') },
+          { label: t('تاریخ', 'نېټه', 'Date') },
+          { label: t('مبلغ', 'مبلغ', 'Total'), className: 'text-end' },
+          { label: t('پرداخت‌شده', 'پرداخت شوی', 'Paid'), className: 'text-end' },
+          { label: t('باقیات', 'پاتې', 'Remaining'), className: 'text-end' },
+          { label: t('وضعیت', 'حالت', 'Status') },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('برای این مشتری بلی ثبت نشده است', 'د دې پیرودونکي لپاره بل نه دی ثبت شوی', 'No invoices for this customer')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((s, i) => {
+            const rem = s.total - s.paidAmount
+            return (
+              <DocRow key={s.id} index={i}>
+                <DocCell className="font-mono text-xs">{s.invoiceNumber}</DocCell>
+                <DocCell className="text-xs whitespace-nowrap">{toJalaliStr(s.date)}</DocCell>
+                <DocCell className="text-end whitespace-nowrap">
+                  {formatMoney(s.total, s.currency as Currency)}
+                </DocCell>
+                <DocCell className="text-end whitespace-nowrap">
+                  {formatMoney(s.paidAmount, s.currency as Currency)}
+                </DocCell>
+                <DocCell className={`text-end whitespace-nowrap ${rem > 0.001 ? 'font-semibold text-red-600' : ''}`}>
+                  {formatMoney(rem, s.currency as Currency)}
+                </DocCell>
+                <DocCell className="text-xs whitespace-nowrap">{statusLabel(s.status)}</DocCell>
+              </DocRow>
+            )
+          })
+        )}
+      </DocTable>
+
+      <div className="mt-4">
+        <DocTotals
+          rows={[
+            {
+              label: t('مجموع فروش (به افغانی)', 'ټوله پلورنه (افغانی)', 'Total sales (AFN)'),
+              value: formatMoney(sumTotal),
+            },
+            {
+              label: t('مجموع پرداخت‌شده (به افغانی)', 'ټوله پرداخت شوی (افغانی)', 'Total paid (AFN)'),
+              value: formatMoney(sumPaid),
+              tone: 'success',
+            },
+          ]}
+          grandLabel={t('باقیات قرض مشتری', 'پاتې پور', 'Outstanding balance')}
+          grandValue={formatMoney(remaining)}
+        />
+      </div>
+
+      {Math.abs(remaining) > 0.001 && (
+        <div className="mt-4">
+          <DocAmountWords text={amountToWords(Math.abs(remaining), 'AFN', lang)} />
+        </div>
+      )}
+    </PrintDocDialog>
   )
 }

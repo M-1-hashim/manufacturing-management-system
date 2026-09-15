@@ -141,7 +141,7 @@ export async function cacheClear(): Promise<void> {
 export async function cacheInvalidatePrefix(prefix: string): Promise<void> {
   if (!idbAvailable()) return
   try {
-    const all = await withStore<{ url: string }[]>(STORE_CACHE, 'readonly', (s) => s.getAllKeys() as unknown as IDBRequest<string[]>)
+    const all = await withStore<IDBValidKey[]>(STORE_CACHE, 'readonly', (s) => s.getAllKeys())
     for (const url of all) {
       if (typeof url === 'string' && url.startsWith(prefix)) {
         await withStore(STORE_CACHE, 'readwrite', (s) => s.delete(url))

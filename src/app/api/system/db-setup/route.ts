@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         undefined,
         `host-setup: create tables — created=${r.createdTables.length} bootstrap=${r.bootstrapped}`
       )
-      return NextResponse.json({ ok: r.ok, ...r })
+      return NextResponse.json({ ...r })
     }
 
     if (action === 'migrate') {

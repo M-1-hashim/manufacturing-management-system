@@ -21,11 +21,11 @@ export async function POST(req: Request) {
       }
       case 'sync-now': {
         const r = await triggerSyncNow()
-        return NextResponse.json({ ok: !r.error, ...r, status: getState() })
+        return NextResponse.json({ ...r, ok: !r.error, status: getState() })
       }
       case 'snapshot-now': {
         const r = await triggerSnapshotNow()
-        return NextResponse.json({ ok: r.ok, ...r, status: getState() })
+        return NextResponse.json({ ...r, ok: r.ok, status: getState() })
       }
       default:
         return NextResponse.json({ ok: false, error: 'UNKNOWN_ACTION' }, { status: 400 })

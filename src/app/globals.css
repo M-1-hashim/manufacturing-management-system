@@ -225,12 +225,31 @@ body::before {
   background: var(--primary);
 }
 .nav-label {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: oklch(0.46 calc(0.05 * var(--theme-c, 1)) var(--theme-h, 165) / 0.95);
   padding-inline: 0.65rem;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+/* ---- کارت‌ها و کادرها: همان ته‌رنگ سایدبار — پس‌زمینهٔ صفحه دست‌نخورده ---- */
+.bg-card {
+  background-image:
+    linear-gradient(180deg, oklch(0.55 calc(0.075 * var(--theme-c, 1)) var(--theme-h, 165) / 0.075), transparent 54%),
+    linear-gradient(0deg, oklch(0.55 calc(0.045 * var(--theme-c, 1)) var(--theme-h, 165) / 0.045), transparent 40%);
+}
+.dark .bg-card {
+  background-image:
+    linear-gradient(180deg, oklch(0.78 calc(0.09 * var(--theme-c, 1)) var(--theme-h, 165) / 0.075), transparent 54%),
+    linear-gradient(0deg, oklch(0.78 calc(0.05 * var(--theme-c, 1)) var(--theme-h, 165) / 0.045), transparent 40%);
+}
+/* مرز کادرها هم کمی ته‌رنگ تم بگیرد (فقط المان‌های هم bg-card هم border) */
+.bg-card.border {
+  border-color: oklch(0.55 calc(0.055 * var(--theme-c, 1)) var(--theme-h, 165) / 0.24);
+}
+.dark .bg-card.border {
+  border-color: oklch(0.78 calc(0.06 * var(--theme-c, 1)) var(--theme-h, 165) / 0.20);
 }
 
 /* ---- کارت‌ها: سایهٔ لطیف با رنگ تم ---- */

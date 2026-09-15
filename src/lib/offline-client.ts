@@ -217,8 +217,8 @@ export async function trySync(): Promise<{ done: number; failed: number } | null
   } finally {
     syncing = false
     await refreshPendingCount()
-    if (done > 0) toast.success(m('synced')(done))
-    if (failed > 0) toast.error(m('failed')(failed))
+    if (done > 0) toast.success(m('synced', done))
+    if (failed > 0) toast.error(m('failed', failed))
     if (done > 0) {
       // دریافت داده‌های تازه هاست — پاک‌سازی کش و بارگیری مجدد
       await cacheClear()

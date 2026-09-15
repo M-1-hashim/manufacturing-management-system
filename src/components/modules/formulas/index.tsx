@@ -6,6 +6,7 @@ import { useI18n } from '@/lib/i18n'
 import { toast } from 'sonner'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { PageHeader, LoadingBlock, EmptyState } from '@/components/shared/common'
+import { PrintDocDialog, DocTable, DocRow, DocCell, DocTotals, DocNotes } from '@/components/shared/print-doc'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +19,7 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FlaskConical, Plus, Pencil, Trash2, CopyPlus, Search, X, Package, Calculator } from 'lucide-react'
+import { FlaskConical, Plus, Pencil, Trash2, CopyPlus, Search, X, Package, Calculator, Printer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ---------- انواع ----------
@@ -28,6 +29,7 @@ interface FormulaItemT { id: string; rawMaterialId: string; quantity: number; pe
 interface FormulaT {
   id: string; productId: string; name: string; version: number; outputQty: number
   laborCost: number; overheadCost: number; notes: string | null; isActive: boolean
+  createdAt: string
   product: ProductLite; items: FormulaItemT[]
 }
 interface ItemDraft { key: string; rawMaterialId: string; quantity: string }
@@ -67,6 +69,9 @@ export default function FormulasModule() {
   const [deleteTarget, setDeleteTarget] = useState<FormulaT | null>(null)
   const [versionTarget, setVersionTarget] = useState<FormulaT | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // ---------- چاپ شیت فورمولا ----------
+  const [printTarget, setPrintTarget] = useState<FormulaT | null>(null)
 
   const materialsById = useMemo(() => {
     const m: Record<string, RawMaterialLite> = {}
@@ -385,6 +390,15 @@ export default function FormulasModule() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      title={t('چاپ شیت فورمولا', 'د فورمولا شیټ چاپ', 'Print formula sheet')}
+                      onClick={() => setPrintTarget(f)}
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="ghost"
                       className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ms-auto"
                       onClick={() => setDeleteTarget(f)}
@@ -596,7 +610,89 @@ export default function FormulasModule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ---------- چاپ شیت فورمولا ---------- */}
+      <FormulaSheetPrintDialog formula={printTarget} onClose={() => setPrintTarget(null)} />
     </div>
+  )
+}
+
+// ================= دیالوگ چاپ شیت فورمولا =================
+function FormulaSheetPrintDialog({ formula, onClose }: { formula: FormulaT | null; onClose: () => void }) {
+  const { t } = useI18n()
+  const f = formula
+  const sum = f ? sumOfItems(f) : 0
+  const matCost = f ? materialCostOf(f) : 0
+  const batchTotal = f ? matCost + f.laborCost + f.overheadCost : 0
+
+  return (
+    <PrintDocDialog
+      open={!!f}
+      onClose={onClose}
+      docType={t('شیت فورمولا', 'د فورمولا شیټ', 'Formula Sheet')}
+      docTypeEn="FORMULA SHEET (BOM)"
+      docNumber={f ? `FM-${f.id.slice(-6)}` : undefined}
+      date={f?.createdAt}
+      meta={
+        f
+          ? [[
+              { label: t('محصول', 'محصول', 'Product'), value: f.product?.name ?? '—' },
+              { label: t('نام فورمولا', 'د فورمول نوم', 'Formula name'), value: f.name },
+              { label: t('نسخه', 'نسخه', 'Version'), value: `v${f.version}` },
+              { label: t('خروجی هر بچ', 'د هرې بچې محصول', 'Output per batch'), value: `${fmtQty(f.outputQty)} ${f.product?.unit ?? ''}` },
+              {
+                label: t('وضعیت', 'وضعیت', 'Status'),
+                value: f.isActive ? t('فعال', 'فعال', 'Active') : t('غیرفعال', 'غیرفعال', 'Inactive'),
+              },
+            ]]
+          : []
+      }
+    >
+      {f && (
+        <>
+          <DocTable
+            head={[
+              { label: '#' },
+              { label: t('ماده خام', 'خام ماده', 'Raw material') },
+              { label: t('واحد', 'واحد', 'Unit') },
+              { label: t('مقدار', 'مقدار', 'Quantity') },
+              { label: t('فیصد', 'فیصد', 'Percent') },
+            ]}
+          >
+            {f.items.map((it, idx) => {
+              const pct = it.percentage ?? (sum > 0 ? (it.quantity / sum) * 100 : 0)
+              return (
+                <DocRow key={it.id} index={idx}>
+                  <DocCell className="font-mono w-8">{idx + 1}</DocCell>
+                  <DocCell className="font-medium">{it.rawMaterial?.name ?? '—'}</DocCell>
+                  <DocCell className="text-neutral-500">{it.rawMaterial?.unit ?? ''}</DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{fmtQty(it.quantity)}</span></DocCell>
+                  <DocCell className="font-mono"><span dir="ltr">{formatNumber(pct, 1)}٪</span></DocCell>
+                </DocRow>
+              )
+            })}
+            {/* ردیف مجموع مقدار مواد */}
+            <tr className="border-t-2 border-neutral-300 bg-neutral-50 font-bold">
+              <td className="py-2.5 px-2.5" colSpan={3}>{t('مجموع مقدار مواد', 'د موادو ټول مقدار', 'Total material quantity')}</td>
+              <td className="py-2.5 px-2.5 font-mono"><span dir="ltr">{fmtQty(sum)}</span></td>
+              <td className="py-2.5 px-2.5 font-mono"><span dir="ltr">{sum > 0 ? '100٪' : '—'}</span></td>
+            </tr>
+          </DocTable>
+
+          <DocTotals
+            rows={[
+              { label: t('مواد', 'مواد', 'Materials'), value: formatMoney(matCost) },
+              { label: t('اجرت', 'مزد', 'Labor'), value: formatMoney(f.laborCost) },
+              { label: t('سربار', 'سربار', 'Overhead'), value: formatMoney(f.overheadCost) },
+              { label: t('مصرف هر واحد', 'د هرې واحدې لګښت', 'Cost per unit'), value: formatMoney(f.outputQty > 0 ? batchTotal / f.outputQty : 0) },
+            ]}
+            grandLabel={t('مصرف کل برای یک بچ', 'د یوې بچې ټول لګښت', 'Total cost per batch')}
+            grandValue={formatMoney(batchTotal)}
+          />
+          <DocNotes>{f.notes}</DocNotes>
+        </>
+      )}
+    </PrintDocDialog>
   )
 }
 

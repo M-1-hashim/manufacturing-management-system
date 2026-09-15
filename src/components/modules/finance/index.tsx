@@ -16,12 +16,22 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
+  Printer,
 } from 'lucide-react'
 import { PageHeader, StatCard, EmptyState } from '@/components/shared/common'
 import { useFetch } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
 import { formatNumber, formatMoney, toJalaliStr, CURRENCY_LABELS } from '@/lib/format'
 import type { Currency } from '@/lib/format'
+import { amountToWords } from '@/lib/amount-words'
+import {
+  PrintDocDialog,
+  DocTable,
+  DocRow,
+  DocCell,
+  DocTotals,
+  DocAmountWords,
+} from '@/components/shared/print-doc'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,6 +59,7 @@ import { cn } from '@/lib/utils'
 type SaleRow = {
   id: string
   invoiceNumber: string
+  customerId?: string | null
   customer?: { name: string } | null
   customerName: string | null
   date: string
@@ -76,6 +87,9 @@ type ProductionRow = {
 type CustomerRow = {
   id: string
   name: string
+  phone?: string | null
+  address?: string | null
+  type?: string
   balance: number
 }
 
@@ -120,6 +134,9 @@ export default function FinanceModule() {
   const production = useFetch<ProductionRow[]>('/api/production')
   const customers = useFetch<CustomerRow[]>('/api/customers')
   const settings = useFetch<Record<string, string>>('/api/settings')
+
+  const [debtReportOpen, setDebtReportOpen] = useState(false)
+  const [statementCustomer, setStatementCustomer] = useState<CustomerRow | null>(null)
 
   const saleList = sales.data ?? []
   const expenseList = expenses.data ?? []
@@ -263,9 +280,20 @@ export default function FinanceModule() {
         {/* قرض مشتریان */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Banknote className="h-4 w-4 text-amber-600" />
-              {t('قرض مشتریان', 'د پیرودونکو پورونه', 'Customer receivables')}
+            <CardTitle className="flex items-center justify-between gap-2 text-base">
+              <span className="flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-amber-600" />
+                {t('قرض مشتریان', 'د پیرودونکو پورونه', 'Customer receivables')}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title={t('چاپ گزارش قرض مشتریان', 'د پیرودونکو د پور راپور چاپ', 'Print customer debts report')}
+                onClick={() => setDebtReportOpen(true)}
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -315,9 +343,20 @@ export default function FinanceModule() {
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {debtCustomers.map((c) => (
-                    <Badge key={c.id} variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400">
-                      {c.name}: {formatMoney(c.balance)}
-                    </Badge>
+                    <span key={c.id} className="inline-flex items-center gap-0.5">
+                      <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400">
+                        {c.name}: {formatMoney(c.balance)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        title={t('چاپ صورت‌حساب مشتری', 'د مشتري صورت‌حساب چاپ', 'Print customer statement')}
+                        onClick={() => setStatementCustomer(c)}
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
                   ))}
                 </div>
               )}
@@ -331,8 +370,22 @@ export default function FinanceModule() {
           onChanged={expenses.refetch}
           monthlyTotal={monthlyExpenses}
           loading={expenses.loading}
+          toAfn={toAfn}
         />
       </div>
+
+      {/* دیالوگ‌های چاپی */}
+      <DebtorsReportDialog
+        open={debtReportOpen}
+        onClose={() => setDebtReportOpen(false)}
+        customers={debtCustomers}
+      />
+
+      <CustomerDebtStatementDialog
+        customer={statementCustomer}
+        sales={saleList}
+        onClose={() => setStatementCustomer(null)}
+      />
     </div>
   )
 }
@@ -368,11 +421,13 @@ function ExpensesCard({
   onChanged,
   monthlyTotal,
   loading,
+  toAfn,
 }: {
   expenses: ExpenseRow[]
   onChanged: () => void
   monthlyTotal: number
   loading: boolean
+  toAfn?: (amount: number, currency: string) => number
 }) {
   const { t } = useI18n()
   const [category, setCategory] = useState(CATEGORIES[0])
@@ -383,6 +438,7 @@ function ExpensesCard({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [saving, setSaving] = useState(false)
   const [filterCat, setFilterCat] = useState(ALL)
+  const [printOpen, setPrintOpen] = useState(false)
 
   const filtered = useMemo(
     () => (filterCat === ALL ? expenses : expenses.filter((e) => e.category === filterCat)),
@@ -444,9 +500,20 @@ function ExpensesCard({
             <ReceiptText className="h-4 w-4 text-primary" />
             {t('مصارف عملیاتی', 'عملیاتي لګښتونه', 'Operating expenses')}
           </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            {t('این ماه', 'دا میاشت', 'This month')}:{' '}
-            <span className="font-bold text-red-600">{formatMoney(monthlyTotal)}</span>
+          <span className="flex items-center gap-1">
+            <span className="text-xs font-normal text-muted-foreground">
+              {t('این ماه', 'دا میاشت', 'This month')}:{' '}
+              <span className="font-bold text-red-600">{formatMoney(monthlyTotal)}</span>
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title={t('چاپ گزارش مصارف', 'د لګښتونو راپور چاپ', 'Print expenses report')}
+              onClick={() => setPrintOpen(true)}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
           </span>
         </CardTitle>
       </CardHeader>
@@ -565,6 +632,321 @@ function ExpensesCard({
           )}
         </div>
       </CardContent>
+
+      {/* دیالوگ گزارش مصارف (چاپ) */}
+      <ExpensesReportDialog
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+        expenses={filtered}
+        filterLabel={filterCat === ALL ? t('همه کتگوری‌ها', 'ټولې کټګورۍ', 'All categories') : filterCat}
+        toAfn={toAfn}
+      />
     </Card>
+  )
+}
+
+// ================= دیالوگ گزارش مصارف (چاپ) =================
+function ExpensesReportDialog({
+  open,
+  onClose,
+  expenses,
+  filterLabel,
+  toAfn,
+}: {
+  open: boolean
+  onClose: () => void
+  expenses: ExpenseRow[]
+  filterLabel: string
+  toAfn?: (amount: number, currency: string) => number
+}) {
+  const { t, lang } = useI18n()
+  if (!open) return null
+
+  const rows = expenses.slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  // مجموع به تفکیک ارز + مجموع کل به افغانی
+  const byCurrency = new Map<string, number>()
+  for (const e of rows) byCurrency.set(e.currency, (byCurrency.get(e.currency) || 0) + (e.amount || 0))
+  const totalAfn = toAfn ? rows.reduce((acc, e) => acc + toAfn(e.amount || 0, e.currency), 0) : null
+  const single = byCurrency.size === 1 ? Array.from(byCurrency.values())[0] ?? 0 : 0
+  const grand = totalAfn ?? single
+
+  // نمبر سند بر اساس تاریخ شمسی امروز
+  const now = new Date()
+  let docNumber = 'EXP'
+  try {
+    const j = toJalaali(now.getFullYear(), now.getMonth() + 1, now.getDate())
+    docNumber = `EXP-${j.jy}${String(j.jm).padStart(2, '0')}${String(j.jd).padStart(2, '0')}`
+  } catch {
+    docNumber = `EXP-${now.toISOString().slice(0, 10).replace(/-/g, '')}`
+  }
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('گزارش مصارف', 'د لګښتونو راپور', 'Expenses Report')}
+      docTypeEn="EXPENSES REPORT"
+      docNumber={docNumber}
+      meta={[
+        [
+          { label: t('کتگوری', 'کټګوري', 'Category'), value: filterLabel },
+          { label: t('تعداد اقلام', 'د مورډونو شمېر', 'Entries count'), value: formatNumber(rows.length) },
+        ],
+      ]}
+    >
+      <DocTable
+        head={[
+          { label: t('تاریخ', 'نېټه', 'Date') },
+          { label: t('کتگوری', 'کټګوري', 'Category') },
+          { label: t('توضیح', 'تشریح', 'Description') },
+          { label: t('مقدار', 'مقدار', 'Amount'), className: 'text-end' },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={4} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('مصرفی ثبت نشده است', 'لګښت نه دی ثبت شوی', 'No expenses recorded')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((e, i) => (
+            <DocRow key={e.id} index={i}>
+              <DocCell className="text-xs whitespace-nowrap">{toJalaliStr(e.date)}</DocCell>
+              <DocCell className="text-xs">{e.category}</DocCell>
+              <DocCell className="text-xs">{e.description}</DocCell>
+              <DocCell className="text-end whitespace-nowrap font-semibold">
+                {formatMoney(e.amount, e.currency as Currency)}
+              </DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+
+      <div className="mt-4">
+        <DocTotals
+          rows={
+            byCurrency.size > 1
+              ? Array.from(byCurrency.entries()).map(([cur, sum]) => ({
+                  label: `${t('مجموع', 'مجموع', 'Total')} (${CURRENCY_LABELS[cur as Currency] ?? cur})`,
+                  value: formatMoney(sum, cur as Currency),
+                }))
+              : []
+          }
+          grandLabel={
+            totalAfn != null
+              ? t('مجموع مصارف (به افغانی)', 'ټول لګښتونه (افغانی)', 'Total expenses (AFN)')
+              : t('مجموع مصارف', 'ټول لګښتونه', 'Total expenses')
+          }
+          grandValue={formatMoney(grand, totalAfn != null ? 'AFN' : (rows[0]?.currency as Currency) ?? 'AFN')}
+        />
+      </div>
+
+      {Math.abs(grand) > 0.001 && (
+        <div className="mt-4">
+          <DocAmountWords text={amountToWords(Math.abs(grand), 'AFN', lang)} />
+        </div>
+      )}
+    </PrintDocDialog>
+  )
+}
+
+// ================= دیالوگ گزارش قرض مشتریان (چاپ) =================
+function DebtorsReportDialog({
+  open,
+  onClose,
+  customers,
+}: {
+  open: boolean
+  onClose: () => void
+  customers: CustomerRow[]
+}) {
+  const { t, lang } = useI18n()
+  if (!open) return null
+
+  const rows = customers.filter((c) => c.balance > 0.001)
+  const totalDebt = rows.reduce((acc, c) => acc + (c.balance || 0), 0)
+
+  const now = new Date()
+  let docNumber = 'DBT'
+  try {
+    const j = toJalaali(now.getFullYear(), now.getMonth() + 1, now.getDate())
+    docNumber = `DBT-${j.jy}${String(j.jm).padStart(2, '0')}${String(j.jd).padStart(2, '0')}`
+  } catch {
+    docNumber = `DBT-${now.toISOString().slice(0, 10).replace(/-/g, '')}`
+  }
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('گزارش قرض مشتریان', 'د پیرودونکو د پور راپور', 'Customer Debts Report')}
+      docTypeEn="CUSTOMER DEBTS REPORT"
+      docNumber={docNumber}
+      meta={[
+        [
+          { label: t('تعداد مشتریان بدهکار', 'د پوروړو پیرودونکو شمېر', 'Debtors count'), value: formatNumber(rows.length) },
+          { label: t('تاریخ گزارش', 'د راپور نېټه', 'Report date'), value: toJalaliStr(now) },
+        ],
+      ]}
+    >
+      <DocTable
+        head={[
+          { label: t('مشتری', 'پیرودونکی', 'Customer') },
+          { label: t('تیلیفون', 'تیلیفون', 'Phone') },
+          { label: t('باقیات قرض', 'پاتې پور', 'Balance'), className: 'text-end' },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('مشتری بدهکار وجود ندارد', 'پوروړی پیرودونکی نشته', 'No debtors')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((c, i) => (
+            <DocRow key={c.id} index={i}>
+              <DocCell className="font-medium">{c.name}</DocCell>
+              <DocCell className="text-xs">
+                <span dir="ltr">{c.phone || '—'}</span>
+              </DocCell>
+              <DocCell className="text-end whitespace-nowrap font-semibold text-red-600">
+                {formatMoney(c.balance)}
+              </DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+
+      <div className="mt-4">
+        <DocTotals
+          rows={[]}
+          grandLabel={t('مجموع قرض مشتریان', 'ټول پور', 'Total receivables')}
+          grandValue={formatMoney(totalDebt)}
+        />
+      </div>
+
+      {totalDebt > 0.001 && (
+        <div className="mt-4">
+          <DocAmountWords text={amountToWords(totalDebt, 'AFN', lang)} />
+        </div>
+      )}
+    </PrintDocDialog>
+  )
+}
+
+// ================= دیالوگ صورت‌حساب قرض مشتری (چاپ) =================
+function CustomerDebtStatementDialog({
+  customer,
+  sales,
+  onClose,
+}: {
+  customer: CustomerRow | null
+  sales: SaleRow[]
+  onClose: () => void
+}) {
+  const { t, lang } = useI18n()
+  if (!customer) return null
+
+  // بل‌های نسیه/پرداخت‌نشدهٔ همین مشتری — مرتب بر اساس تاریخ
+  const rows = sales
+    .filter((s) => s.customerId === customer.id)
+    .slice()
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  // بل‌ها ممکن است ارزهای مختلف داشته باشند → مجموع‌ها با نرخ هر بل به افغانی تبدیل می‌شود
+  const sumTotal = rows.reduce((acc, s) => acc + (s.total || 0) * (s.exchangeRate || 1), 0)
+  const sumPaid = rows.reduce((acc, s) => acc + (s.paidAmount || 0) * (s.exchangeRate || 1), 0)
+  const remaining = Math.round((sumTotal - sumPaid) * 100) / 100
+
+  const statusLabel = (st: string) =>
+    st === 'paid'
+      ? t('پرداخت‌شده', 'پرداخت شوی', 'Paid')
+      : st === 'partial'
+        ? t('جزئی', 'نیمه', 'Partial')
+        : t('پرداخت‌نشده', 'ناپرداخت', 'Unpaid')
+
+  return (
+    <PrintDocDialog
+      open
+      onClose={onClose}
+      docType={t('صورت‌حساب مشتری', 'د مشتري صورت‌حساب', 'Customer Statement')}
+      docTypeEn="CUSTOMER STATEMENT"
+      docNumber={`CS-${customer.id.slice(-6).toUpperCase()}`}
+      meta={[
+        [
+          { label: t('نام مشتری', 'د پیرودونکي نوم', 'Customer name'), value: customer.name },
+          { label: t('تیلیفون', 'تیلیفون', 'Phone'), value: customer.phone || '—', ltr: true },
+          { label: t('آدرس', 'پته', 'Address'), value: customer.address || '—' },
+          {
+            label: t('قرض باقیات فعلی (دفتر)', 'اوسنی پور (دفتر)', 'Current book balance'),
+            value: formatMoney(customer.balance),
+          },
+        ],
+      ]}
+    >
+      <DocTable
+        head={[
+          { label: t('بل', 'بل', 'Invoice') },
+          { label: t('تاریخ', 'نېټه', 'Date') },
+          { label: t('مبلغ', 'مبلغ', 'Total'), className: 'text-end' },
+          { label: t('پرداخت‌شده', 'پرداخت شوی', 'Paid'), className: 'text-end' },
+          { label: t('باقیات', 'پاتې', 'Remaining'), className: 'text-end' },
+          { label: t('وضعیت', 'حالت', 'Status') },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('برای این مشتری بلی ثبت نشده است', 'د دې پیرودونکي لپاره بل نه دی ثبت شوی', 'No invoices for this customer')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((s, i) => {
+            const rem = s.total - s.paidAmount
+            return (
+              <DocRow key={s.id} index={i}>
+                <DocCell className="font-mono text-xs">{s.invoiceNumber}</DocCell>
+                <DocCell className="text-xs whitespace-nowrap">{toJalaliStr(s.date)}</DocCell>
+                <DocCell className="text-end whitespace-nowrap">
+                  {formatMoney(s.total, s.currency as Currency)}
+                </DocCell>
+                <DocCell className="text-end whitespace-nowrap">
+                  {formatMoney(s.paidAmount, s.currency as Currency)}
+                </DocCell>
+                <DocCell className={`text-end whitespace-nowrap ${rem > 0.001 ? 'font-semibold text-red-600' : ''}`}>
+                  {formatMoney(rem, s.currency as Currency)}
+                </DocCell>
+                <DocCell className="text-xs whitespace-nowrap">{statusLabel(s.status)}</DocCell>
+              </DocRow>
+            )
+          })
+        )}
+      </DocTable>
+
+      <div className="mt-4">
+        <DocTotals
+          rows={[
+            {
+              label: t('مجموع فروش (به افغانی)', 'ټوله پلورنه (افغانی)', 'Total sales (AFN)'),
+              value: formatMoney(sumTotal),
+            },
+            {
+              label: t('مجموع پرداخت‌شده (به افغانی)', 'ټوله پرداخت شوی (افغانی)', 'Total paid (AFN)'),
+              value: formatMoney(sumPaid),
+              tone: 'success',
+            },
+          ]}
+          grandLabel={t('باقیات قرض مشتری', 'پاتې پور', 'Outstanding balance')}
+          grandValue={formatMoney(remaining)}
+        />
+      </div>
+
+      {Math.abs(remaining) > 0.001 && (
+        <div className="mt-4">
+          <DocAmountWords text={amountToWords(Math.abs(remaining), 'AFN', lang)} />
+        </div>
+      )}
+    </PrintDocDialog>
   )
 }

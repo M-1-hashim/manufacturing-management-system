@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const body = (await req.json().catch(() => ({}))) as { restore?: string }
+    const body = (await req.json().catch(() => ({}))) as { restore?: string; format?: string }
 
     // بازیابی از فایل کاپی احتیاطی موجود
     if (body.restore) {

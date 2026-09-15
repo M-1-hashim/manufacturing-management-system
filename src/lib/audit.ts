@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 export type AuditAction =
   | 'login'
   | 'login_failed'
+  | 'bootstrap'
   | 'logout'
   | 'create'
   | 'update'

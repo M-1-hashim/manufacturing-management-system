@@ -510,8 +510,8 @@ function Shell() {
               <Factory className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
+              <p className="font-semibold text-[15px] tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
+              <p className="text-[12px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
             </div>
             <button className="ms-auto lg:hidden p-1" onClick={() => setSidebarOpen(false)} aria-label="بستن منو">
               <X className="h-5 w-5" />
@@ -535,7 +535,7 @@ function Shell() {
                           key={item.id}
                           onClick={() => { setActiveTab(item.id as never); setSidebarOpen(false) }}
                           className={cn(
-                            'relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                            'relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[14.5px] font-medium transition-colors',
                             active
                               ? 'bg-primary/10 text-primary font-semibold'
                               : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -543,7 +543,7 @@ function Shell() {
                           aria-current={active ? 'page' : undefined}
                         >
                           {active && <span className="nav-active-bar" aria-hidden />}
-                          <item.icon className="h-4 w-4 shrink-0" />
+                          <item.icon className="h-[18px] w-[18px] shrink-0" />
                           <span className="truncate">{t(item.fa, item.ps, item.en)}</span>
                         </button>
                       )
@@ -556,12 +556,12 @@ function Shell() {
 
           <div className="p-2.5 border-t shrink-0">
             <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[13px] font-bold shrink-0">
+              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[14px] font-bold shrink-0">
                 {user.fullName.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium truncate">{user.fullName}</p>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="text-[14px] font-medium truncate">{user.fullName}</p>
+                <p className="text-[12px] text-muted-foreground truncate">
                   {roleLabel(user.role, lang)}
                   {user.department && user.department !== 'general' ? ` · ${departmentLabel(user.department, lang)}` : ''}
                 </p>

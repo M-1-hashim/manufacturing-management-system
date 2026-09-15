@@ -255,7 +255,7 @@ export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport
       if (localUsers.length > 0) {
         for (let i = 0; i < localUsers.length; i += 100) {
           const chunk = localUsers.slice(i, i + 100).map((u) => ({ ...u }))
-          await pair.server.user.createMany({ data: chunk, skipDuplicates: true })
+          await pair.server.user.createMany({ data: chunk, skipDuplicates: true as never })
         }
         report.copiedUsers = localUsers.length
         report.bootstrapped = true
@@ -266,7 +266,7 @@ export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport
       const rows = localSettings.filter((s) => !String(s.key).startsWith('sync.'))
       if (rows.length > 0) {
         for (let i = 0; i < rows.length; i += 100) {
-          await pair.server.setting.createMany({ data: rows.slice(i, i + 100).map((s) => ({ ...s })), skipDuplicates: true })
+          await pair.server.setting.createMany({ data: rows.slice(i, i + 100).map((s) => ({ ...s })), skipDuplicates: true as never })
         }
         report.copiedSettings = rows.length
         report.bootstrapped = true

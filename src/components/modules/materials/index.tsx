@@ -11,6 +11,7 @@ import {
   Coins,
   Pencil,
   Plus,
+  Printer,
   Search,
   Trash2,
   Truck,
@@ -26,6 +27,13 @@ import {
   StatCard,
   TableSkeleton,
 } from '@/components/shared/common'
+import {
+  DocCell,
+  DocRow,
+  DocTable,
+  DocTotals,
+  PrintDocDialog,
+} from '@/components/shared/print-doc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -73,6 +81,7 @@ interface Supplier {
   name: string
   phone?: string | null
   address?: string | null
+  notes?: string | null
   _count?: { materials: number }
 }
 
@@ -191,6 +200,10 @@ export default function MaterialsModule() {
   const [supForm, setSupForm] = useState<SupplierForm>(emptySupplierForm)
   const [supBusy, setSupBusy] = useState(false)
   const [supToDelete, setSupToDelete] = useState<Supplier | null>(null)
+
+  // چاپ — صورت‌حساب تأمین‌کننده و لیست مواد خام
+  const [printSup, setPrintSup] = useState<Supplier | null>(null)
+  const [listPrintOpen, setListPrintOpen] = useState(false)
 
   const setF = (patch: Partial<MaterialForm>) => setForm((f) => ({ ...f, ...patch }))
   const setSupF = (patch: Partial<SupplierForm>) => setSupForm((f) => ({ ...f, ...patch }))
@@ -489,6 +502,15 @@ export default function MaterialsModule() {
             <Boxes className="h-4 w-4 text-primary" />
             {t('لیست مواد خام', 'د خامو موادو لیست', 'Material list')}
             <Badge variant="secondary">{formatNumber(list.length)}</Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ms-auto"
+              onClick={() => setListPrintOpen(true)}
+            >
+              <Printer className="h-4 w-4" />
+              {t('چاپ لیست مواد', 'د موادو لیست چاپ', 'Print list')}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -826,6 +848,15 @@ export default function MaterialsModule() {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
+                  title={t('چاپ صورت‌حساب', 'د صورت‌حساب چاپ', 'Print statement')}
+                  onClick={() => setPrintSup(s)}
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
                   title={t('تصحیح', 'سمول', 'Edit')}
                   onClick={() => openSupEdit(s)}
                 >
@@ -880,6 +911,20 @@ export default function MaterialsModule() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* چاپ صورت‌حساب تأمین‌کننده */}
+      <SupplierStatementDialog
+        supplier={printSup}
+        materials={materials.data ?? []}
+        onClose={() => setPrintSup(null)}
+      />
+
+      {/* چاپ لیست مواد خام */}
+      <MaterialsListDialog
+        open={listPrintOpen}
+        materials={list}
+        onClose={() => setListPrintOpen(false)}
+      />
+
       {/* تصدیق حذف تأمین‌کننده */}
       <AlertDialog open={!!supToDelete} onOpenChange={(o) => !o && setSupToDelete(null)}>
         <AlertDialogContent>
@@ -908,5 +953,154 @@ export default function MaterialsModule() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+// ================= چاپ صورت‌حساب تأمین‌کننده =================
+function SupplierStatementDialog({
+  supplier,
+  materials,
+  onClose,
+}: {
+  supplier: Supplier | null
+  materials: RawMaterial[]
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const rows = useMemo(
+    () => (supplier ? materials.filter((m) => m.supplierId === supplier.id) : []),
+    [materials, supplier]
+  )
+  if (!supplier) return null
+
+  const totalValue = rows.reduce((a, m) => a + m.stock * m.purchasePrice, 0)
+
+  return (
+    <PrintDocDialog
+      open
+      onClose={onClose}
+      docType={t('صورت‌حساب تأمین‌کننده', 'د تأمین‌کننده صورت‌حساب', 'Supplier Statement')}
+      docTypeEn="SUPPLIER STATEMENT"
+      docNumber={`SS-${supplier.id.slice(-6).toUpperCase()}`}
+      meta={[
+        [
+          { label: t('نام تأمین‌کننده', 'د تأمین‌کونکي نوم', 'Supplier name'), value: supplier.name },
+          { label: t('تیلیفون', 'تلیفون', 'Phone'), value: supplier.phone || '—', ltr: true },
+          { label: t('آدرس', 'پته', 'Address'), value: supplier.address || '—' },
+          { label: t('یادداشت', 'یادښت', 'Notes'), value: supplier.notes || '—' },
+        ],
+      ]}
+    >
+      <DocTable
+        minWidth={620}
+        head={[
+          { label: '#', className: 'w-8 text-center' },
+          { label: t('کود', 'کوډ', 'Code') },
+          { label: t('نام ماده', 'د مادې نوم', 'Material') },
+          { label: t('واحد', 'واحد', 'Unit'), className: 'text-center' },
+          { label: t('قیمت خرید', 'د اخیستو قیمت', 'Purchase price'), className: 'text-center' },
+          { label: t('موجودی', 'موجودي', 'Stock'), className: 'text-center' },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('ماده‌ای ثبت نشده است', 'هیڅ ماده نه ده ثبت شوې', 'No materials recorded')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((m, i) => (
+            <DocRow key={m.id} index={i}>
+              <DocCell className="text-center text-neutral-400">{formatNumber(i + 1)}</DocCell>
+              <DocCell>
+                <span className="font-mono text-xs" dir="ltr">{m.code}</span>
+              </DocCell>
+              <DocCell className="font-medium">{m.name}</DocCell>
+              <DocCell className="text-center">{m.unit}</DocCell>
+              <DocCell className="text-center">{formatMoney(m.purchasePrice)}</DocCell>
+              <DocCell className="text-center font-semibold">{formatNumber(m.stock)}</DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+      <DocTotals
+        rows={[
+          {
+            label: t('تعداد مواد', 'د موادو شمېر', 'Number of materials'),
+            value: formatNumber(rows.length),
+          },
+        ]}
+        grandLabel={t('ارزش تخمینی موجودی', 'د موجودي اټکلی ارزښت', 'Estimated stock value')}
+        grandValue={formatMoney(totalValue, 'AFN')}
+      />
+    </PrintDocDialog>
+  )
+}
+
+// ================= چاپ لیست مواد خام =================
+function MaterialsListDialog({
+  open,
+  materials,
+  onClose,
+}: {
+  open: boolean
+  materials: RawMaterial[]
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const totalValue = materials.reduce((a, m) => a + m.stock * m.purchasePrice, 0)
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('لیست مواد خام', 'د خامو موادو لیست', 'Raw Materials List')}
+      docTypeEn="RAW MATERIALS LIST"
+    >
+      <DocTable
+        minWidth={640}
+        head={[
+          { label: '#', className: 'w-8 text-center' },
+          { label: t('کود', 'کوډ', 'Code') },
+          { label: t('نام ماده', 'د مادې نوم', 'Material') },
+          { label: t('واحد', 'واحد', 'Unit'), className: 'text-center' },
+          { label: t('قیمت خرید', 'د اخیستو قیمت', 'Purchase price'), className: 'text-center' },
+          { label: t('موجودی', 'موجودي', 'Stock'), className: 'text-center' },
+          { label: t('حداقل موجودی', 'لږترلږه موجودي', 'Min stock'), className: 'text-center' },
+        ]}
+      >
+        {materials.length === 0 ? (
+          <tr>
+            <td colSpan={7} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('ماده‌ای ثبت نشده است', 'هیڅ ماده نه ده ثبت شوې', 'No materials recorded')}
+            </td>
+          </tr>
+        ) : (
+          materials.map((m, i) => (
+            <DocRow key={m.id} index={i}>
+              <DocCell className="text-center text-neutral-400">{formatNumber(i + 1)}</DocCell>
+              <DocCell>
+                <span className="font-mono text-xs" dir="ltr">{m.code}</span>
+              </DocCell>
+              <DocCell className="font-medium">{m.name}</DocCell>
+              <DocCell className="text-center">{m.unit}</DocCell>
+              <DocCell className="text-center">{formatMoney(m.purchasePrice)}</DocCell>
+              <DocCell className="text-center font-semibold">{formatNumber(m.stock)}</DocCell>
+              <DocCell className="text-center text-neutral-500">{formatNumber(m.minStock)}</DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+      <DocTotals
+        rows={[
+          {
+            label: t('ارزش تخمینی موجودی', 'د موجودي اټکلی ارزښت', 'Estimated stock value'),
+            value: formatMoney(totalValue, 'AFN'),
+          },
+        ]}
+        grandLabel={t('تعداد مواد', 'د موادو شمېر', 'Number of materials')}
+        grandValue={formatNumber(materials.length)}
+      />
+    </PrintDocDialog>
   )
 }

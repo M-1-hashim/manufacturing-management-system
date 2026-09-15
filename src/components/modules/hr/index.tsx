@@ -8,6 +8,7 @@ import {
   Pencil,
   Plus,
   Power,
+  Printer,
   Trash2,
   UserCheck,
   UserX,
@@ -17,9 +18,19 @@ import {
 import { toast } from 'sonner'
 import { useFetch } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
-import { formatMoney, formatNumber, STATUS_COLORS, toJalaliStr } from '@/lib/format'
+import { formatMoney, formatNumber, jalaliMonthName, STATUS_COLORS, toJalaliStr } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { amountToWords } from '@/lib/amount-words'
 import { EmptyState, PageHeader, StatCard, TableSkeleton } from '@/components/shared/common'
+import {
+  DocCell,
+  DocRow,
+  DocTable,
+  DocAmountWords,
+  DocNotes,
+  DocTotals,
+  PrintDocDialog,
+} from '@/components/shared/print-doc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -144,6 +155,10 @@ export default function HrModule() {
   const [pAmount, setPAmount] = useState('')
   const [pNotes, setPNotes] = useState('')
   const [pSaving, setPSaving] = useState(false)
+
+  // چاپ — فیش معاش و گزارش حاضری
+  const [printSal, setPrintSal] = useState<Sal | null>(null)
+  const [attPrintOpen, setAttPrintOpen] = useState(false)
 
   // ---------- کارکنان ----------
   const [searchText, setSearchText] = useState('')
@@ -611,6 +626,10 @@ export default function HrModule() {
                       <SelectItem value="30">{t('۳۰ روز', '۳۰ ورځې', '30 days')}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button variant="outline" onClick={() => setAttPrintOpen(true)}>
+                    <Printer className="h-4 w-4" />
+                    {t('گزارش حاضری', 'د حاضرو راپور', 'Attendance report')}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -713,6 +732,15 @@ export default function HrModule() {
                             </TableCell>
                             <TableCell>
                               <div className="flex justify-start">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  title={t('چاپ فیش معاش', 'د معاش فیش چاپ', 'Print salary slip')}
+                                  onClick={() => setPrintSal(s)}
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -929,6 +957,157 @@ export default function HrModule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ---------- چاپ فیش معاش ---------- */}
+      <SalarySlipDialog
+        payment={printSal}
+        employees={employees}
+        onClose={() => setPrintSal(null)}
+      />
+
+      {/* ---------- چاپ گزارش حاضری ---------- */}
+      <AttendanceReportDialog
+        open={attPrintOpen}
+        rows={attendance}
+        onClose={() => setAttPrintOpen(false)}
+      />
     </div>
+  )
+}
+
+// برچسب ماه پرداخت مثل «1403-01 (حمل)»
+function monthJalaliLabel(month: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(month.trim())
+  if (!m) return month
+  return `${month} (${jalaliMonthName(parseInt(m[2], 10))})`
+}
+
+// ================= چاپ فیش معاش =================
+function SalarySlipDialog({
+  payment,
+  employees,
+  onClose,
+}: {
+  payment: Sal | null
+  employees: Emp[]
+  onClose: () => void
+}) {
+  const { t, lang } = useI18n()
+  if (!payment) return null
+
+  const emp = employees.find((e) => e.id === payment.employeeId)
+  const empName = emp?.name ?? payment.employee?.name ?? '—'
+
+  return (
+    <PrintDocDialog
+      open
+      onClose={onClose}
+      docType={t('فیش معاش', 'د معاش فیش', 'Salary Slip')}
+      docTypeEn="SALARY SLIP"
+      docNumber={`SL-${payment.id.slice(-6).toUpperCase()}`}
+      date={payment.date}
+      meta={[
+        [
+          { label: t('کارمند', 'کوونکی', 'Employee'), value: empName },
+          { label: t('وظیفه', 'دنده', 'Position'), value: emp?.position ?? '—' },
+          { label: t('تیلفون', 'تیلفون', 'Phone'), value: emp?.phone || '—', ltr: true },
+          { label: t('ماه (شمسی)', 'میاشت (شمسي)', 'Month (Shamsi)'), value: monthJalaliLabel(payment.month) },
+          { label: t('مبلغ پرداخت‌شده', 'پرداخت شوی مبلغ', 'Paid amount'), value: formatMoney(payment.amount) },
+          { label: t('تاریخ پرداخت', 'د پرداخت نېټه', 'Paid at'), value: toJalaliStr(payment.date) },
+        ],
+      ]}
+    >
+      <DocTotals
+        rows={[
+          {
+            label: t('معاش اساسی', 'بنسټیز معاش', 'Base salary'),
+            value: emp ? formatMoney(emp.salary) : '—',
+          },
+        ]}
+        grandLabel={t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}
+        grandValue={formatMoney(payment.amount)}
+      />
+      <DocAmountWords text={amountToWords(payment.amount, 'AFN', lang)} />
+      {payment.notes && <DocNotes>{payment.notes}</DocNotes>}
+    </PrintDocDialog>
+  )
+}
+
+// ================= چاپ گزارش حاضری =================
+function AttendanceReportDialog({
+  open,
+  rows,
+  onClose,
+}: {
+  open: boolean
+  rows: Att[]
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const counts = useMemo(
+    () => ({
+      present: rows.filter((a) => a.status === 'present').length,
+      absent: rows.filter((a) => a.status === 'absent').length,
+      leave: rows.filter((a) => a.status === 'leave').length,
+    }),
+    [rows]
+  )
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('گزارش حاضری', 'د حاضرو راپور', 'Attendance Report')}
+      docTypeEn="ATTENDANCE REPORT"
+    >
+      <DocTable
+        minWidth={560}
+        head={[
+          { label: '#', className: 'w-8 text-center' },
+          { label: t('نام کارمند', 'د کوونکي نوم', 'Employee') },
+          { label: t('تاریخ', 'نېټه', 'Date'), className: 'text-center' },
+          { label: t('وضعیت', 'حالت', 'Status'), className: 'text-center' },
+          { label: t('شیفت', 'شفت', 'Shift'), className: 'text-center' },
+        ]}
+      >
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('سابقه‌ای ثبت نشده', 'سابقه نه ده ثبت شوې', 'No attendance records')}
+            </td>
+          </tr>
+        ) : (
+          rows.map((a, i) => (
+            <DocRow key={a.id} index={i}>
+              <DocCell className="text-center text-neutral-400">{formatNumber(i + 1)}</DocCell>
+              <DocCell className="font-medium">{a.employee?.name ?? '—'}</DocCell>
+              <DocCell className="text-center">{toJalaliStr(a.date)}</DocCell>
+              <DocCell className="text-center">{STATUS_LABELS[a.status] ?? a.status}</DocCell>
+              <DocCell className="text-center">{a.shift ?? '—'}</DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+      <DocTotals
+        rows={[
+          {
+            label: t('حاضر', 'حاضر', 'Present'),
+            value: formatNumber(counts.present),
+            tone: 'success',
+          },
+          {
+            label: t('غایب', 'غایب', 'Absent'),
+            value: formatNumber(counts.absent),
+            tone: 'danger',
+          },
+          {
+            label: t('رخصتی', 'رخصتي', 'Leave'),
+            value: formatNumber(counts.leave),
+          },
+        ]}
+        grandLabel={t('مجموع', 'مجموع', 'Total')}
+        grandValue={formatNumber(rows.length)}
+      />
+    </PrintDocDialog>
   )
 }

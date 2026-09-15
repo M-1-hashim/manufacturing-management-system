@@ -2,6 +2,7 @@
 
 // ماژول گزارشات — فروش، تولید، مالی و انبار با انتخاب بازه زمانی و خروجی CSV
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   AlertTriangle,
   BarChart3,
@@ -9,6 +10,7 @@ import {
   Download,
   Factory,
   PieChart as PieChartIcon,
+  Printer,
   RotateCcw,
   ShoppingCart,
   Wallet,
@@ -31,6 +33,13 @@ import { useFetch } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
 import { STATUS_COLORS, formatMoney, formatNumber, shortDateLabel, toJalaliStr } from '@/lib/format'
 import { LoadingBlock, PageHeader, StatCard } from '@/components/shared/common'
+import {
+  PrintDocDialog,
+  DocTable,
+  DocRow,
+  DocCell,
+  DocTotals,
+} from '@/components/shared/print-doc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -111,6 +120,7 @@ function compact(n: number): string {
 export default function ReportsModule() {
   const { t } = useI18n()
   const [range, setRange] = useState(90)
+  const [printTab, setPrintTab] = useState<'sales' | 'production' | 'finance' | 'inventory' | null>(null)
   const { data, loading, error, refetch } = useFetch<ReportsData>(`/api/reports?range=${range}`)
 
   if (loading && !data) {
@@ -202,29 +212,40 @@ export default function ReportsModule() {
                   <ShoppingCart className="h-4 w-4 text-emerald-600" />
                   {t('روند فروش روزانه', 'ورځنی پلورنې بهیر', 'Daily sales trend')}
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    downloadCSV('sales-report.csv', [
-                      [
-                        t('تاریخ میلادی', 'میلادي نېټه', 'Gregorian date'),
-                        t('تاریخ شمسی', 'شمسي نېټه', 'Jalali date'),
-                        t('فروش (افغانی)', 'پلورنه (افغانی)', 'Sales (AFN)'),
-                        t('تعداد بل', 'د بلونو شمېر', 'Invoice count'),
-                      ],
-                      ...data.salesByDay.map((d) => [
-                        d.date.slice(0, 10),
-                        toJalaliStr(d.date),
-                        d.total,
-                        d.count,
-                      ]),
-                    ])
-                  }
-                >
-                  <Download className="me-2 h-4 w-4" />
-                  {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={t('چاپ گزارش فروش', 'د پلورنې راپور چاپ', 'Print sales report')}
+                    onClick={() => setPrintTab('sales')}
+                  >
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      downloadCSV('sales-report.csv', [
+                        [
+                          t('تاریخ میلادی', 'میلادي نېټه', 'Gregorian date'),
+                          t('تاریخ شمسی', 'شمسي نېټه', 'Jalali date'),
+                          t('فروش (افغانی)', 'پلورنه (افغانی)', 'Sales (AFN)'),
+                          t('تعداد بل', 'د بلونو شمېر', 'Invoice count'),
+                        ],
+                        ...data.salesByDay.map((d) => [
+                          d.date.slice(0, 10),
+                          toJalaliStr(d.date),
+                          d.total,
+                          d.count,
+                        ]),
+                      ])
+                    }
+                  >
+                    <Download className="me-2 h-4 w-4" />
+                    {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -440,23 +461,34 @@ export default function ReportsModule() {
                   <Factory className="h-4 w-4 text-emerald-600" />
                   {t('تولید در مقابل ضایعات', 'تولید او ضایعات', 'Produced vs waste')}
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    downloadCSV('production-report.csv', [
-                      [
-                        t('محصول', 'محصول', 'Product'),
-                        t('تولیدشده', 'تولید شوی', 'Produced'),
-                        t('ضایعات', 'ضایعات', 'Waste'),
-                      ],
-                      ...productionSummary.byProduct.map((p) => [p.productName, p.produced, p.waste]),
-                    ])
-                  }
-                >
-                  <Download className="me-2 h-4 w-4" />
-                  {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={t('چاپ گزارش تولید', 'د تولید راپور چاپ', 'Print production report')}
+                    onClick={() => setPrintTab('production')}
+                  >
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      downloadCSV('production-report.csv', [
+                        [
+                          t('محصول', 'محصول', 'Product'),
+                          t('تولیدشده', 'تولید شوی', 'Produced'),
+                          t('ضایعات', 'ضایعات', 'Waste'),
+                        ],
+                        ...productionSummary.byProduct.map((p) => [p.productName, p.produced, p.waste]),
+                      ])
+                    }
+                  >
+                    <Download className="me-2 h-4 w-4" />
+                    {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -512,19 +544,30 @@ export default function ReportsModule() {
                     <PieChartIcon className="h-4 w-4 text-amber-600" />
                     {t('مصارف به تفکیک کتگوری', 'لگښتونه په کټګوریو', 'Expenses by category')}
                   </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      downloadCSV('finance-report.csv', [
-                        [t('کتگوری', 'کټګوری', 'Category'), t('مبلغ (افغانی)', 'مبلغ (افغانی)', 'Amount (AFN)')],
-                        ...data.expensesByCategory.map((e) => [e.category, e.total]),
-                      ])
-                    }
-                  >
-                    <Download className="me-2 h-4 w-4" />
-                    {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title={t('چاپ گزارش مالی', 'مالي راپور چاپ', 'Print finance report')}
+                      onClick={() => setPrintTab('finance')}
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        downloadCSV('finance-report.csv', [
+                          [t('کتگوری', 'کټګوری', 'Category'), t('مبلغ (افغانی)', 'مبلغ (افغانی)', 'Amount (AFN)')],
+                          ...data.expensesByCategory.map((e) => [e.category, e.total]),
+                        ])
+                      }
+                    >
+                      <Download className="me-2 h-4 w-4" />
+                      {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -647,38 +690,49 @@ export default function ReportsModule() {
                     <Boxes className="h-4 w-4 text-emerald-600" />
                     {t('زیادترین ارزش — محصولات', 'ډېر ارزښت — محصولات', 'Highest value — products')}
                   </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      downloadCSV('inventory-report.csv', [
-                        [
-                          t('نوع', 'ډول', 'Type'),
-                          t('نام', 'نوم', 'Name'),
-                          t('موجودی', 'موجودي', 'Stock'),
-                          t('واحد', 'واحد', 'Unit'),
-                          t('ارزش (افغانی)', 'ارزښت (افغانی)', 'Value (AFN)'),
-                        ],
-                        ...inventoryValuation.topProducts.map((p) => [
-                          t('محصول', 'محصول', 'Product'),
-                          p.name,
-                          p.stock,
-                          p.unit,
-                          p.value,
-                        ]),
-                        ...inventoryValuation.topMaterials.map((m) => [
-                          t('ماده خام', 'خام ماده', 'Material'),
-                          m.name,
-                          m.stock,
-                          m.unit,
-                          m.value,
-                        ]),
-                      ])
-                    }
-                  >
-                    <Download className="me-2 h-4 w-4" />
-                    {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title={t('چاپ گزارش انبار', 'د ګدام راپور چاپ', 'Print inventory report')}
+                      onClick={() => setPrintTab('inventory')}
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        downloadCSV('inventory-report.csv', [
+                          [
+                            t('نوع', 'ډول', 'Type'),
+                            t('نام', 'نوم', 'Name'),
+                            t('موجودی', 'موجودي', 'Stock'),
+                            t('واحد', 'واحد', 'Unit'),
+                            t('ارزش (افغانی)', 'ارزښت (افغانی)', 'Value (AFN)'),
+                          ],
+                          ...inventoryValuation.topProducts.map((p) => [
+                            t('محصول', 'محصول', 'Product'),
+                            p.name,
+                            p.stock,
+                            p.unit,
+                            p.value,
+                          ]),
+                          ...inventoryValuation.topMaterials.map((m) => [
+                            t('ماده خام', 'خام ماده', 'Material'),
+                            m.name,
+                            m.stock,
+                            m.unit,
+                            m.value,
+                          ]),
+                        ])
+                      }
+                    >
+                      <Download className="me-2 h-4 w-4" />
+                      {t('دانلود CSV', 'CSV ډاونلوډ', 'Download CSV')}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -758,6 +812,423 @@ export default function ReportsModule() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* دیالوگ چاپ گزارش فعال — یک دیالوگ برای هر تب */}
+      <PrintDocDialog
+        open={printTab !== null}
+        onClose={() => setPrintTab(null)}
+        docType={
+          printTab === 'production'
+            ? t('گزارش تولید', 'د تولید راپور', 'Production Report')
+            : printTab === 'finance'
+              ? t('گزارش مالی', 'مالي راپور', 'Finance Report')
+              : printTab === 'inventory'
+                ? t('گزارش انبار', 'د ګدام راپور', 'Inventory Report')
+                : t('گزارش فروش', 'د پلورنې راپور', 'Sales Report')
+        }
+        docTypeEn={
+          printTab === 'production'
+            ? 'PRODUCTION REPORT'
+            : printTab === 'finance'
+              ? 'FINANCE REPORT'
+              : printTab === 'inventory'
+                ? 'INVENTORY REPORT'
+                : 'SALES REPORT'
+        }
+        docNumber={`RPT-${data.range}D`}
+        meta={[
+          [
+            {
+              label: t('بازه گزارش', 'د راپور موده', 'Report range'),
+              value: t(
+                `${formatNumber(data.range)} روز اخیر`,
+                `وروستي ${formatNumber(data.range)} ورځې`,
+                `Last ${data.range} days`
+              ),
+            },
+            { label: t('تاریخ گزارش', 'د راپور نېټه', 'Report date'), value: toJalaliStr(new Date()) },
+          ],
+        ]}
+      >
+        {printTab === 'sales' && <SalesReportPrint data={data} />}
+        {printTab === 'production' && <ProductionReportPrint data={data} />}
+        {printTab === 'finance' && <FinanceReportPrint data={data} />}
+        {printTab === 'inventory' && <InventoryReportPrint data={data} />}
+      </PrintDocDialog>
+    </div>
+  )
+}
+
+// ================= بخش‌های چاپ گزارش‌ها =================
+
+function PrintSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-bold tracking-[0.15em] text-neutral-500">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+// ---------- چاپ گزارش فروش ----------
+function SalesReportPrint({ data }: { data: ReportsData }) {
+  const { t } = useI18n()
+  const monthTotal = data.salesByMonth.reduce((a, m) => a + m.total, 0)
+  const paymentTotal = data.salesByPayment.reduce((a, p) => a + p.total, 0)
+  const paymentCount = data.salesByPayment.reduce((a, p) => a + p.count, 0)
+  const productRevenue = data.topProducts.reduce((a, p) => a + p.revenue, 0)
+  const customerTotal = data.salesByCustomer.reduce((a, c) => a + c.total, 0)
+
+  return (
+    <div className="space-y-5">
+      <PrintSection title={t('فروش ماهانه', 'میاشتنۍ پلورنه', 'Monthly sales')}>
+        <DocTable
+          head={[
+            { label: t('ماه', 'میاشت', 'Month') },
+            { label: t('مجموع فروش', 'ټوله پلورنه', 'Total sales'), className: 'text-end' },
+          ]}
+        >
+          {data.salesByMonth.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            data.salesByMonth.map((m, i) => (
+              <DocRow key={m.label} index={i}>
+                <DocCell>{m.label}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(m.total)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals rows={[]} grandLabel={t('مجموع فروش', 'ټوله پلورنه', 'Total sales')} grandValue={formatMoney(monthTotal)} />
+        </div>
+      </PrintSection>
+
+      <PrintSection title={t('فروش به تفکیک روش پرداخت', 'د پرداخت له لارې پلورنه', 'Sales by payment method')}>
+        <DocTable
+          head={[
+            { label: t('روش پرداخت', 'د تادیې طریقه', 'Payment method') },
+            { label: t('تعداد بل', 'د بلونو شمېر', 'Invoices'), className: 'text-center' },
+            { label: t('مجموع', 'مجموع', 'Total'), className: 'text-end' },
+          ]}
+        >
+          {data.salesByPayment.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            data.salesByPayment.map((p, i) => (
+              <DocRow key={p.method} index={i}>
+                <DocCell>{p.method}</DocCell>
+                <DocCell className="text-center">{formatNumber(p.count)}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(p.total)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[
+              { label: t('تعداد کل بل‌ها', 'ټول بلونه', 'Total invoices'), value: formatNumber(paymentCount) },
+            ]}
+            grandLabel={t('مجموع فروش', 'ټوله پلورنه', 'Total sales')}
+            grandValue={formatMoney(paymentTotal)}
+          />
+        </div>
+      </PrintSection>
+
+      <PrintSection title={t('محصولات پرفروش', 'پر پلورنه محصولات', 'Top products')}>
+        <DocTable
+          head={[
+            { label: t('محصول', 'محصول', 'Product') },
+            { label: t('مقدار', 'مقدار', 'Qty'), className: 'text-center' },
+            { label: t('عواید', 'عواید', 'Revenue'), className: 'text-end' },
+          ]}
+        >
+          {data.topProducts.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            data.topProducts.slice(0, 10).map((p, i) => (
+              <DocRow key={p.name} index={i}>
+                <DocCell>{p.name}</DocCell>
+                <DocCell className="text-center">{formatNumber(p.qty)}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(p.revenue)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[]}
+            grandLabel={t('مجموع عواید محصولات پرفروش', 'د غوره محصولاتو عواید', 'Top products revenue')}
+            grandValue={formatMoney(productRevenue)}
+          />
+        </div>
+      </PrintSection>
+
+      <PrintSection title={t('مشتریان برتر', 'غوره پیرودونکي', 'Top customers')}>
+        <DocTable
+          head={[
+            { label: t('مشتری', 'پیرودونکی', 'Customer') },
+            { label: t('تعداد خرید', 'د اخیستنو شمېر', 'Orders'), className: 'text-center' },
+            { label: t('مجموع خرید', 'ټوله پیرود', 'Total'), className: 'text-end' },
+          ]}
+        >
+          {data.salesByCustomer.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            data.salesByCustomer.slice(0, 10).map((c, i) => (
+              <DocRow key={c.name} index={i}>
+                <DocCell>{c.name}</DocCell>
+                <DocCell className="text-center">{formatNumber(c.orders)}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(c.total)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[]}
+            grandLabel={t('مجموع خرید مشتریان برتر', 'د غوره پیرودونکو پیرود', 'Top customers total')}
+            grandValue={formatMoney(customerTotal)}
+          />
+        </div>
+      </PrintSection>
+    </div>
+  )
+}
+
+// ---------- چاپ گزارش تولید ----------
+function ProductionReportPrint({ data }: { data: ReportsData }) {
+  const { t } = useI18n()
+  const { productionSummary } = data
+  const producedTotal = productionSummary.byProduct.reduce((a, p) => a + p.produced, 0)
+  const wasteTotal = productionSummary.byProduct.reduce((a, p) => a + p.waste, 0)
+
+  const statusLabel = (st: string) => {
+    const l = PROD_STATUS[st] ?? [st, st, st]
+    return t(l[0], l[1], l[2])
+  }
+
+  return (
+    <div className="space-y-5">
+      <PrintSection title={t('تولید به تفکیک وضعیت', 'تولید په حالتونو', 'Production by status')}>
+        <DocTable
+          head={[
+            { label: t('وضعیت', 'حالت', 'Status') },
+            { label: t('تعداد سفارش', 'د فرمایو شمېر', 'Orders'), className: 'text-center' },
+          ]}
+        >
+          {productionSummary.byStatus.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            productionSummary.byStatus.map((s, i) => (
+              <DocRow key={s.status} index={i}>
+                <DocCell>{statusLabel(s.status)}</DocCell>
+                <DocCell className="text-center">{formatNumber(s.count)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[]}
+            grandLabel={t('مجموع سفارشات', 'ټولې فرمایې', 'Total orders')}
+            grandValue={formatNumber(productionSummary.byStatus.reduce((a, s) => a + s.count, 0))}
+          />
+        </div>
+      </PrintSection>
+
+      <PrintSection title={t('تولید در مقابل ضایعات', 'تولید او ضایعات', 'Produced vs waste')}>
+        <DocTable
+          head={[
+            { label: t('محصول', 'محصول', 'Product') },
+            { label: t('تولیدشده', 'تولید شوی', 'Produced'), className: 'text-center' },
+            { label: t('ضایعات', 'ضایعات', 'Waste'), className: 'text-center' },
+            { label: t('نسبت ضایعات', 'د ضایعاتو تناسب', 'Waste %'), className: 'text-center' },
+          ]}
+        >
+          {productionSummary.byProduct.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            productionSummary.byProduct.map((p, i) => {
+              const total = p.produced + p.waste
+              const pct = total > 0 ? (p.waste / total) * 100 : 0
+              return (
+                <DocRow key={p.productName} index={i}>
+                  <DocCell>{p.productName}</DocCell>
+                  <DocCell className="text-center">{formatNumber(p.produced)}</DocCell>
+                  <DocCell className={`text-center ${pct > 5 ? 'font-semibold text-red-600' : ''}`}>
+                    {formatNumber(p.waste)}
+                  </DocCell>
+                  <DocCell className="text-center">{formatNumber(pct, 1)}٪</DocCell>
+                </DocRow>
+              )
+            })
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[
+              { label: t('مجموع تولید', 'ټول تولید', 'Total produced'), value: formatNumber(producedTotal) },
+              { label: t('مجموع ضایعات', 'ټول ضایعات', 'Total waste'), value: formatNumber(wasteTotal), tone: 'danger' },
+            ]}
+            grandLabel={t('مجموع تولید و ضایعات', 'تولید او ضایعات یکجا', 'Produced + waste')}
+            grandValue={formatNumber(producedTotal + wasteTotal)}
+          />
+        </div>
+      </PrintSection>
+    </div>
+  )
+}
+
+// ---------- چاپ گزارش مالی ----------
+function FinanceReportPrint({ data }: { data: ReportsData }) {
+  const { t } = useI18n()
+  const expenseTotal = data.expensesByCategory.reduce((a, e) => a + e.total, 0)
+
+  return (
+    <div className="space-y-5">
+      <PrintSection title={t('مصارف به تفکیک کتگوری', 'لگښتونه په کټګوریو', 'Expenses by category')}>
+        <DocTable
+          head={[
+            { label: t('کتگوری', 'کټګوري', 'Category') },
+            { label: t('مقدار', 'مقدار', 'Amount'), className: 'text-end' },
+          ]}
+        >
+          {data.expensesByCategory.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            data.expensesByCategory.map((e, i) => (
+              <DocRow key={e.category} index={i}>
+                <DocCell>{e.category}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(e.total)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[]}
+            grandLabel={t('مجموع مصارف', 'ټول لګښتونه', 'Total expenses')}
+            grandValue={formatMoney(expenseTotal)}
+          />
+        </div>
+      </PrintSection>
+
+      <PrintSection title={t('گزارش مالیات فروش', 'د پلورنې مالیه راپور', 'Sales tax report')}>
+        <DocTable
+          head={[
+            { label: t('نوع مالیات', 'د مالیې ډول', 'Tax type') },
+            { label: t('تعداد بل', 'د بلونو شمېر', 'Invoices'), className: 'text-center' },
+            { label: t('مبلغ', 'مبلغ', 'Amount'), className: 'text-end' },
+          ]}
+        >
+          <DocRow index={0}>
+            <DocCell>{t('مالیات ۲٪', '۲٪ مالیه', '2% tax')}</DocCell>
+            <DocCell className="text-center">{formatNumber(data.taxReport.tax2Count)}</DocCell>
+            <DocCell className="text-end font-semibold">{formatMoney(data.taxReport.tax2Amount)}</DocCell>
+          </DocRow>
+          <DocRow index={1}>
+            <DocCell>{t('مالیات ۱۰٪', '۱۰٪ مالیه', '10% tax')}</DocCell>
+            <DocCell className="text-center">{formatNumber(data.taxReport.tax10Count)}</DocCell>
+            <DocCell className="text-end font-semibold">{formatMoney(data.taxReport.tax10Amount)}</DocCell>
+          </DocRow>
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[]}
+            grandLabel={t('کل مالیات', 'ټوله مالیه', 'Total tax')}
+            grandValue={formatMoney(data.taxReport.totalTax)}
+          />
+        </div>
+      </PrintSection>
+    </div>
+  )
+}
+
+// ---------- چاپ گزارش انبار ----------
+function InventoryReportPrint({ data }: { data: ReportsData }) {
+  const { t } = useI18n()
+  const { inventoryValuation } = data
+
+  return (
+    <div className="space-y-5">
+      <PrintSection title={t('ارزش محصولات', 'د محصولاتو ارزښت', 'Products value')}>
+        <DocTable
+          head={[
+            { label: t('محصول', 'محصول', 'Product') },
+            { label: t('موجودی', 'موجودي', 'Stock'), className: 'text-center' },
+            { label: t('ارزش', 'ارزښت', 'Value'), className: 'text-end' },
+          ]}
+        >
+          {inventoryValuation.topProducts.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            inventoryValuation.topProducts.slice(0, 15).map((p, i) => (
+              <DocRow key={p.name} index={i}>
+                <DocCell>{p.name}</DocCell>
+                <DocCell className="text-center">{formatNumber(p.stock)} {p.unit}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(p.value)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+      </PrintSection>
+
+      <PrintSection title={t('ارزش مواد خام', 'د خامو موادو ارزښت', 'Materials value')}>
+        <DocTable
+          head={[
+            { label: t('ماده', 'ماده', 'Material') },
+            { label: t('موجودی', 'موجودي', 'Stock'), className: 'text-center' },
+            { label: t('ارزش', 'ارزښت', 'Value'), className: 'text-end' },
+          ]}
+        >
+          {inventoryValuation.topMaterials.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="border-t border-neutral-200 py-4 text-center text-neutral-400">—</td>
+            </tr>
+          ) : (
+            inventoryValuation.topMaterials.slice(0, 15).map((m, i) => (
+              <DocRow key={m.name} index={i}>
+                <DocCell>{m.name}</DocCell>
+                <DocCell className="text-center">{formatNumber(m.stock)} {m.unit}</DocCell>
+                <DocCell className="text-end font-semibold">{formatMoney(m.value)}</DocCell>
+              </DocRow>
+            ))
+          )}
+        </DocTable>
+        <div className="mt-2">
+          <DocTotals
+            rows={[
+              {
+                label: t('ارزش محصولات', 'د محصولاتو ارزښت', 'Products value'),
+                value: formatMoney(inventoryValuation.productsValue),
+              },
+              {
+                label: t('ارزش مواد خام', 'د خامو موادو ارزښت', 'Materials value'),
+                value: formatMoney(inventoryValuation.materialsValue),
+              },
+            ]}
+            grandLabel={t('ارزش کل انبار', 'د ګدام ټول ارزښت', 'Total inventory value')}
+            grandValue={formatMoney(inventoryValuation.total)}
+          />
+        </div>
+      </PrintSection>
     </div>
   )
 }

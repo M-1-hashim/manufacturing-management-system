@@ -12,6 +12,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Printer,
   Search,
   Tag,
   Trash2,
@@ -27,6 +28,13 @@ import {
   StatCard,
   TableSkeleton,
 } from '@/components/shared/common'
+import {
+  DocCell,
+  DocRow,
+  DocTable,
+  DocTotals,
+  PrintDocDialog,
+} from '@/components/shared/print-doc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -191,6 +199,10 @@ export default function ProductsModule() {
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
   const [editingCatName, setEditingCatName] = useState('')
   const [catToDelete, setCatToDelete] = useState<Category | null>(null)
+
+  // چاپ — لیست قیمت محصولات و ورق محصول
+  const [priceListOpen, setPriceListOpen] = useState(false)
+  const [printProduct, setPrintProduct] = useState<Product | null>(null)
 
   const setF = (patch: Partial<ProductForm>) => setForm((f) => ({ ...f, ...patch }))
 
@@ -453,6 +465,10 @@ export default function ProductsModule() {
         icon={Package}
         actions={
           <>
+            <Button variant="outline" onClick={() => setPriceListOpen(true)}>
+              <Printer className="h-4 w-4" />
+              {t('لیست قیمت محصولات', 'د محصولاتو لیست قیمت', 'Product price list')}
+            </Button>
             <Button variant="outline" onClick={() => setCatsOpen(true)}>
               <Tag className="h-4 w-4" />
               {t('کتگوری‌ها', 'کټګورۍ', 'Categories')}
@@ -629,6 +645,15 @@ export default function ProductsModule() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-start gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title={t('چاپ مشخصات محصول', 'د محصول مشخصات چاپ', 'Print product sheet')}
+                              onClick={() => setPrintProduct(p)}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -925,6 +950,16 @@ export default function ProductsModule() {
         </DialogContent>
       </Dialog>
 
+      {/* چاپ لیست قیمت محصولات */}
+      <ProductPriceListDialog
+        open={priceListOpen}
+        products={list}
+        onClose={() => setPriceListOpen(false)}
+      />
+
+      {/* چاپ ورق یک محصول */}
+      <ProductSheetDialog product={printProduct} onClose={() => setPrintProduct(null)} />
+
       {/* تصدیق حذف محصول */}
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
@@ -994,5 +1029,126 @@ export default function ProductsModule() {
 function LoadingIcon() {
   return (
     <span className="me-1 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent align-[-2px]" />
+  )
+}
+
+// ================= چاپ لیست قیمت محصولات =================
+function ProductPriceListDialog({
+  open,
+  products,
+  onClose,
+}: {
+  open: boolean
+  products: Product[]
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const stockValue = products.reduce((a, p) => a + p.stock * p.costPrice, 0)
+
+  return (
+    <PrintDocDialog
+      open={open}
+      onClose={onClose}
+      docType={t('لیست قیمت محصولات', 'د محصولاتو لیست قیمت', 'Product Price List')}
+      docTypeEn="PRODUCT PRICE LIST"
+    >
+      <DocTable
+        minWidth={680}
+        head={[
+          { label: '#', className: 'w-8 text-center' },
+          { label: t('کود', 'کوډ', 'Code') },
+          { label: t('نام محصول', 'د محصول نوم', 'Product') },
+          { label: t('کتگوری', 'کټګوري', 'Category') },
+          { label: t('واحد', 'واحد', 'Unit'), className: 'text-center' },
+          { label: t('قیمت تمام‌شده', 'د بشپړېدو قیمت', 'Cost'), className: 'text-center' },
+          { label: t('قیمت فروش', 'د پلور قیمت', 'Sale price'), className: 'text-center' },
+          { label: t('قیمت عمده', 'د پرچون قیمت', 'Wholesale'), className: 'text-center' },
+          { label: t('موجودی', 'موجودي', 'Stock'), className: 'text-center' },
+        ]}
+      >
+        {products.length === 0 ? (
+          <tr>
+            <td colSpan={9} className="border-t border-neutral-200 py-4 text-center text-neutral-400">
+              {t('محصولی ثبت نشده است', 'هیڅ محصول نه دی ثبت شوي', 'No products recorded')}
+            </td>
+          </tr>
+        ) : (
+          products.map((p, i) => (
+            <DocRow key={p.id} index={i}>
+              <DocCell className="text-center text-neutral-400">{formatNumber(i + 1)}</DocCell>
+              <DocCell>
+                <span className="font-mono text-xs" dir="ltr">{p.code}</span>
+              </DocCell>
+              <DocCell className="font-medium">{p.name}</DocCell>
+              <DocCell>{p.category?.name ?? '—'}</DocCell>
+              <DocCell className="text-center">{p.unit}</DocCell>
+              <DocCell className="text-center">{formatMoney(p.costPrice)}</DocCell>
+              <DocCell className="text-center font-semibold">{formatMoney(p.salePrice)}</DocCell>
+              <DocCell className="text-center">{formatMoney(p.wholesalePrice)}</DocCell>
+              <DocCell className="text-center">{formatNumber(p.stock)}</DocCell>
+            </DocRow>
+          ))
+        )}
+      </DocTable>
+      <DocTotals
+        rows={[
+          {
+            label: t('ارزش موجودی (تمام‌شده)', 'د موجودي ارزښت (بشپړېدو)', 'Stock value (cost)'),
+            value: formatMoney(stockValue, 'AFN'),
+          },
+        ]}
+        grandLabel={t('تعداد محصولات', 'د محصولاتو شمېر', 'Number of products')}
+        grandValue={formatNumber(products.length)}
+      />
+    </PrintDocDialog>
+  )
+}
+
+// ================= چاپ ورق یک محصول =================
+function ProductSheetDialog({
+  product,
+  onClose,
+}: {
+  product: Product | null
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  if (!product) return null
+
+  return (
+    <PrintDocDialog
+      open
+      onClose={onClose}
+      docType={t('ورق قیمت محصول', 'د محصول ورق قیمت', 'Product Price Sheet')}
+      docTypeEn="PRODUCT SHEET"
+      docNumber={`PS-${product.id.slice(-6).toUpperCase()}`}
+      meta={[
+        [
+          { label: t('نام محصول', 'د محصول نوم', 'Product name'), value: product.name },
+          { label: t('کود', 'کوډ', 'Code'), value: product.code, ltr: true },
+          { label: t('کتگوری', 'کټګوري', 'Category'), value: product.category?.name ?? '—' },
+          { label: t('واحد', 'واحد', 'Unit'), value: product.unit },
+        ],
+      ]}
+    >
+      <DocTotals
+        rows={[
+          {
+            label: t('موجودی فعلی', 'اوسنی موجودي', 'Current stock'),
+            value: `${formatNumber(product.stock)} ${product.unit}`,
+          },
+          {
+            label: t('قیمت تمام‌شده', 'د بشپړېدو قیمت', 'Cost price'),
+            value: formatMoney(product.costPrice),
+          },
+          {
+            label: t('قیمت عمده', 'د پرچون قیمت', 'Wholesale price'),
+            value: formatMoney(product.wholesalePrice),
+          },
+        ]}
+        grandLabel={t('قیمت فروش (خرده)', 'د پلور قیمت (لږ پلور)', 'Sale price (retail)')}
+        grandValue={formatMoney(product.salePrice)}
+      />
+    </PrintDocDialog>
   )
 }

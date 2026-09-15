@@ -888,3 +888,102 @@ Work Log:
 
 Stage Summary:
 - commit f068927 → push شد؛ ریلیز v1.0.12 منتشر شد (Release id 388671007): Setup.exe 168MB + Portable 266MB + RELEASE-NOTES — هر ۳ asset state=uploaded
+---
+Task ID: 8-a
+Agent: coordinator (main)
+Task: زیرساخت چاپ مشترک + رنگ کارت‌ها از سایدبار + متن بزرگتر سایدبار + بازیابی دوبارهٔ local-schema.ts
+
+Work Log:
+- src/lib/amount-words.ts ساخته شد — amountToWords (دری/پشتو/انگلیسی + AFN/USD/PKR) از فروش استخراج شد؛ sales/index.tsx حالا از همین می‌خواند
+- src/components/shared/print-doc.tsx ساخته شد — سیستم چاپ اسناد مشترک: PrintDocDialog (سرلوحهٔ شرکت + نوع سند + نمبر + تاریخ شمسی/میلادی + بخش‌های meta + امضاها + پاورقی + دکمهٔ چاپ با print-area) + DocTable/DocRow/DocCell/DocTotals/DocAmountWords/DocNotes + useCompanySettings
+- globals.css: قاعدهٔ .bg-card با گرادیان ته‌رنگ hue تم (مثل سایدبار) در روشن و تیره + مرز ته‌رنگ برای .bg-card.border — پس‌زمینهٔ صفحه (bg-background) دست‌نخورده
+- سایدبار بزرگتر: آیتم‌های منو 13px→14.5px + آیکن h-4→18px؛ nav-label 10.5→12px؛ عنوان 14→15px؛ نام کاربر 13→14px
+- 🐑 بازیابی مجدد src/lib/local-schema.ts (بار سوم — در سشن قبلی بازیابی شده بود ولی ذخیره/کامیت نشده بود): CREATE TABLE IF NOT EXISTS برای ۱۹ جدول + ایندکس‌ها؛ سرور دوباره بالا آمد: «[local-schema] OK — 19 tables ensured» + GET / 200
+- lint پاک
+
+Stage Summary:
+- زیرساخت آماده برای ساب‌ایجنت‌های 8-b/8-c/8-d (چاپ در همهٔ ماژول‌ها)
+- این بار local-schema.ts حتماً باید در کامیت نهایی باشد
+
+---
+Task ID: 8-d
+Agent: print-integration
+Task: چاپ در ماژول‌های مواد خام/محصولات/منابع بشری — صورت‌حساب تأمین‌کننده، لیست مواد خام، لیست قیمت محصولات، ورق محصول، فیش معاش، گزارش حاضری (اتصال به سیستم چاپ مشترک 8-a)
+
+Work Log:
+- هر سه فایل ماژول خط‌به‌خط خوانده شد (row types، tabs، دیالوگ‌ها، state، فیلترها) + print-doc.tsx و amount-words.ts و InvoiceDialog فروش به‌عنوان مرجع لحن بازبینی شد
+- materials/index.tsx: (۱) دکمهٔ ghost پرینتر در اکشن‌های هر ردیف تأمین‌کننده (داخل دیالوگ تأمین‌کننده‌ها) → SupplierStatementDialog: PrintDocDialog با docType «صورت‌حساب تأمین‌کننده / SUPPLIER STATEMENT»، docNumber=SS-{id6}، meta نام/تیلیفون/آدرس/یادداشت تأمین‌کننده، DocTable مواد همان تأمین‌کننده (فیلتر materials بر supplierId: کود/نام/واحد/قیمت خرید/موجودی)، DocTotals تعداد مواد + ارزش تخمینی موجودی Σ(stock×purchasePrice) با formatMoney AFN؛ (۲) دکمهٔ «چاپ لیست مواد» در CardTitle بخش لیست مواد خام → MaterialsListDialog: چاپ لیست فیلترشدهٔ فعلی (list) با ستون حداقل موجودی + DocTotals ارزش تخمینی موجودی و تعداد مواد؛ Supplier interface فیلد notes?? گرفته (API شاملش می‌کند)
+- products/index.tsx: (۱) دکمهٔ «لیست قیمت محصولات» در PageHeader actions → ProductPriceListDialog: DocTable کود/نام/کتگوری/واحد/قیمت تمام‌شده/فروش/عمده/موجودی روی list فیلترشدهٔ فعلی + DocTotals ارزش موجودی (تمام‌شده) و تعداد محصولات؛ (۲) دکمهٔ ghost پرینتر در اکشن‌های هر ردیف محصول (اختیاری) → ProductSheetDialog: ورق قیمت تک‌محصول با meta نام/کود/کتگوری/واحد و DocTotals موجودی/تمام‌شده/عمده با گراند قیمت فروش خرده
+- hr/index.tsx: (۱) دکمهٔ ghost پرینتر در اکشن‌های هر ردیف پرداخت معاش → SalarySlipDialog: docType «فیش معاش / SALARY SLIP»، docNumber=SL-{id6}، date=payment.date، meta کارمند/وظیفه/تیلفون/ماه (1403-01 + نام ماه شمسی با jalaliMonthName)/مبلغ/تاریخ پرداخت، DocTotals معاش اساسی (از employees) + گراند پرداخت‌شده، DocAmountWords(amountToWords(amount,'AFN',lang))، DocNotes یادداشت پرداخت؛ (۲) دکمهٔ «گزارش حاضری» در سرلوحهٔ سابقهٔ حاضری (کنار فیلترها) → AttendanceReportDialog: چاپ رکوردهای فعلی فیلترشده (کارمند/تاریخ شمسی/وضعیت حاضر-غایب-رخصتی از STATUS_LABELS/شیفت) + DocTotals شمارش هر وضعیت با گراند مجموع
+- همهٔ متن‌های جدید سه‌زبانه با دری افغانی خالص در اسلات اول (چاپ، صورت‌حساب، تأمین‌کننده، فیش معاش، حاضری، مجموع، معاش اساسی، ارزش تخمینی موجودی...)؛ دیالوگ‌های جدید در انتهای هر فایل، بدون تغییر export/امضای موجود؛ هیچ فایل دیگری دست نخورد
+- tsc --noEmit: صفر خطا در سه فایل (خطاهای موجود پروژه در examples/، prisma/seed.ts، scripts/، finance و... مربوط به عوامل دیگر است)؛ eslint سه فایل: 0 خطا 0 هشدار (lint کل پروژه فقط ۲ خطای از پیش موجود finance/index.tsx عامل 8-c را نشان می‌داد)
+
+Stage Summary:
+- کاربرد: برای هر تأمین‌کننده بل صورت‌حساب چاپ می‌شود؛ لیست مواد خام و لیست قیمت محصولات (با احترام به فیلترهای فعلی) و ورق تک‌محصول چاپ می‌شود؛ هر پرداخت معاش فیش چاپی با مبلغ به حروف دارد؛ گزارش حاضریِ فیلترشده با شمارش حاضر/غایب/رخصتی چاپ می‌شود — همه روی سرلوحهٔ شرکت، تاریخ شمسی/میلادی، امضاها و دکمهٔ چاپ سیستم مشترک 8-a
+- Files touched: src/components/modules/materials/index.tsx، src/components/modules/products/index.tsx، src/components/modules/hr/index.tsx (فقط همین سه)
+
+---
+Task ID: 8-c
+Agent: print-integration
+Task: چاپ اسناد در ماژول‌های تولید + فورمولاها + انبار با سیستم مشترک PrintDocDialog (بل ورک‌آردر / شیت فورمولا / گزارش موجودی / گزارش ورود و خروج)
+
+Work Log:
+- هر سه فایل ماژول خط‌به‌خط خوانده شد؛ شکل واقعی دیتا بررسی شد: production از ProductionOrderT (کاست‌ها، وضعیت، QC)، formulas از FormulaT با items+rawMaterial (API با include کل فیلدها از جمله createdAt برمی‌گرداند)، inventory از InvResponse — ستون «کد» در خلاصهٔ موجودی /api/inventory وجود ندارد → جدول‌های گزارش موجودی به‌جای کد: نام/واحد/موجودی/حداقل/وضعیت
+- production/index.tsx: دکمهٔ Printer ghost (آیکن‌تنها، title سه‌زبانه «چاپ ورک‌آردر») در سلول اجراؤاتِ هر ردیف سفارش — برای همهٔ وضعیت‌ها (pending/in_progress/completed/cancelled)؛ «—» جای‌دار سلولِ completed/cancelled حذف شد چون حالا اکشن دارد؛ state printTarget + کامپوننت WorkOrderPrintDialog پایین فایل: PrintDocDialog با docType «ورک‌آردر تولید»/PRODUCTION WORK ORDER، docNumber=orderNumber، date=startDate؛ meta بخش ۱ (محصول، فورمولا v—نام، مقدار پلان‌شده+واحد، وضعیت با همان statusLabel ماژول، مقدار تولیدشده، ضایعات، کنترل کیفیت با qcLabel) و بخش ۲ (مصرف مواد/اجرت/سربار، تاریخ شروع و ختم شمسی)؛ children: DocTotals (مواد/اجرت/سربار + گرند مصرف کل با formatMoney AFN) + DocNotes یادداشت سفارش
+- formulas/index.tsx: دکمهٔ Printer outline آیکن‌تنها در ردیف دکمه‌های کارت هر فورمولا (بین «نسخه جدید» و «حذف»، title «چاپ شیت فورمولا»)؛ FormulaT فیلد createdAt: string گرفت؛ state printTarget + کامپوننت FormulaSheetPrintDialog: docType «شیت فورمولا»/FORMULA SHEET (BOM)، docNumber=`FM-`+id.slice(-6)، date=createdAt؛ meta (محصول، نام فورمولا، نسخه، خروجی هر بچ، وضعیت فعال/غیرفعال)؛ children: DocTable اقلام (#، ماده خام، واحد، مقدار، فیصد — فیصد از percentage یا محاسبه از مجموع مثل کارت) + ردیف مجموع مقدار مواد (colSpan) + DocTotals (مواد/اجرت/سربار/مصرف هر واحد + گرند مصرف کل برای یک بچ) + DocNotes
+- inventory/index.tsx: (۱) دکمهٔ «گزارش موجودی انبار» outline با آیکن Printer در اکشن‌های PageHeader کنار «ثبت حرکت جدید» → InventoryReportDialog: دو DocTable در یک سند (محصولات و مواد خام: نام/واحد/موجودی/حداقل/وضعیت با فلگ کمبود سرخ / کافی سبز) + DocTotals (تعداد محصولات، تعداد مواد خام، اقلام با کمبود tone danger + گرند ارزش کل موجودی) — کل موجودی بدون فیلتر (فیلترها فقط گردش را محدود می‌کنند)؛ (۲) دکمهٔ «گزارش ورود و خروج» outline sm در هدر کارت گردش‌ها کنار سه فیلتر (disabled وقتی لیست خالی) → MovementsReportDialog: همان txs فیلترشدهٔ نمایش‌داده‌شده + meta (نوع حرکت، نوع قلم، دوره از fDays)؛ جدول (تاریخ شمسی، نوع با TYPE_LABELS خود ماژول = ورود/خروج/اصلاح/انتقال، قلم، نوع قلم، مقدار+واحد، انبار، حواله) + DocTotals (مجموع ورود/خروج/تعداد حرکت‌ها + گرند مجموع خالص)
+- همهٔ رشته‌های جدید سه‌زبانه با دری افغانی خالص (ورک‌آردر، فورمولا، شیت، ماده خام، فیصد، مجموع، کمبود، وضعیت، حواله، مصرف/اجرت/سربار هماهنگ با واژگان موجود ماژول‌ها)؛ هیچ فایل دیگری دست نخورد؛ تعریف دیالوگ‌ها پایین فایل؛ export/default دست‌نخورده
+- 🐑 بازیابی: sumOfItems در formulas حین ادیت ناخواسته حذف شده بود — فوراً به انتهای فایل برگردانده شد
+- Verify: bunx tsc --noEmit → صفر خطا در سه فایل (خطاهای موجود examples/prisma/scripts/api بی‌ربط پیش‌تر هم بودند)؛ bun run lint → پاک، بدون هیچ خروجی
+
+Stage Summary:
+- کاربر حالا از هر سه ماژول بل چاپ می‌کند: ورک‌آردر تولید (با کاست‌ها و وضعیت QC) در هر ردیف سفارش، شیت فورمولا (BOM با فیصد و مصرف بچ) در هر کارت فورمولا، گزارش موجودی انبار (محصولات+مواد خام+کمبود+ارزش) در هدر انبار و گزارش ورود و خروج (همان فیلترهای فعال) در تب گردش
+- همه از PrintDocDialog مشترک تسک 8-a استفاده می‌کنند: سرلوحهٔ شرکت، تاریخ شمسی/میلادی، امضاها، دکمهٔ چاپ A4 — بدون دیالوگ تو در تو
+- Files: src/components/modules/production/index.tsx (+WorkOrderPrintDialog)، src/components/modules/formulas/index.tsx (+FormulaSheetPrintDialog، createdAt در FormulaT)، src/components/modules/inventory/index.tsx (+InventoryReportDialog، +MovementsReportDialog، TX_DAYS_LABELS)
+---
+Task ID: 8-b
+Agent: print-integration
+Task: چاپ در ماژول‌های فروش + مالی + گزارشات — صورت‌حساب مشتری، گزارش مصارف، گزارش قرض مشتریان و چاپ هر چهار گزارش تب گزارشات (سیستم مشترک print-doc از 8-a)
+
+Work Log:
+- worklog.md (بخش 8-a) و print-doc.tsx / amount-words.ts / hooks.ts / format.ts / APIهای sales+customers خوانده شد تا تایپ‌ها و الگوی دیالوگ بل (InvoiceDialog) دقیق تقلید شود
+- sales/index.tsx: کامپوننت جدید CustomerStatementDialog (پایین فایل) روی PrintDocDialog مشترک — docType «صورت‌حساب مشتری / CUSTOMER STATEMENT»، docNumber CS-XXXXXX (آخرین ۶ کاراکتر id)، meta شامل نام/تیلیفون/آدرس/نوع (خرده/عمده)/قرض باقیات دفتر/تعداد بل‌ها؛ DocTable بل‌های همان مشتری (فیلتر sales.data بر اساس customerId، مرتب قدیمی→جدید): نمبر بل، تاریخ شمسی، مبلغ، پرداخت‌شده، باقیات، وضعیت (هر بل به ارز خودش)؛ DocTotals: مجموع فروش + مجموع پرداخت‌شده به افغانی (تبدیل با exchangeRate هر بل) و نوار باقیات؛ DocAmountWords باقیات اگر ≠ ۰
+- sales/index.tsx: CustomersDialog اکنون sales: SaleRow[] می‌گیرد (از لیست همو دریافت‌شدهٔ والد) + state statementCustomer؛ دکمهٔ Printer (ghost/icon، title=«چاپ صورت‌حساب مشتری») در ستون اجراؤات هر ردیف مشتری، قبل از دکمهٔ تصحیح؛ دیالوگ صورت‌حساب در قالب fragment کنار دیالوگ مشتریان رندر می‌شود؛ InvoiceDialog موجود دست‌نخورده ماند
+- finance/index.tsx: ExpensesCard دکمهٔ چاپ در سرلوحه (کنار «این ماه») → ExpensesReportDialog «گزارش مصارف / EXPENSES REPORT» با docNumber EXP-<تاریخ شمسی امروز>؛ همان لیست فیلترشدهٔ کتگوری چاپ می‌شود (DocTable: تاریخ شمسی/کتگوری/توضیح/مقدار)؛ DocTotals با مجموع به تفکیک ارز (اگر چند ارز) + مجموع کل به افغانی از toAfn (پراپ اختیاری جدید از والد)؛ DocAmountWords مجموع
+- finance/index.tsx: کارت «قرض مشتریان» دکمهٔ چاپ سرلوحه → DebtorsReportDialog «گزارش قرض مشتریان / CUSTOMER DEBTS REPORT» (docNumber DBT-<تاریخ شمسی>): جدول مشتری/تیلیفون/باقیات قرض برای balance>0.001 + مجموع کل + مبلغ به حروف؛ هر Badge مشتری بدهکار حالا با دکمهٔ Printer کوچک (h-6) است → CustomerDebtStatementDialog «صورت‌حساب مشتری» مشابه sales (بل‌های همان مشتری از saleList موجود ماژول فیلتر می‌شود — بدون فچ اضافی) با meta نام/تیلیفون/آدرس/باقیات دفتر و DocTotals/DocAmountWords
+- finance/index.tsx: تایپ‌های محلی به‌صورت افزایشی گسترش یافت: SaleRow +customerId?: string|null، CustomerRow +phone/address/type (اختیاری) — API واقعی هر دو فیلد را برمی‌گرداند
+- reports/index.tsx: state printTab ('sales'|'production'|'finance'|'inventory'|null)؛ در هر چهار تب، دکمهٔ Printer کنار دکمهٔ CSV (داخل یک flex مشترک)؛ یک PrintDocDialog واحد در ریشهٔ ماژول با docType/docTypeEn متغیر، docNumber RPT-<range>D و meta بازه + تاریخ گزارش؛ چهار کامپوننت چاپ پایین فایل:
+  - SalesReportPrint: جدول فروش ماهانه + مجموع؛ روش پرداخت (تعداد/مبلغ + مجموع)؛ محصولات پرفروش (۱۰ اول)؛ مشتریان برتر (۱۰ اول) — هرکدام DocTotals
+  - ProductionReportPrint: تولید به تفکیک وضعیت (لیبل‌های PROD_STATUS سه‌زبانه) + مجموع سفارشات؛ تولید/ضایعات با نسبت ٪ + مجموع‌های تولید و ضایعات
+  - FinanceReportPrint: مصارف به تفکیک کتگوری + مجموع؛ جدول مالیات ۲٪/۱۰٪ (تعداد بل، مبلغ) + کل مالیات
+  - InventoryReportPrint: ارزش محصولات و مواد خام (۱۵ اول هرکدام، موجودی+واحد) + DocTotals ارزش محصولات/مواد خام و نوار ارزش کل انبار
+- همهٔ رشته‌های جدید سه‌زبانه (دری افغانی/پشتو/انگلیسی) با الگوی t('دری','پشتو','English')؛ فایل‌های دیگر دست نخورد (globals.css/print-doc/amount-words/page.tsx لمس نشد)؛ 'use client' و امضای export ها تغییری نکرد
+- راستی‌آزمایی: bunx tsc --noEmit → صفر خطا در سه فایل ماژول (۳۴ خطای قدیمی فایل‌های دیگر: examples/prisma seed/scripts/skills/api system — دست‌نخورده)؛ bun run lint → پاک بدون هیچ اخطار
+
+Stage Summary:
+- فروش: چاپ صورت‌حساب هر مشتری (بل‌هایش + مجموع فروش/پرداخت/باقیات به افغانی + مبلغ به حروف) از دیالوگ مشتریان در کنار چاپ بل موجود
+- مالی: چاپ گزارش مصارف با رعایت فیلتر کتگوری، گزارش قرض مشتریان (همهٔ بدهکاران + مجموع) و صورت‌حساب چاپی هر مشتری بدهکار
+- گزارشات: چاپ اختصاصی هر چهار تب (فروش/تولید/مالی/انبار) با جدول‌های DocTable و مجموع‌ها از همان دادهٔ /api/reports
+- فایل‌های تغییر یافته: src/components/modules/sales/index.tsx، src/components/modules/finance/index.tsx، src/components/modules/reports/index.tsx (+ worklog.md)
+---
+Task ID: 8
+Agent: coordinator (main) + ۳ ساب‌ایجنت موازی (8-b/8-c/8-d)
+Task: چاپ بل/سند در تمام بخش‌ها + صورت‌حساب هر مشتری و هر تأمین‌کننده + رنگ سایدبار در کارت‌ها و کادرها (بدون پس‌زمینه) + متن بزرگتر سایدبار — v1.0.13
+
+Work Log:
+- زیرساخت (8-a): src/lib/amount-words.ts (مبلغ به حروف سه‌زبانه) + src/components/shared/print-doc.tsx (PrintDocDialog + DocTable/DocRow/DocCell/DocTotals/DocAmountWords/DocNotes + useCompanySettings) — برگهٔ A4 استاندارد با سرلوحهٔ شرکت، نوع سند، نمبر، تاریخ شمسی/میلادی، امضاها؛ amountToWords از فروش استخراج و مشترک شد
+- 8-b: فروش → دکمهٔ چاپ صورت‌حساب مشتری (CS-) در هر ردیف مشتری با جدول بل‌ها و باقیات؛ مالی → چاپ گزارش مصارف (EXP-)، چاپ گزارش قرض مشتریان (DBT-)، دکمهٔ چاپ صورت‌حساب کنار هر مشتری بدهکار؛ گزارشات → یک دکمهٔ چاپ برای هر تب (فروش/تولید/مالی/انبار — RPT-)
+- 8-c: تولید → چاپ ورک‌آردر (PR-) در هر سفارش با هزینه‌ها و ضایعات؛ فورمولاسیون → چاپ شیت فورمولا (FM-) با اقلام و فیصد؛ انبار → گزارش موجودی انبار (کمبود قرمز) + گزارش ورود و خروج با فیلترهای فعال
+- 8-d: مواد خام → صورت‌حساب تأمین‌کننده (SS-) با مواد و ارزش موجودی + چاپ لیست مواد؛ محصولات → لیست قیمت محصولات + شیت هر محصول؛ کارکنان → فیش معاش (SL-) با مبلغ به حروف + گزارش حاضری
+- رنگ کارت‌ها: قاعدهٔ .bg-card در globals.css با همان گرادیان ته‌رنگ hue تمِ سایدبار (روشن + تیره) + مرز ته‌رنگ .bg-card.border — پس‌زمینهٔ صفحه (bg-background) دست‌نخورده
+- سایدبار بزرگتر: آیتم منو 13→14.5px، آیکن 16→18px، nav-label 10.5→12px، عنوان 15px، نام کاربر 14px
+- 🐛 باگ واقعی رفع شد: offline-client.ts — «m('synced')(done)» صدازدنِ string بود → crash بعد از هر همگام‌سازی موفق و پرش cacheClear؛ حالا m('synced', done)
+- رفع تایپ‌های قدیمی: AuditAction + 'bootstrap' | body.format در backup POST | حذف ok تکراری در db-setup/sync-actions | getAllKeys تایپ درست | skipDuplicates cast در host-setup → tsc در src/: صفر خطا
+- 🐑 local-schema.ts بار سوم گم شده بود (در سشن قبل بازیابی ولی کامیت نشده بود) — دوباره ساخته شد (۱۹ جدول + ایندکس‌ها)؛ این بار در کامیت است
+- تست مرورگر (agent-browser): داشبورد (کارت‌های ته‌رنگ‌دار روشن/تیره)؛ چاپ‌ها: صورت‌حساب مشتری CS، گزارش قرض DBT، گزارش مصارف EXP، ورک‌آردر PR، شیت فورمولا FM، گزارش موجودی، صورت‌حساب تأمین‌کننده SS، لیست قیمت، فیش معاش SL، گزارش حاضری، گزارش فروش RPT — همگی باز و درست رندر شدند؛ صفر خطای کنسول؛ موبایل ۳۹۰px سالم
+- نسخه: app-version.ts / package.json / installer.nsi → 1.0.13؛ lint پاک
+
+Stage Summary:
+- همهٔ ۱۳ ماژول حالا سند چاپی دارند؛ برای هر مشتری و هر تأمین‌کننده صورت‌حساب جداگانه چاپ می‌شود
+- کارت‌ها و کادرها رنگ تمِ سایدبار را گرفتند؛ پس‌زمینهٔ صفحه خنثی ماند
+- commit + push + Release v1.0.13
