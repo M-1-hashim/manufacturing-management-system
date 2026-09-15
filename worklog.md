@@ -1191,3 +1191,30 @@ Stage Summary:
 - ۸ هندلر محلی (products/categories/raw-materials/suppliers/formulas/production/inventory/warehouses) کامل و آینهٔ دقیق سرور؛ قراردادهای پاسخ: products→{...,category|null}، categories/suppliers/warehouses→{...,_count:{products|materials|transactions}}، raw-materials→{...,supplier|null}، formulas→{...,product,items:[{...,rawMaterial}]}، production→{...,product,formula:{...,items:[{...,rawMaterial}]}}، inventory GET→{transactions[+warehouse],products[],materials[]}، inventory POST/production POST/PUT→رکورد hydrate‌شده، DELETE→{ok:true}
 - عوارض جانبی complete تولید ۱۰۰٪ مطابق هاست: کسر مواد به نسبت تولید، ورود خالص (بدون ضایعات)، ۲+n تراکنش انبار با reference=PR-xxxx، هزینه‌های round2، توزیع هزینهٔ ضایعات روی costPrice، Audit «complete»
 - فایل‌های تغییر یافته: فقط ۸ فایل src/lib/local-api/handlers/{products,categories,raw-materials,suppliers,formulas,production,inventory,warehouses}.ts (+ همین worklog)
+
+---
+Task ID: 10
+Agent: coordinator (main)
+Task: APK کاملاً آفلاین («نه یک برنامهٔ کامل که اصلاً به آدرس سرور نیاز نداشته باشد») — باندل وب داخل APK، حذف کامل وابستگی به هاست، بیلد/توزیع v1.0.18
+
+Work Log:
+- ادامهٔ کارهای تسک‌های 3-a/3-b/3-c (موتور local-api + ۲۴ هندلر که قبلاً کامیت شده بودند در f5573c6) — این مرحله بیلد نهایی و انتشار بود
+- محیط بیلد از نو ساخته شد (sandbox ریست شده بود): Temurin JDK 21 → ~/jdk21 (javac تأیید)، build-tools 36 → ~/android-sdk/android-16 (d8 8.10.9)، platform-34 → ~/android-sdk/android-34/android.jar (26MB)
+- باگ کامپایل MainActivity رفع شد: import اشتباه android.os.MediaScannerConnection → android.media.MediaScannerConnection (کد آفلاین قبلاً هرگز کامپایل نشده بود)
+- نسخه‌ها sync شد: package.json + app-version.ts → 1.0.18، installer.nsi → 1.0.18.0 (AndroidManifest از قبل versionCode 3 / versionName 1.0.18 داشت)
+- بیلد وب استاتیک: android/build_web_export.sh (stash موقت api/middleware/instrumentation → next build با NEXT_EXPORT=1 + NEXT_PUBLIC_LOCAL_MODE=1 + distDir=.next-apk → کپی به android/assets/app → restore کامل با trap) — 14.7s، خروجی 2.6M
+- صحت‌سنجی مرورگری باندل استاتیک (python http.server روی 8089 + agent-browser):
+  - ورود admin/admin123 علیه موتور محلی ✓، داشبورد با دیتای seed (بل INV-1001، مشتری آریانا…) ✓
+  - ساخت محصول «آب‌میوه پرتقال 1 لیتر» P-099 ✓، ماندگاری بعد از reload ✓ (۲۱ کولکشن setab-local.* در localStorage)
+  - تنظیمات: کارت اندروید/APK و کارت «اتصال برنامه به هاست» به‌درستی پنهان ✓
+  - کاپی احتیاطی از UI: backup-20260915-171350.json ساخته شد ✓
+  - ماژول فروش رندر ✓، موبایل 390px (منوی جمع‌شو) ✓، صفر خطای کنسول/صفحه
+- بیلد APK: bash android/build.sh (aapt2 → javac --release 8 → d8 → zipalign → apksigner با همان keystore setab.jks) → app.apk 1,096,488 B (~1.05MB)
+- تأیید APK: apksigner verify ✓ (SHA-256 c553eb67… مثل قبل)، badging: com.setab.erp versionCode=3 versionName=1.0.18 label «سِتب» ✓، 56 فایل assets/app (+index.html، فونت B-Nazanin، لوگو) + classes.dex = 73 فایل
+- توزیع: cp → download/app.apk (MD5 یکسان 76dee9ea…)
+
+Stage Summary:
+- app.apk اکنون «برنامهٔ کامل مستقل» است: کل وب‌اپ (۱۳ ماژول) + موتور API محلی + دیتابیس localStorage داخل APK باندل شده؛ بدون هیچ آدرس سرور، کاملاً آفلاین کار می‌کند
+- MainActivity آفلاین: صفحه از http://localhost/index.html (ترفند secure-context برای crypto.subtle/localStorage) بارگذاری و همه‌چیز از assets سرو می‌شود؛ /api/* توسط موتور JS داخل صفحه پاسخ می‌گیرد؛ ذخیرهٔ کاپی احتیاطی با پل AndroidBridge.saveFile در Downloads دستگاه
+- بیلد تکرارپذیر: android/build_web_export.sh → android/build.sh؛ برای آپدیت‌های بعدی همان keystore (setab.jks، pass setab2024) الزامی است
+- محدودیت محیط: شبیه‌ساز اندروید موجود نیست — تأیید نهایی روی گوشی واقعی توسط کاربر (نصب از منابع ناشناس)
