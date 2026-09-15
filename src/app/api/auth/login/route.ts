@@ -5,7 +5,7 @@ import { signSession, SESSION_COOKIE, SESSION_MAX_AGE_S } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { ensureInitialPull } from '@/lib/connection-manager'
 
-// قفل شدن حساب بعد از ۵ بار داخل شدن ناکام به مدت ۱۵ دقیقه (حافظه محلی هاست)
+// قفل شدن حساب بعد از 5 بار داخل شدن ناکام به مدت 15 دقیقه (حافظه محلی هاست)
 const MAX_FAILS = 5
 const LOCK_MS = 15 * 60 * 1000
 const failMap = new Map<string, { count: number; lockedUntil: number }>()

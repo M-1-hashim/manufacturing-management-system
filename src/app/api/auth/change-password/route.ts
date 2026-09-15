@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'پسورد فعلی و پسورد جدید الزامی است' }, { status: 400 })
     }
     if (String(newPassword).length < 6) {
-      return NextResponse.json({ error: 'پسورد جدید باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد جدید باید حداقل 6 کاراکتر باشد' }, { status: 400 })
     }
 
     const user = await db.user.findUnique({ where: { id: session.uid } })

@@ -83,7 +83,7 @@ export async function GET(req: Request) {
       })
     }
 
-    // ---- فروش به تفکیک ماه (۱۲ ماه اخیر) ----
+    // ---- فروش به تفکیک ماه (12 ماه اخیر) ----
     const monthMap = new Map<string, number>()
     for (const s of sales12) {
       const d = s.date
@@ -100,7 +100,7 @@ export async function GET(req: Request) {
       })
     }
 
-    // ---- فروش به تفکیک مشتری (تاپ ۱۰) ----
+    // ---- فروش به تفکیک مشتری (تاپ 10) ----
     const custAgg = new Map<string, { total: number; orders: number }>()
     for (const s of sales) {
       const name = s.customer?.name ?? s.customerName ?? 'مشتری متفرقه'
@@ -114,7 +114,7 @@ export async function GET(req: Request) {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10)
 
-    // ---- محصولات پرفروش (تاپ ۱۰) ----
+    // ---- محصولات پرفروش (تاپ 10) ----
     const prodAgg = new Map<string, { qty: number; revenue: number }>()
     for (const s of sales) {
       const r = toAfn(s.exchangeRate)

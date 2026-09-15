@@ -41,12 +41,12 @@ const NUM_WORDS: Record<
 }
 
 const CURRENCY_WORDS: Record<Currency, { fa: string; ps: string; en: string }> = {
-  AFN: { fa: 'افغانی', ps: 'افغانی', en: 'Afghani' },
+  AFN: { fa: 'AFG', ps: 'AFG', en: 'AFG' },
   USD: { fa: 'دالر امریکایی', ps: 'امریکایی ډالر', en: 'US Dollar' },
   PKR: { fa: 'کلدار پاکستانی', ps: 'پاکستاني کلدار', en: 'Pakistani Rupee' },
 }
 
-/** تبدیل عدد ۱ تا ۹۹۹ به حروف */
+/** تبدیل عدد 1 تا 999 به حروف */
 function threeDigitWords(lang: NumLang, n: number): string {
   const w = NUM_WORDS[lang]
   const parts: string[] = []

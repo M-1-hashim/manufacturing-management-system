@@ -9,7 +9,7 @@ export async function GET() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const day14Start = new Date(now.getTime() - 13 * 86400000)
     const day90Start = new Date(now.getTime() - 89 * 86400000)
-    // برای روند ۱۴ روزه باید از اول ماه هم عقب‌تر برویم اگر لازم شد
+    // برای روند 14 روزه باید از اول ماه هم عقب‌تر برویم اگر لازم شد
     const trendStart = monthStart < day14Start ? monthStart : day14Start
     const month6Start = new Date(now.getFullYear(), now.getMonth() - 5, 1)
 
@@ -112,7 +112,7 @@ export async function GET() {
       inventoryValue: Math.round(productsValue + materialsValue),
     }
 
-    // ---- روند فروش ۱۴ روز اخیر (روزهای خالی صفر) ----
+    // ---- روند فروش 14 روز اخیر (روزهای خالی صفر) ----
     const trendMap = new Map<string, number>()
     for (const s of salesWindow) {
       const d = s.date
@@ -130,7 +130,7 @@ export async function GET() {
       })
     }
 
-    // ---- روند تولید ۶ ماه اخیر ----
+    // ---- روند تولید 6 ماه اخیر ----
     const prodMap = new Map<string, { planned: number; produced: number }>()
     for (const o of orders) {
       const key = `${o.startDate.getFullYear()}-${o.startDate.getMonth()}`
@@ -151,7 +151,7 @@ export async function GET() {
       })
     }
 
-    // ---- محصولات پرفروش ۹۰ روز اخیر (تاپ ۵) ----
+    // ---- محصولات پرفروش 90 روز اخیر (تاپ 5) ----
     const prodAgg = new Map<string, { qty: number; revenue: number }>()
     for (const s of sales90) {
       const r = toAfn(s.exchangeRate)
@@ -172,7 +172,7 @@ export async function GET() {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5)
 
-    // ---- آخرین فروش‌ها (۸ بل) ----
+    // ---- آخرین فروش‌ها (8 بل) ----
     const recentSales = recentSaleRows.map((s) => ({
       invoiceNumber: s.invoiceNumber,
       customerName: s.customer?.name ?? s.customerName ?? '—',
@@ -182,7 +182,7 @@ export async function GET() {
       itemsCount: s._count.items,
     }))
 
-    // ---- هشدار موجودی کم (محصولات + مواد، حداکثر ۱۰) ----
+    // ---- هشدار موجودی کم (محصولات + مواد، حداکثر 10) ----
     const lowStockAll: {
       type: 'product' | 'material'
       name: string

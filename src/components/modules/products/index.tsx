@@ -704,7 +704,7 @@ export default function ProductsModule() {
               <Input
                 value={form.name}
                 onChange={(e) => setF({ name: e.target.value })}
-                placeholder={t('مثال: شیر پاستوریزه ۱ لیتر', 'بېلګه: پاستوریزه شیدو ۱ لیتر', 'e.g. Pasteurized milk 1L')}
+                placeholder={t('مثال: شیر پاستوریزه 1 لیتر', 'بېلګه: پاستوریزه شیدو 1 لیتر', 'e.g. Pasteurized milk 1L')}
               />
             </div>
             <div className="space-y-1.5">

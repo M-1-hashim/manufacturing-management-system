@@ -150,8 +150,8 @@ export default function UsersModule() {
   }
 
   const PASSWORD_MSG = t(
-    'پسورد باید حداقل ۶ حرف باشد',
-    'د پټ نوم باید لږ تر لږه ۶ توري وي',
+    'پسورد باید حداقل 6 حرف باشد',
+    'د پټ نوم باید لږ تر لږه 6 توري وي',
     'Password must be at least 6 characters'
   )
 
@@ -164,8 +164,8 @@ export default function UsersModule() {
     if (!editing && fUsername.trim().length < 3) {
       toast.error(
         t(
-          'نام کاربری باید حداقل ۳ حرف باشد',
-          'د کاروونکي نوم باید لږ تر لږه ۳ توري وي',
+          'نام کاربری باید حداقل 3 حرف باشد',
+          'د کاروونکي نوم باید لږ تر لږه 3 توري وي',
           'Username must be at least 3 characters'
         )
       )

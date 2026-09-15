@@ -53,13 +53,13 @@ export async function POST(req: Request) {
     const department = body.department === undefined || body.department === '' ? 'general' : body.department
 
     if (username.length < 3) {
-      return NextResponse.json({ error: 'نام کاربری باید حداقل ۳ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'نام کاربری باید حداقل 3 کاراکتر باشد' }, { status: 400 })
     }
     if (!fullName) {
       return NextResponse.json({ error: 'نام کامل الزامی است' }, { status: 400 })
     }
     if (password.length < 6) {
-      return NextResponse.json({ error: 'پسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+      return NextResponse.json({ error: 'پسورد باید حداقل 6 کاراکتر باشد' }, { status: 400 })
     }
     if (!role) {
       return NextResponse.json({ error: 'نقش کاربر نامعتبر است' }, { status: 400 })

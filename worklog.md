@@ -1013,3 +1013,11 @@ Stage Summary:
 - هیچ باگ کدی پیدا نشد — نسخهٔ ۱.۰.۱۳ از تست کامل نقطه‌به‌نقطه سربلند بیرون آمد
 - A6 (مشکل تولید در آنلاین) رسماً بسته می‌شود: معماری محلی‌محور همهٔ نوشتن‌ها را روی SQLite محلی انجام می‌دهد و موتور سینک ۳ ثانیه‌ای دلتاها را جابه‌جا می‌کند
 - تسک B (تست کامل) این مرحله انجام شد؛ فایل تغییر یافته فقط db/custom.db (دیتای تست) + bump نسخه به ۱.۰.۱۴
+
+## v1.0.9 — English digits + AFG currency + remove admin hint
+- Global conversion of Persian/Arabic digits (۰-۹/٠-٩) to Latin (0-9) across all user-visible strings in src (t() has no dict keys → safe)
+- Currency display changed to "AFG": format.ts CURRENCY_LABELS/SYMBOLS.AFN → 'AFG' (was ؋ افغانی); amount-words AFN unit → AFG; (؋) → (AFG) in hr/formulas; 'افغانی/افغانۍ' → 'AFG' in sales/finance/reports/settings labels + audit msg (api/sales); 'Rate to AFN' → 'Rate to AFG', '(vs AFN)' → '(vs AFG)', 'Total sales/paid/expenses (AFG)'
+- Removed login hint block (حساب ادمین: admin / admin123 + department staff note) from src/app/page.tsx
+- settings fmtDate: toLocaleString('fa-AF') → toGregorianStr(iso, true) (Latin-digit Gregorian)
+- Verified in browser: login page has no hint text; dashboard/sales/finance/settings show Latin digits + "X AFG"; no page errors. Old audit-log rows keep historical wording (DB data)
+- lint ✓ tsc(src) ✓

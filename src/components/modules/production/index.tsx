@@ -1,5 +1,5 @@
 'use client'
-// ماژول تولید — جادوگر ثبت سفارش تولید (۳ مرحله) + پیگیری سفارش‌ها و تکمیل تولید با کسر خودکار انبار
+// ماژول تولید — جادوگر ثبت سفارش تولید (3 مرحله) + پیگیری سفارش‌ها و تکمیل تولید با کسر خودکار انبار
 import { useMemo, useState } from 'react'
 import { useFetch } from '@/lib/hooks'
 import { useI18n } from '@/lib/i18n'
@@ -446,7 +446,7 @@ export default function ProductionModule() {
 
           <Separator />
 
-          {/* ---------- مرحله ۱ ---------- */}
+          {/* ---------- مرحله 1 ---------- */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -498,7 +498,7 @@ export default function ProductionModule() {
             </div>
           )}
 
-          {/* ---------- مرحله ۲ ---------- */}
+          {/* ---------- مرحله 2 ---------- */}
           {step === 2 && wFormula && (
             <div className="space-y-4">
               <div className="flex items-end gap-3 flex-wrap">
@@ -579,7 +579,7 @@ export default function ProductionModule() {
             </div>
           )}
 
-          {/* ---------- مرحله ۳ ---------- */}
+          {/* ---------- مرحله 3 ---------- */}
           {step === 3 && wFormula && (
             <div className="space-y-4">
               <div className="rounded-lg border space-y-2.5 p-3 text-sm">

@@ -120,12 +120,12 @@ export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult>
   await db.$transaction(async (tx) => {
     const txc = (model: string) => tx[model as keyof typeof tx] as unknown as Delegate
 
-    // ۱) حذف همه رکوردها — فرزندان اول (ترتیب معکوس)
+    // 1) حذف همه رکوردها — فرزندان اول (ترتیب معکوس)
     for (const t of [...parsed].reverse()) {
       await txc(t.name).deleteMany()
     }
 
-    // ۲) درج رکوردها — والدین اول، دسته‌ای
+    // 2) درج رکوردها — والدین اول، دسته‌ای
     for (const t of parsed) {
       for (let i = 0; i < t.rows.length; i += CHUNK) {
         const chunk = t.rows.slice(i, i + CHUNK).map((r) => parseRow(t.name, t.dates, r))
@@ -134,7 +134,7 @@ export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult>
       }
     }
 
-    // ۳) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق کاپی احتیاطی باشد
+    // 3) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق کاپی احتیاطی باشد
     for (const t of parsed) {
       const found = await txc(t.name).findMany()
       if (found.length !== t.rows.length) {

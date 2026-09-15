@@ -154,7 +154,7 @@ export function backupAbsPath(name: string): string {
 
 // ---------------- بازیابی نسخه کاپی احتیاطی (Restore) ----------------
 const SQLITE_MAGIC = Buffer.from('SQLite format 3\0')
-const RESTORE_MAX_BYTES = 512 * 1024 * 1024 // حداکثر ۵۱۲ مگابایت
+const RESTORE_MAX_BYTES = 512 * 1024 * 1024 // حداکثر 512 مگابایت
 
 /** بررسی سریع صحت فایل دیتابیس: امضای SQLite + وجود جداول کلیدی اسکیما */
 export function validateSqliteDbBuffer(buf: Buffer): boolean {
@@ -180,7 +180,7 @@ export async function restoreFromBuffer(
   actor?: AuditActor | null,
   sourceLabel = 'upload'
 ): Promise<RestoreResult> {
-  // ---------- مسیر ۱: فایل JSON ----------
+  // ---------- مسیر 1: فایل JSON ----------
   const head = dbBytes.subarray(0, 64).toString('utf8').trimStart()
   if (head.startsWith('{')) {
     // اعتبارسنجی ساختار فایل قبل از هر تغییری
@@ -212,7 +212,7 @@ export async function restoreFromBuffer(
     }
   }
 
-  // ---------- مسیر ۲: فایل باینری SQLite ----------
+  // ---------- مسیر 2: فایل باینری SQLite ----------
   if (currentDbType() === 'mysql') {
     throw new Error('فایل .db مخصوص دیتابیس SQLite است — در حالت MySQL از کاپی احتیاطی JSON استفاده کنید')
   }
@@ -221,10 +221,10 @@ export async function restoreFromBuffer(
     throw new Error('فایل ارسالی یک دیتابیس معتبر سیستم مدیریتی نیست')
   }
 
-  // ۱) کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)
+  // 1) کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)
   const safety = await createBackup('manual', actor)
 
-  // ۲) قطع اتصال‌ها و تعویض فایل
+  // 2) قطع اتصال‌ها و تعویض فایل
   await db.$disconnect().catch(() => {})
   const dbPath = dbFilePath()
   const tmpPath = `${dbPath}.restore-tmp`
@@ -239,7 +239,7 @@ export async function restoreFromBuffer(
     throw e
   }
 
-  // ۳) اتصال مجدد و تست سلامت — در صورت خرابی، کاپی احتیاطی برمی‌گردد
+  // 3) اتصال مجدد و تست سلامت — در صورت خرابی، کاپی احتیاطی برمی‌گردد
   try {
     await db.$queryRaw`SELECT COUNT(*) FROM "User"`
     await logAudit(actor ?? null, 'backup_restore', 'system', undefined, `${sourceLabel} — safety: ${safety.name}`)
@@ -294,7 +294,7 @@ async function autoBackupTick(): Promise<void> {
   }
 }
 
-/** در instrumentation.ts هاست فراخوانی می‌شود — هر ۱۰ دقیقه بررسی می‌کند */
+/** در instrumentation.ts هاست فراخوانی می‌شود — هر 10 دقیقه بررسی می‌کند */
 export function initBackupScheduler(): void {
   if (g.__mfgBackupTimer) return
   g.__mfgBackupTimer = setInterval(() => {

@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useI18n } from '@/lib/i18n'
-import { formatNumber } from '@/lib/format'
+import { formatNumber, toGregorianStr } from '@/lib/format'
 import { useAppStore } from '@/lib/store'
 import { useFetch } from '@/lib/hooks'
 import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
@@ -29,7 +29,7 @@ import { clearOfflineCache } from '@/lib/offline-client'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 
-// ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخهٔ ۱.۰.۳ به بعد) ----------
+// ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخهٔ 1.0.3 به بعد) ----------
 interface DbConnInfoT {
   ok: boolean
   path: string
@@ -161,7 +161,7 @@ function fmtSize(n: number): string {
 
 function fmtDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleString('fa-AF')
+    return toGregorianStr(iso, true)
   } catch {
     return iso
   }
@@ -626,8 +626,8 @@ export default function SettingsModule() {
       } else {
         toast.success(
           t(
-            `نرخ لحظه‌ای دریافت شد: ۱ دالر = ${r.usd} افغانی`,
-            `لحظه يي نرخ ترلاسه شو: ۱ ډالر = ${r.usd} افغانۍ`,
+            `نرخ لحظه‌ای دریافت شد: 1 دالر = ${r.usd} AFG`,
+            `لحظه يي نرخ ترلاسه شو: 1 ډالر = ${r.usd} AFG`,
             `Live rates fetched: 1 USD = ${r.usd} AFN`
           )
         )
@@ -731,7 +731,7 @@ export default function SettingsModule() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Coins className="h-4 w-4 text-primary" />
-                {t('اسعار (نسبت به افغانی)', 'د اسعارو نرخ (په افغانۍ)', 'Exchange rates (vs AFN)')}
+                {t('اسعار (نسبت به AFG)', 'د اسعارو نرخ (په AFG)', 'Exchange rates (vs AFG)')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -815,8 +815,8 @@ export default function SettingsModule() {
                 <Input id="defaultTax" dir="ltr" type="number" min="0" max="100" className="text-end" value={form.defaultTax ?? ''} onChange={(e) => set('defaultTax', e.target.value)} />
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-200">{t('۲٪ مالیات خدمات', '۲٪ د خدماتو مالیه', '2% services')}</Badge>
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200">{t('۱۰٪ مالیات تماس', '۱۰٪ تماس مالیه', '10% telecom')}</Badge>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-200">{t('2٪ مالیات خدمات', '2٪ د خدماتو مالیه', '2% services')}</Badge>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200">{t('10٪ مالیات تماس', '10٪ تماس مالیه', '10% telecom')}</Badge>
               </div>
             </CardContent>
           </Card>
@@ -984,9 +984,9 @@ export default function SettingsModule() {
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                 >
                   <option value="0">{t('غیرفعال', 'ناروښان', 'Disabled')}</option>
-                  <option value="1">{t('هر ۱ ساعت', 'هر ۱ ساعت', 'Every hour')}</option>
-                  <option value="6">{t('هر ۶ ساعت', 'هر ۶ ساعته', 'Every 6 hours')}</option>
-                  <option value="12">{t('هر ۱۲ ساعت', 'هر ۱۲ ساعته', 'Every 12 hours')}</option>
+                  <option value="1">{t('هر 1 ساعت', 'هر 1 ساعت', 'Every hour')}</option>
+                  <option value="6">{t('هر 6 ساعت', 'هر 6 ساعته', 'Every 6 hours')}</option>
+                  <option value="12">{t('هر 12 ساعت', 'هر 12 ساعته', 'Every 12 hours')}</option>
                   <option value="24">{t('روزانه', 'ورځنی', 'Daily')}</option>
                   <option value="168">{t('هفتگی', 'اونیز', 'Weekly')}</option>
                 </select>
@@ -1230,13 +1230,13 @@ export default function SettingsModule() {
                                 ? t('📋 وصل شد ولی جدول‌ها ساخته نشده‌اند — فایل SQL هاست را در phpMyAdmin ایمپورت کنید.', '📋 ونښلول خو جدولونه نه دي جوړ شوي — د SQL هوسټ فایل په phpMyAdmin وارد کړئ.', 'Connected but tables are missing — import the host SQL file in phpMyAdmin.')
                                 : dbInfo.host === '127.0.0.1'
                                   ? t(
-                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (۱) انترنت دستگاه روشن است؛ (۲) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (۳) آدرس هاست SSH، پورت (معمولاً 21098) و نام کاربری/پسورد cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
-                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (۱) انترنت روشن وي؛ (۲) په cPanel → Manage Shell کې SSH فعال وي؛ (۳) د SSH هاست پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
+                                      '🔗 تونل SSH وصل نمی‌شود. چک کنید: (1) انترنت دستگاه روشن است؛ (2) در cPanel هاست → Manage Shell دسترسی SSH فعال (Enable) باشد؛ (3) آدرس هاست SSH، پورت (معمولاً 21098) و نام کاربری/پسورد cPanel درست باشند — دکمه «تست اتصال SSH» جواب دقیق می‌دهد. تا وقتی تونل وصل نشود، برنامه روی دیتابیس محلی کار می‌کند.',
+                                      '🔗 د SSH تونل نه نښلېږي. وګورئ: (1) انترنت روشن وي؛ (2) په cPanel → Manage Shell کې SSH فعال وي؛ (3) د SSH هاست پته، بورډ (معمولاً 21098) او cPanel کاروونکی/پسورد سم وي — تڼۍ «تست اتصال SSH» دقیق ځواب درکوي. تر نښلېدو پروګرام په ځایی ډاټابیس کار کوي.',
                                       '🔗 SSH tunnel cannot connect. Check: (1) internet is on; (2) SSH access enabled in cPanel → Manage Shell; (3) SSH server address, port (usually 21098) and cPanel credentials are correct — the "Test SSH connection" button gives an exact answer. Until the tunnel connects, the app works on the local database.'
                                     )
                                   : t(
-                                      '🌐 هاست MySQL پیدا نشد. اگر هاست شما اشتراکی است (Namecheap و اکثر cPanelها)، اتصال مستقیم پورت 3306 همیشه بسته است — در فورم پایین حالت «تونل SSH» را انتخاب و ذخیره کنید. برای VPS/هاست اختصاصی: (۱) IP دستگاه در Remote MySQL ثبت و تازه باشد؛ (۲) پورت 3306 در فایروال باز باشد؛ (۳) آدرس هاست درست باشد.',
-                                      '🌐 د MySQL هاست نه موندل کېږي. که هوسټ مو شریک دی (Namecheap او ډېری cPanel)، مستقیم نښلول 3306 تل تړلی وي — په فورم کې «د SSH تونل» حالت غوره او خوندي کړئ. د VPS لپاره: (۱) IP په Remote MySQL کې اوسمن وي؛ (۲) بورډ 3306 پرانیستی وي؛ (۳) پته سمه وي.',
+                                      '🌐 هاست MySQL پیدا نشد. اگر هاست شما اشتراکی است (Namecheap و اکثر cPanelها)، اتصال مستقیم پورت 3306 همیشه بسته است — در فورم پایین حالت «تونل SSH» را انتخاب و ذخیره کنید. برای VPS/هاست اختصاصی: (1) IP دستگاه در Remote MySQL ثبت و تازه باشد؛ (2) پورت 3306 در فایروال باز باشد؛ (3) آدرس هاست درست باشد.',
+                                      '🌐 د MySQL هاست نه موندل کېږي. که هوسټ مو شریک دی (Namecheap او ډېری cPanel)، مستقیم نښلول 3306 تل تړلی وي — په فورم کې «د SSH تونل» حالت غوره او خوندي کړئ. د VPS لپاره: (1) IP په Remote MySQL کې اوسمن وي؛ (2) بورډ 3306 پرانیستی وي؛ (3) پته سمه وي.',
                                       '🌐 MySQL server not reachable. If you are on shared hosting (Namecheap and most cPanels), direct port 3306 is always blocked — switch to SSH tunnel mode in the form below and save. For VPS/dedicated: (1) your IP registered/updated in Remote MySQL; (2) port 3306 open in firewall; (3) correct host address.'
                                     )}
                         </p>
@@ -1301,8 +1301,8 @@ export default function SettingsModule() {
                 {hostSetupResult && <p className="text-[11px] text-muted-foreground leading-5">{hostSetupResult}</p>}
                 <p className="text-[11px] text-muted-foreground leading-5">
                   {t(
-                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (۱۹ جدول + کپی کاربران سیستم محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
-                    '«جوړول» نوی/تش هوسټ چمتو کوي (۱۹ جدول + کاپي کارنانو). «انتقال» ټول د دې دستگاه ډاټا هوسټ ته اچي — کله چې مخکې بې هوسټه کارېدئ او اوس هوسټ ته ځئ.',
+                    '«ساخت جدول‌ها» هاست تازه/خالی را آماده می‌کند (19 جدول + کپی کاربران سیستم محلی). «انتقال» همهٔ دیتای این دستگاه را روی هاست می‌ریزد — برای وقتی که قبلاً بدون هاست کار کرده‌اید و حالا می‌خواهید به هاست بروید.',
+                    '«جوړول» نوی/تش هوسټ چمتو کوي (19 جدول + کاپي کارنانو). «انتقال» ټول د دې دستگاه ډاټا هوسټ ته اچي — کله چې مخکې بې هوسټه کارېدئ او اوس هوسټ ته ځئ.',
                     '"Create tables" prepares a fresh/empty host (19 tables + copies local users). "Migrate" pushes all data from this device to the host — for when you worked locally before and now want to move to the host.'
                   )}
                 </p>
@@ -1425,8 +1425,8 @@ export default function SettingsModule() {
                     </p>
                     <p>
                       {t(
-                        'هر وقت انترنت وصل شود (حداکثر ۱۵ ثانیه بعد) همهٔ تغییرات خودکار به هاست منتقل و جدیدترین دیتا دریافت می‌شود — نیازی به هیچ کاری نیست.',
-                        'له انترنت له نښلېدو سره (تر ۱۵ ثانیو) ټول بدلونونه اتوماتیک هاست ته ځي او نوی ډاټا راځي — هیڅ کار ته اړتیا نشته.',
+                        'هر وقت انترنت وصل شود (حداکثر 15 ثانیه بعد) همهٔ تغییرات خودکار به هاست منتقل و جدیدترین دیتا دریافت می‌شود — نیازی به هیچ کاری نیست.',
+                        'له انترنت له نښلېدو سره (تر 15 ثانیو) ټول بدلونونه اتوماتیک هاست ته ځي او نوی ډاټا راځي — هیڅ کار ته اړتیا نشته.',
                         'When internet returns (within ~15 seconds) all changes are pushed to the server and fresh data is pulled automatically — no action needed.'
                       )}
                     </p>
@@ -1521,8 +1521,8 @@ export default function SettingsModule() {
                         {t('تنظیم در cPanel (یک‌بار):', 'په cPanel کې امستنه (یو ځل):', 'Setup in cPanel (once):')}
                       </p>
                       <p>
-                        ۱) {t('«Manage My Databases» → دیتابیس و کاربر بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
-                        {'  '}۲) {t('«Manage Shell» → دسترسی SSH را Enable کنید.', '«Manage Shell» → د SSH لاسرسی فعاله کړئ.', '«Manage Shell» → enable SSH access.')}
+                        1) {t('«Manage My Databases» → دیتابیس و کاربر بسازید (مثل cpuser_factory).', '«Manage My Databases» → ډاټابیس او کاروونکی جوړ کړئ.', '«Manage My Databases» → create database & user.')}
+                        {'  '}2) {t('«Manage Shell» → دسترسی SSH را Enable کنید.', '«Manage Shell» → د SSH لاسرسی فعاله کړئ.', '«Manage Shell» → enable SSH access.')}
                       </p>
                       <p>
                         {t(

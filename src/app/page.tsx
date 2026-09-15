@@ -102,7 +102,7 @@ function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }
     e.preventDefault()
     setError(null)
     if (next.length < 6) {
-      setError(t('پسورد جدید باید حداقل ۶ کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه ۶ توري وي', 'New password must be at least 6 characters'))
+      setError(t('پسورد جدید باید حداقل 6 کاراکتر باشد', 'نوی پټ نوم باید لږ تر لږه 6 توري وي', 'New password must be at least 6 characters'))
       return
     }
     if (next !== confirm) {
@@ -228,7 +228,7 @@ function LoginView() {
           <ul className="space-y-3 text-[13px]">
             {(
               [
-                [t('۱۳ ماژول تخصصی', '۱۳ مسلکي ماډلونه', '13 specialized modules')],
+                [t('13 ماژول تخصصی', '13 مسلکي ماډلونه', '13 specialized modules')],
                 [t('سه‌زبانه (دری/پشتو/انگلیسی) + راست‌به‌چپ', 'دوه‌ژبیز (دری/پښتو/انګلیسي) + RTL', 'Trilingual (Dari/Pashto/English) + RTL')],
                 [t('کارکرد آفلاین + همگام‌سازی خودکار', 'افلاین کار کول + اتوماتیک همغه کول', 'Offline-ready with automatic sync')],
                 [t('تقویم شمسی و افغانی', 'شمسي او افغاني تقویم', 'Shamsi & Afghan calendar')],
@@ -276,10 +276,6 @@ function LoginView() {
             <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? t('در حال داخل شدن...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
             </Button>
-            <div className="text-xs text-muted-foreground text-center space-y-1 pt-3 border-t">
-              <p>{t('حساب ادمین:', 'د ادمین حساب:', 'Admin account:')} <span dir="ltr" className="font-mono">admin / admin123</span></p>
-              <p>{t('کارکنان بخش‌ها با حساب اختصاصی خود وارد می‌شوند (ایجاد شده توسط ادمین)', 'د برخو کارکوونکي په خپلو ځانګړو حسابونو ننوځي', 'Department staff sign in with their own accounts (created by admin)')}</p>
-            </div>
           </form>
         </div>
       </div>
@@ -338,7 +334,7 @@ function Shell() {
     }
   }, [])
 
-  // وضعیت اتصال دیتابیس (هاست به کدام دیتابیس وصل است؟) — هر ۲۰ ثانیه
+  // وضعیت اتصال دیتابیس (هاست به کدام دیتابیس وصل است؟) — هر 20 ثانیه
   useEffect(() => {
     if (!user || !online) return
     let alive = true
@@ -621,7 +617,7 @@ function Shell() {
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
 
-              {/* انتخاب‌گر تم رنگی — گرادیان زندهٔ ۱۱ تم */}
+              {/* انتخاب‌گر تم رنگی — گرادیان زندهٔ 11 تم */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')} title={t('تم رنگی', 'رنګینه ټینګ', 'Color theme')}>

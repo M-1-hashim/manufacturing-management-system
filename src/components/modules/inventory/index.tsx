@@ -415,9 +415,9 @@ export default function InventoryModule() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7">{t('۷ روز', '۷ ورځې', '7 days')}</SelectItem>
-                      <SelectItem value="30">{t('۳۰ روز', '۳۰ ورځې', '30 days')}</SelectItem>
-                      <SelectItem value="90">{t('۹۰ روز', '۹۰ ورځې', '90 days')}</SelectItem>
+                      <SelectItem value="7">{t('7 روز', '7 ورځې', '7 days')}</SelectItem>
+                      <SelectItem value="30">{t('30 روز', '30 ورځې', '30 days')}</SelectItem>
+                      <SelectItem value="90">{t('90 روز', '90 ورځې', '90 days')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -1022,9 +1022,9 @@ function InventoryReportDialog({
 
 // ================= دیالوگ چاپ گزارش ورود و خروج =================
 const TX_DAYS_LABELS: Record<string, [string, string, string]> = {
-  '7': ['۷ روز اخیر', 'وروستي ۷ ورځې', 'Last 7 days'],
-  '30': ['۳۰ روز اخیر', 'وروستي ۳۰ ورځې', 'Last 30 days'],
-  '90': ['۹۰ روز اخیر', 'وروستي ۹۰ ورځې', 'Last 90 days'],
+  '7': ['7 روز اخیر', 'وروستي 7 ورځې', 'Last 7 days'],
+  '30': ['30 روز اخیر', 'وروستي 30 ورځې', 'Last 30 days'],
+  '90': ['90 روز اخیر', 'وروستي 90 ورځې', 'Last 90 days'],
 }
 
 function MovementsReportDialog({

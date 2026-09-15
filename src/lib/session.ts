@@ -11,7 +11,7 @@ export interface SessionPayload {
 }
 
 export const SESSION_COOKIE = 'mfg_session'
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000 // ۷ روز
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 روز
 
 function getSecret(): string {
   return process.env.SESSION_SECRET || 'mfg-erp-afghanistan-secret-key-2024'

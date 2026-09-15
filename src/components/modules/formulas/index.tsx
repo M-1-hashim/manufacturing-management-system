@@ -456,11 +456,11 @@ export default function FormulasModule() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>{t('اجرت (؋)', 'مزد (؋)', 'Labor (؋)')}</Label>
+                    <Label>{t('اجرت (AFG)', 'مزد (AFG)', 'Labor (AFG)')}</Label>
                     <Input type="number" min={0} step="any" value={form.laborCost} onChange={(e) => setForm({ ...form, laborCost: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t('سربار (؋)', 'سربار (؋)', 'Overhead (؋)')}</Label>
+                    <Label>{t('سربار (AFG)', 'سربار (AFG)', 'Overhead (AFG)')}</Label>
                     <Input type="number" min={0} step="any" value={form.overheadCost} onChange={(e) => setForm({ ...form, overheadCost: e.target.value })} />
                   </div>
                 </div>

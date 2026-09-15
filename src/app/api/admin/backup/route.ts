@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'فایل کاپی احتیاطی ارسال نشده است' }, { status: 400 })
       }
       if (file.size > 512 * 1024 * 1024) {
-        return NextResponse.json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر ۵۱۲ مگابایت)' }, { status: 400 })
+        return NextResponse.json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر 512 مگابایت)' }, { status: 400 })
       }
       const buf = Buffer.from(await file.arrayBuffer())
       try {

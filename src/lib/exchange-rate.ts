@@ -1,7 +1,7 @@
 // اسعار لحظه‌ای — دریافت از API عمومی واقعی (رایگان بدون کلید)
 // منبع اصلی: exchangerate-api.com (open.er-api.com)
 // منبع کاپی احتیاطی: fawazahmed0 currency-api روی CDN jsDelivr
-// کش حافظه ۱ ساعته + ذخیره در دیتابیس تا حتی هنگام قطع انترنت، آخرین نرخ در دسترس باشد
+// کش حافظه 1 ساعته + ذخیره در دیتابیس تا حتی هنگام قطع انترنت، آخرین نرخ در دسترس باشد
 import { db } from '@/lib/db'
 
 export interface LiveRates {
@@ -15,7 +15,7 @@ export interface LiveRates {
   nextUpdate?: string // تجدید بعدی منبع (ISO)
 }
 
-const TTL_MS = 60 * 60 * 1000 // کش حافظه هاست: ۱ ساعت
+const TTL_MS = 60 * 60 * 1000 // کش حافظه هاست: 1 ساعت
 const FETCH_TIMEOUT_MS = 8000
 const DEFAULT_USD = 70 // fallback نهایی اگر هیچ منبعی نبود
 const DEFAULT_PKR = 0.25

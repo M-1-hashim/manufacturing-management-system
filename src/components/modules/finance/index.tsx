@@ -198,7 +198,7 @@ export default function FinanceModule() {
 
       {/* درآمد به تفکیک ارز */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title={t('درآمد افغانی', 'افغانۍ عاید', 'Revenue AFN')} value={formatMoney(fin.byCurrency.AFN || 0)} icon={Banknote} tone="green" />
+        <StatCard title={t('درآمد (AFG)', 'عاید (AFG)', 'Revenue (AFG)')} value={formatMoney(fin.byCurrency.AFN || 0)} icon={Banknote} tone="green" />
         <StatCard title={t('درآمد دالر', 'دالر عاید', 'Revenue USD')} value={formatMoney(fin.byCurrency.USD || 0, 'USD')} icon={Banknote} tone="blue" />
         <StatCard title={t('درآمد کلدار', 'کلدار عاید', 'Revenue PKR')} value={formatMoney(fin.byCurrency.PKR || 0, 'PKR')} icon={Banknote} tone="amber" />
         <StatCard
@@ -254,8 +254,8 @@ export default function FinanceModule() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Row label={t('مالیات ۲٪ جمع‌شده', 'ټول شوی ۲٪ مالیه', 'Collected 2% tax')} value={formatMoney(fin.tax2)} tone="text-amber-600" />
-            <Row label={t('مالیات ۱۰٪ جمع‌شده', 'ټول شوی ۱۰٪ مالیه', 'Collected 10% tax')} value={formatMoney(fin.tax10)} tone="text-amber-600" />
+            <Row label={t('مالیات 2٪ جمع‌شده', 'ټول شوی 2٪ مالیه', 'Collected 2% tax')} value={formatMoney(fin.tax2)} tone="text-amber-600" />
+            <Row label={t('مالیات 10٪ جمع‌شده', 'ټول شوی 10٪ مالیه', 'Collected 10% tax')} value={formatMoney(fin.tax10)} tone="text-amber-600" />
             <Separator />
             <Row label={t('جمع مالیات', 'ټوله مالیه', 'Total tax')} value={formatMoney(fin.tax2 + fin.tax10)} bold />
             <Separator />
@@ -267,8 +267,8 @@ export default function FinanceModule() {
             />
             <p className="text-xs text-muted-foreground">
               {t(
-                'مبالغ به افغانی با نرخ ثبت‌شده هر بل تبدیل شده است.',
-              'مبالغ افغانۍ ته د هر بل په ثبت شوې نرخ بدل شوي دي.',
+                'مبالغ به AFG با نرخ ثبت‌شده هر بل تبدیل شده است.',
+              'مبالغ AFG ته د هر بل په ثبت شوې نرخ بدل شوي دي.',
                 'Amounts converted to AFN using each invoice rate.'
               )}
             </p>
@@ -735,7 +735,7 @@ function ExpensesReportDialog({
           }
           grandLabel={
             totalAfn != null
-              ? t('مجموع مصارف (به افغانی)', 'ټول لګښتونه (افغانی)', 'Total expenses (AFN)')
+              ? t('مجموع مصارف (AFG)', 'ټول لګښتونه (AFG)', 'Total expenses (AFG)')
               : t('مجموع مصارف', 'ټول لګښتونه', 'Total expenses')
           }
           grandValue={formatMoney(grand, totalAfn != null ? 'AFN' : (rows[0]?.currency as Currency) ?? 'AFN')}
@@ -928,11 +928,11 @@ function CustomerDebtStatementDialog({
         <DocTotals
           rows={[
             {
-              label: t('مجموع فروش (به افغانی)', 'ټوله پلورنه (افغانی)', 'Total sales (AFN)'),
+              label: t('مجموع فروش (AFG)', 'ټوله پلورنه (AFG)', 'Total sales (AFG)'),
               value: formatMoney(sumTotal),
             },
             {
-              label: t('مجموع پرداخت‌شده (به افغانی)', 'ټوله پرداخت شوی (افغانی)', 'Total paid (AFN)'),
+              label: t('مجموع پرداخت‌شده (AFG)', 'ټوله پرداخت شوی (AFG)', 'Total paid (AFG)'),
               value: formatMoney(sumPaid),
               tone: 'success',
             },

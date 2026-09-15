@@ -4,13 +4,13 @@ import * as jalaali from 'jalaali-js' // jalaali-js v2 (ESM) — بدون export
 export type Currency = 'AFN' | 'USD' | 'PKR'
 
 export const CURRENCY_LABELS: Record<Currency, string> = {
-  AFN: '؋ افغانی',
+  AFN: 'AFG',
   USD: '$ دالر',
   PKR: '₨ کلدار',
 }
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
-  AFN: '؋',
+  AFN: 'AFG',
   USD: '$',
   PKR: '₨',
 }
@@ -29,7 +29,7 @@ export function formatMoney(n: number | null | undefined, currency: Currency = '
   return `${formatNumber(n)} ${CURRENCY_SYMBOLS[currency]}`
 }
 
-/** تاریخ شمسی به‌صورت ۱۴۰۳/۱۲/۱۵ */
+/** تاریخ شمسی به‌صورت 1403/12/15 */
 export function toJalaliStr(date: Date | string | null | undefined, withTime = false): string {
   if (!date) return '—'
   const d = typeof date === 'string' ? new Date(date) : date

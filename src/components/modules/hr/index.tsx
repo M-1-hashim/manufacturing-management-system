@@ -621,9 +621,9 @@ export default function HrModule() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7">{t('۷ روز', '۷ ورځې', '7 days')}</SelectItem>
-                      <SelectItem value="14">{t('۱۴ روز', '۱۴ ورځې', '14 days')}</SelectItem>
-                      <SelectItem value="30">{t('۳۰ روز', '۳۰ ورځې', '30 days')}</SelectItem>
+                      <SelectItem value="7">{t('7 روز', '7 ورځې', '7 days')}</SelectItem>
+                      <SelectItem value="14">{t('14 روز', '14 ورځې', '14 days')}</SelectItem>
+                      <SelectItem value="30">{t('30 روز', '30 ورځې', '30 days')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button variant="outline" onClick={() => setAttPrintOpen(true)}>
@@ -846,7 +846,7 @@ export default function HrModule() {
                 <Input dir="ltr" className="font-mono" value={ePhone} onChange={(e) => setEPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>{t('معاش ماهانه (؋)', 'میاشتنی معاش (؋)', 'Monthly Salary (؋)')}</Label>
+                <Label>{t('معاش ماهانه (AFG)', 'میاشتنی معاش (AFG)', 'Monthly Salary (AFG)')}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -928,7 +928,7 @@ export default function HrModule() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label>{t('مبلغ (؋)', 'مبلغ (؋)', 'Amount (؋)')}</Label>
+                <Label>{t('مبلغ (AFG)', 'مبلغ (AFG)', 'Amount (AFG)')}</Label>
                 <Input
                   type="number"
                   min="0"

@@ -75,7 +75,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     if (body.password) {
       const password = String(body.password)
       if (password.length < 6) {
-        return NextResponse.json({ error: 'پسورد باید حداقل ۶ کاراکتر باشد' }, { status: 400 })
+        return NextResponse.json({ error: 'پسورد باید حداقل 6 کاراکتر باشد' }, { status: 400 })
       }
       data.password = hashPassword(password)
     }

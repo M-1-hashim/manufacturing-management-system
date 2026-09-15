@@ -15,11 +15,11 @@ class ApiError extends Error {
 /**
  * POST /api/production/[id]/complete
  * تکمیل سفارش تولید به‌صورت اتمیک:
- *  ۱) کسر مواد اولیه از انبار + ثبت تراکنش خروجی برای هر ماده
- *  ۲) علاوه کردن «مقدار خالص» محصول (تولید منهای ضایعات) به انبار + ثبت تراکنش ورودی
+ *  1) کسر مواد اولیه از انبار + ثبت تراکنش خروجی برای هر ماده
+ *  2) علاوه کردن «مقدار خالص» محصول (تولید منهای ضایعات) به انبار + ثبت تراکنش ورودی
  *     — ضایعات هرگز به گدام اضافه نمی‌شود، فقط ثبت می‌گردد
- *  ۳) ثبت ضایعات، مصارفی نهایی، وضعیت QC و تاریخ پایان
- *  ۴) تجدید قیمت تمام‌شده محصول (costPrice) بر اساس مقدار خالص
+ *  3) ثبت ضایعات، مصارفی نهایی، وضعیت QC و تاریخ پایان
+ *  4) تجدید قیمت تمام‌شده محصول (costPrice) بر اساس مقدار خالص
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -53,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // ضریب: مقدار واقعی تولید نسبت به خروجی یک بچ فورمولا
       const multiplier = producedQty / (order.formula.outputQty || 1)
 
-      // ۱) کسر مواد اولیه + تراکنش خروجی انبار برای هر ماده
+      // 1) کسر مواد اولیه + تراکنش خروجی انبار برای هر ماده
       for (const item of order.formula.items) {
         const qty = item.quantity * multiplier
         if (qty <= 0) continue
@@ -75,7 +75,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         })
       }
 
-      // ۲) فقط مقدار خالص (بدون ضایعات) به گدام اضافه می‌شود
+      // 2) فقط مقدار خالص (بدون ضایعات) به گدام اضافه می‌شود
       if (goodQty > 0) {
         await tx.product.update({
           where: { id: order.productId },
@@ -95,7 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         })
       }
 
-      // ۳) مصارفی نهایی بر اساس مقدار واقعی تولیدشده
+      // 3) مصارفی نهایی بر اساس مقدار واقعی تولیدشده
       const materialCost = order.formula.items.reduce(
         (a, i) => a + i.quantity * multiplier * i.rawMaterial.purchasePrice,
         0,
@@ -129,7 +129,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       })
 
-      // ۴) قیمت تمام‌شده واحد = مصرف کل ÷ مقدار خالص (ضایعات به قیمت اقلام سالم توزیع می‌شود)
+      // 4) قیمت تمام‌شده واحد = مصرف کل ÷ مقدار خالص (ضایعات به قیمت اقلام سالم توزیع می‌شود)
       if (goodQty > 0) {
         await tx.product.update({
           where: { id: order.productId },

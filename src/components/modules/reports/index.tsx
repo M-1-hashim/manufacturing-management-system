@@ -144,10 +144,10 @@ export default function ReportsModule() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">{t('۷ روز', '۷ ورځې', '7 days')}</SelectItem>
-                <SelectItem value="30">{t('۳۰ روز', '۳۰ ورځې', '30 days')}</SelectItem>
-                <SelectItem value="90">{t('۹۰ روز', '۹۰ ورځې', '90 days')}</SelectItem>
-                <SelectItem value="365">{t('۳۶۵ روز', '۳۶۵ ورځې', '365 days')}</SelectItem>
+                <SelectItem value="7">{t('7 روز', '7 ورځې', '7 days')}</SelectItem>
+                <SelectItem value="30">{t('30 روز', '30 ورځې', '30 days')}</SelectItem>
+                <SelectItem value="90">{t('90 روز', '90 ورځې', '90 days')}</SelectItem>
+                <SelectItem value="365">{t('365 روز', '365 ورځې', '365 days')}</SelectItem>
               </SelectContent>
             </Select>
           }
@@ -186,10 +186,10 @@ export default function ReportsModule() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">{t('۷ روز', '۷ ورځې', '7 days')}</SelectItem>
-              <SelectItem value="30">{t('۳۰ روز', '۳۰ ورځې', '30 days')}</SelectItem>
-              <SelectItem value="90">{t('۹۰ روز', '۹۰ ورځې', '90 days')}</SelectItem>
-              <SelectItem value="365">{t('۳۶۵ روز', '۳۶۵ ورځې', '365 days')}</SelectItem>
+              <SelectItem value="7">{t('7 روز', '7 ورځې', '7 days')}</SelectItem>
+              <SelectItem value="30">{t('30 روز', '30 ورځې', '30 days')}</SelectItem>
+              <SelectItem value="90">{t('90 روز', '90 ورځې', '90 days')}</SelectItem>
+              <SelectItem value="365">{t('365 روز', '365 ورځې', '365 days')}</SelectItem>
             </SelectContent>
           </Select>
         }
@@ -230,7 +230,7 @@ export default function ReportsModule() {
                         [
                           t('تاریخ میلادی', 'میلادي نېټه', 'Gregorian date'),
                           t('تاریخ شمسی', 'شمسي نېټه', 'Jalali date'),
-                          t('فروش (افغانی)', 'پلورنه (افغانی)', 'Sales (AFN)'),
+                          t('فروش (AFG)', 'پلورنه (AFG)', 'Sales (AFG)'),
                           t('تعداد بل', 'د بلونو شمېر', 'Invoice count'),
                         ],
                         ...data.salesByDay.map((d) => [
@@ -291,7 +291,7 @@ export default function ReportsModule() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  {t('فروش ماهانه (۱۲ ماه)', 'میاشتنۍ پلورنه (۱۲ میاشتې)', 'Monthly sales (12 months)')}
+                  {t('فروش ماهانه (12 ماه)', 'میاشتنۍ پلورنه (12 میاشتې)', 'Monthly sales (12 months)')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -559,7 +559,7 @@ export default function ReportsModule() {
                       size="sm"
                       onClick={() =>
                         downloadCSV('finance-report.csv', [
-                          [t('کتگوری', 'کټګوری', 'Category'), t('مبلغ (افغانی)', 'مبلغ (افغانی)', 'Amount (AFN)')],
+                          [t('کتگوری', 'کټګوری', 'Category'), t('مبلغ (AFG)', 'مبلغ (AFG)', 'Amount (AFG)')],
                           ...data.expensesByCategory.map((e) => [e.category, e.total]),
                         ])
                       }
@@ -624,14 +624,14 @@ export default function ReportsModule() {
               </h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <StatCard
-                  title={t('مالیات ۲٪', '۲٪ مالیه', '2% tax')}
+                  title={t('مالیات 2٪', '2٪ مالیه', '2% tax')}
                   value={formatMoney(taxReport.tax2Amount)}
                   hint={`${t('بل', 'بلونه', 'Invoices')}: ${formatNumber(taxReport.tax2Count)}`}
                   icon={Wallet}
                   tone="blue"
                 />
                 <StatCard
-                  title={t('مالیات ۱۰٪', '۱۰٪ مالیه', '10% tax')}
+                  title={t('مالیات 10٪', '10٪ مالیه', '10% tax')}
                   value={formatMoney(taxReport.tax10Amount)}
                   hint={`${t('بل', 'بلونه', 'Invoices')}: ${formatNumber(taxReport.tax10Count)}`}
                   icon={Wallet}
@@ -648,7 +648,7 @@ export default function ReportsModule() {
                 <CardContent className="p-4">
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {t(
-                      'مجموع مالیات از بل‌های فروش در بازه انتخابی محاسبه شده است. نرخ‌های ۲٪ و ۱۰٪ طبق قانون مالیات فروش افغانستان درج می‌گردد.',
+                      'مجموع مالیات از بل‌های فروش در بازه انتخابی محاسبه شده است. نرخ‌های 2٪ و 10٪ طبق قانون مالیات فروش افغانستان درج می‌گردد.',
                       'د پلورنې بلونو ټوله مالیه په ټاکلې موده کې محاسبه شوې ده.',
                       'Total sales tax from invoices in the selected range. 2% and 10% rates per Afghan sales tax law.'
                     )}
@@ -710,7 +710,7 @@ export default function ReportsModule() {
                             t('نام', 'نوم', 'Name'),
                             t('موجودی', 'موجودي', 'Stock'),
                             t('واحد', 'واحد', 'Unit'),
-                            t('ارزش (افغانی)', 'ارزښت (افغانی)', 'Value (AFN)'),
+                            t('ارزش (AFG)', 'ارزښت (AFG)', 'Value (AFG)'),
                           ],
                           ...inventoryValuation.topProducts.map((p) => [
                             t('محصول', 'محصول', 'Product'),
@@ -1137,12 +1137,12 @@ function FinanceReportPrint({ data }: { data: ReportsData }) {
           ]}
         >
           <DocRow index={0}>
-            <DocCell>{t('مالیات ۲٪', '۲٪ مالیه', '2% tax')}</DocCell>
+            <DocCell>{t('مالیات 2٪', '2٪ مالیه', '2% tax')}</DocCell>
             <DocCell className="text-center">{formatNumber(data.taxReport.tax2Count)}</DocCell>
             <DocCell className="text-end font-semibold">{formatMoney(data.taxReport.tax2Amount)}</DocCell>
           </DocRow>
           <DocRow index={1}>
-            <DocCell>{t('مالیات ۱۰٪', '۱۰٪ مالیه', '10% tax')}</DocCell>
+            <DocCell>{t('مالیات 10٪', '10٪ مالیه', '10% tax')}</DocCell>
             <DocCell className="text-center">{formatNumber(data.taxReport.tax10Count)}</DocCell>
             <DocCell className="text-end font-semibold">{formatMoney(data.taxReport.tax10Amount)}</DocCell>
           </DocRow>

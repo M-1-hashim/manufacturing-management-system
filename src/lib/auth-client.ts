@@ -14,7 +14,7 @@ const MESSAGES: Record<Lang, string> = {
 
 let lastNotify = 0
 
-/** پاک‌سازی کاربر جاری و نمایش پیام ختم نشست (حداکثر یک‌بار در ۳ ثانیه) */
+/** پاک‌سازی کاربر جاری و نمایش پیام ختم نشست (حداکثر یک‌بار در 3 ثانیه) */
 export function notifyAuthFailure(): void {
   const before = useAppStore.getState().user
   useAppStore.getState().setUser(null)

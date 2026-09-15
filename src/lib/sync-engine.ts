@@ -4,26 +4,26 @@ import { dbInternal } from '@/lib/db'
 
 /*
  * موتور همگام‌سازی لحظه‌ای دوسویه بین هاست (MySQL) و دیتابیس محلی (SQLite)
- * — معماری «محلی‌محور» نسخهٔ ۱.۰.۱۰:
+ * — معماری «محلی‌محور» نسخهٔ 1.0.10:
  *
  * برنامه همیشه روی دیتابیس محلی کار می‌کند (پاسخ فوری حتی وقتی انترنت
  * کند است). این موتور هر چند ثانیه یک «تیک» می‌زند و فقط «تفاوت‌ها» را
  * جابه‌جا می‌کند:
  *
- *   ۱) push  — سطرهای محلی که updatedAt شان از آخرین ارسال (نشانِ آبی
+ *   1) push  — سطرهای محلی که updatedAt شان از آخرین ارسال (نشانِ آبی
  *      جلوتر) تازه‌تر است → روی هاست درج/تجدید می‌شوند (LWW: نسخهٔ
  *      جدیدتر برنده است)
- *   ۲) pull  — سطرهای هاست که updatedAt شان از آخرین دریافت تازه‌تر است
+ *   2) pull  — سطرهای هاست که updatedAt شان از آخرین دریافت تازه‌تر است
  *      → روی محلی درج/تجدید می‌شوند؛ فرزندان (FormulaItem/SaleItem)
  *      با «مطابق‌سازی دامنهٔ والد» همگام می‌شوند تا حذف‌وایجاد دوباره
  *      در هاست هم روی دستگاه‌های دیگر اعمال شود
- *   ۳) ژورنال حذف — حذف‌های این دستگاه (_SyncJournal) روی هاست تکرار و
+ *   3) ژورنال حذف — حذف‌های این دستگاه (_SyncJournal) روی هاست تکرار و
  *      به‌صورت «سنگ‌قبر» (_SyncTombstones) ثبت می‌شوند
- *   ۴) سنگ‌قبرها — حذف‌های سایر دستگاه‌ها از هاست خوانده و روی محلی
+ *   4) سنگ‌قبرها — حذف‌های سایر دستگاه‌ها از هاست خوانده و روی محلی
  *      اعمال می‌شوند (با احترام به LWW)
  *
- * تشخیص تغییر با یک کوئری UNION ALL سبک (MAX(updatedAt) هر ۱۹ جدول)
- * انجام می‌شود — تیک بی‌کار فقط ۲ رفت‌وبرگشت شبکه دارد.
+ * تشخیص تغییر با یک کوئری UNION ALL سبک (MAX(updatedAt) هر 19 جدول)
+ * انجام می‌شود — تیک بی‌کار فقط 2 رفت‌وبرگشت شبکه دارد.
  *
  * همهٔ اجراؤات idempotent هستند: اگر تیک وسط کار قطع شود، تیک بعدی
  * همان تغییرها را دوباره می‌فرستد و LWW تکرار را بی‌ضرر می‌کند.
@@ -83,7 +83,7 @@ const TOMBSTONE_TABLE = '_SyncTombstones'
 const JOURNAL_MAX = 4000
 /** هم‌پوشانی پنجرهٔ تغییرات برای جبران دقت میلی‌ثانیه و ساعت دستگاه‌ها */
 const OVERLAP_MS = 1500
-/** سنگ‌قبرهای قدیمی‌تر از ۳۰ روز پاک می‌شوند */
+/** سنگ‌قبرهای قدیمی‌تر از 30 روز پاک می‌شوند */
 const TOMBSTONE_TTL_MS = 30 * 24 * 3600 * 1000
 const TOMBSTONE_PULL_LIMIT = 2000
 
@@ -380,7 +380,7 @@ export async function replayJournal(pair: ClientPair): Promise<number> {
       throw e
     }
   }
-  // پاک‌سازی ورودی‌های قدیمی انجام‌شده (بیش از ۷ روز)
+  // پاک‌سازی ورودی‌های قدیمی انجام‌شده (بیش از 7 روز)
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
   await pair.local.$executeRawUnsafe(
     `DELETE FROM "${JOURNAL_TABLE}" WHERE done = 1 AND ts < ?`,
@@ -604,7 +604,7 @@ export function getLastTickResult(): TickResult | null {
 
 /**
  * یک دور کامل همگام‌سازی لحظه‌ای: ژورنال حذف → push → pull → سنگ‌قبرها.
- * در حالت آنلاین هر چند ثانیه اجرا می‌شود؛ تیکِ بی‌کار فقط ۲ رفت‌وبرگشت دارد.
+ * در حالت آنلاین هر چند ثانیه اجرا می‌شود؛ تیکِ بی‌کار فقط 2 رفت‌وبرگشت دارد.
  */
 export async function syncTick(pair: ClientPair): Promise<TickResult> {
   if (tickBusy) return lastTickResult ?? { ok: false, pushed: 0, pulled: 0, deleted: 0, ms: 0, error: 'busy' }
@@ -618,10 +618,10 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
     await ensureServerTombstones(pair)
     const wm = await readWatermarks(pair)
 
-    // ۱) حذف‌های محلی → هاست + سنگ‌قبر
+    // 1) حذف‌های محلی → هاست + سنگ‌قبر
     deleted += await replayJournal(pair)
 
-    // ۲) push — فقط جداولی که MAX(updatedAt) محلی از نشان جلوتر است
+    // 2) push — فقط جداولی که MAX(updatedAt) محلی از نشان جلوتر است
     const localMax = await maxUpdatedAtMap(pair.local, 'sqlite')
     const pushCutoffs = new Map<string, string>()
     for (const t of TABLES) {
@@ -640,7 +640,7 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
       }
     }
 
-    // ۳) pull — فقط جداولی که MAX(updatedAt) هاست از نشان جلوتر است
+    // 3) pull — فقط جداولی که MAX(updatedAt) هاست از نشان جلوتر است
     const serverMax = await maxUpdatedAtMap(pair.server, 'mysql')
     for (const t of TABLES) {
       const cur = serverMax.get(t.name)
@@ -659,14 +659,14 @@ export async function syncTick(pair: ClientPair): Promise<TickResult> {
       }
     }
 
-    // ۴) سنگ‌قبرهای سایر دستگاه‌ها
+    // 4) سنگ‌قبرهای سایر دستگاه‌ها
     try {
       deleted += await pullTombstones(pair, wm)
     } catch (e) {
       console.error('[sync] tombstone pull failed:', (e as Error)?.message || e)
     }
 
-    // ۵) ثبت نشان‌های ارسال
+    // 5) ثبت نشان‌های ارسال
     for (const [tbl, iso] of pushCutoffs) wm.push.set(tbl, iso)
     await writeWatermarks(pair, wm)
 
@@ -710,17 +710,17 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
   if (snapshotBusy) throw new Error('اسنپ‌شات قبلی هنوز در حال اجراست')
   snapshotBusy = true
   try {
-    // ۱) خواندن کامل از هاست
+    // 1) خواندن کامل از هاست
     const data = new Map<string, Row[]>()
     for (const t of TABLES) {
       data.set(t.name, await del(pair.server, t.name).findMany({ take: TAKE_LIMIT }))
     }
 
-    // ۲) کلیدهای sync.* محلی که باید حفظ شوند
+    // 2) کلیدهای sync.* محلی که باید حفظ شوند
     const allLocalSettings = await del(pair.local, 'setting').findMany()
     const preserved = allLocalSettings.filter((r) => isSyncMetaKey(r.key))
 
-    // ۳) نوشتن در محلی — یک تراکنش اتمیک
+    // 3) نوشتن در محلی — یک تراکنش اتمیک
     await pair.local.$transaction(async (tx) => {
       const txd = (name: string) => (tx as unknown as Record<string, Delegate>)[name]
 
@@ -741,7 +741,7 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
         }
       }
 
-      // ۴) راستی‌آزمایی تعداد سطرها
+      // 4) راستی‌آزمایی تعداد سطرها
       for (const t of TABLES) {
         const rows = data.get(t.name) ?? []
         const expected =
@@ -755,7 +755,7 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
       }
     })
 
-    // ۵) تنظیم نشان‌ها بر اساس مقادیر کپی‌شده (جلوگیری از echo)
+    // 5) تنظیم نشان‌ها بر اساس مقادیر کپی‌شده (جلوگیری از echo)
     const wm = await readWatermarks(pair)
     const localMax = await maxUpdatedAtMap(pair.local, 'sqlite')
     for (const t of TABLES) {
@@ -883,7 +883,7 @@ export interface MigrateResult {
 
 /**
  * انتقال کامل دیتای دستگاه محلی به هاست — برای کاربر‌ای که مدت‌ها محلی
- * کار کرده و بعداً به هاست مهاجرت می‌کند. همهٔ ۱۹ جدول به‌ترتیبِ وابستگی
+ * کار کرده و بعداً به هاست مهاجرت می‌کند. همهٔ 19 جدول به‌ترتیبِ وابستگی
  * روی هاست upsert می‌شوند (سطر جدید → create، سطر موجود → update).
  * بعد از موفقیت، نشان‌های ارسال تنظیم می‌شوند تا دلتای تکراری نرود.
  */
@@ -976,7 +976,7 @@ export async function countMismatchTables(pair: ClientPair): Promise<string[]> {
   return mismatched
 }
 
-/** پاک‌سازی سنگ‌قبرهای قدیمی هاست (بیش از ۳۰ روز) */
+/** پاک‌سازی سنگ‌قبرهای قدیمی هاست (بیش از 30 روز) */
 export async function pruneServerTombstones(pair: ClientPair): Promise<void> {
   try {
     await ensureServerTombstones(pair)

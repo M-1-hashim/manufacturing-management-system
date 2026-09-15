@@ -239,10 +239,10 @@ export default function AuditModule() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="50">۵۰</SelectItem>
-                <SelectItem value="100">۱۰۰</SelectItem>
-                <SelectItem value="150">۱۵۰</SelectItem>
-                <SelectItem value="500">۵۰۰</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="150">150</SelectItem>
+                <SelectItem value="500">500</SelectItem>
               </SelectContent>
             </Select>
             <div className="ms-auto flex items-center gap-2">

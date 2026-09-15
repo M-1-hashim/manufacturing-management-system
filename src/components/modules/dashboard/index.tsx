@@ -246,7 +246,7 @@ export default function DashboardModule() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
-              {t('روند فروش ۱۴ روز اخیر', 'د ۱۴ ورځو پلورنې بهیر', 'Sales trend — last 14 days')}
+              {t('روند فروش 14 روز اخیر', 'د 14 ورځو پلورنې بهیر', 'Sales trend — last 14 days')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -298,7 +298,7 @@ export default function DashboardModule() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Factory className="h-4 w-4 text-sky-600" />
-                {t('روند تولید ۶ ماه اخیر', 'د ۶ میاشتو تولید بهیر', 'Production trend — last 6 months')}
+                {t('روند تولید 6 ماه اخیر', 'د 6 میاشتو تولید بهیر', 'Production trend — last 6 months')}
               </CardTitle>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {Object.entries(data.statusCounts).map(([status, count]) =>
@@ -346,7 +346,7 @@ export default function DashboardModule() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Package className="h-4 w-4 text-emerald-600" />
-              {t('محصولات پرفروش (۹۰ روز)', 'پر پلورنه محصولات (۹۰ ورځې)', 'Top products (90 days)')}
+              {t('محصولات پرفروش (90 روز)', 'پر پلورنه محصولات (90 ورځې)', 'Top products (90 days)')}
             </CardTitle>
           </CardHeader>
           <CardContent>

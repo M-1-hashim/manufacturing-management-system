@@ -858,7 +858,7 @@ function NewSaleDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t('نرخ به افغانی', 'د افغانۍ نرخ', 'Rate to AFN')}</Label>
+                <Label>{t('نرخ به AFG', 'د AFG نرخ', 'Rate to AFG')}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -881,8 +881,8 @@ function NewSaleDialog({
                         <Wifi className="h-3 w-3 shrink-0 text-emerald-600" />
                         <span className="text-emerald-700 dark:text-emerald-500">
                           {t(
-                            `نرخ لحظه‌ای: ۱ ${currency === 'USD' ? 'دالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} افغانی`,
-                            `لحظه يي نرخ: ۱ ${currency === 'USD' ? 'ډالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} افغانۍ`,
+                            `نرخ لحظه‌ای: 1 ${currency === 'USD' ? 'دالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} AFG`,
+                            `لحظه يي نرخ: 1 ${currency === 'USD' ? 'ډالر' : 'کلدار'} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} AFG`,
                             `Live rate: 1 ${currency} = ${formatNumber(currency === 'USD' ? live.data.usd : live.data.pkr, 2)} AFN`
                           )}
                         </span>
@@ -925,9 +925,9 @@ function NewSaleDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">۰٪</SelectItem>
-                    <SelectItem value="2">۲٪</SelectItem>
-                    <SelectItem value="10">۱۰٪</SelectItem>
+                    <SelectItem value="0">0٪</SelectItem>
+                    <SelectItem value="2">2٪</SelectItem>
+                    <SelectItem value="10">10٪</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1676,11 +1676,11 @@ function CustomerStatementDialog({
         <DocTotals
           rows={[
             {
-              label: t('مجموع فروش (به افغانی)', 'ټوله پلورنه (افغانی)', 'Total sales (AFN)'),
+              label: t('مجموع فروش (AFG)', 'ټوله پلورنه (AFG)', 'Total sales (AFG)'),
               value: formatMoney(sumTotal),
             },
             {
-              label: t('مجموع پرداخت‌شده (به افغانی)', 'ټوله پرداخت شوی (افغانی)', 'Total paid (AFN)'),
+              label: t('مجموع پرداخت‌شده (AFG)', 'ټوله پرداخت شوی (AFG)', 'Total paid (AFG)'),
               value: formatMoney(sumPaid),
               tone: 'success',
             },

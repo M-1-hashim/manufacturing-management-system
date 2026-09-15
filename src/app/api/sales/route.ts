@@ -156,7 +156,7 @@ export async function POST(req: Request) {
     })
 
     const session = await getSessionFromRequest(req)
-    await logAudit(session, 'create', 'sale', sale.id, `بل ${sale.invoiceNumber} به مبلغ ${Math.round(sale.total * sale.exchangeRate)} افغانی`)
+    await logAudit(session, 'create', 'sale', sale.id, `بل ${sale.invoiceNumber} به مبلغ ${Math.round(sale.total * sale.exchangeRate)} AFG`)
 
     return NextResponse.json(sale, { status: 201 })
   } catch (e) {

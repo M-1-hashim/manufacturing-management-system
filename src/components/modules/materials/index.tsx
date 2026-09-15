@@ -454,7 +454,7 @@ export default function MaterialsModule() {
           value={formatNumber(stats.expiring)}
           icon={CalendarClock}
           tone={stats.expiring > 0 ? 'amber' : 'green'}
-          hint={t('ظرف ۷ روز آینده', 'په راتلونکو ۷ ورځو کې', 'Within the next 7 days')}
+          hint={t('ظرف 7 روز آینده', 'په راتلونکو 7 ورځو کې', 'Within the next 7 days')}
         />
       </div>
 
