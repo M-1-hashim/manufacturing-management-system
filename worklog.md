@@ -1218,3 +1218,11 @@ Stage Summary:
 - MainActivity آفلاین: صفحه از http://localhost/index.html (ترفند secure-context برای crypto.subtle/localStorage) بارگذاری و همه‌چیز از assets سرو می‌شود؛ /api/* توسط موتور JS داخل صفحه پاسخ می‌گیرد؛ ذخیرهٔ کاپی احتیاطی با پل AndroidBridge.saveFile در Downloads دستگاه
 - بیلد تکرارپذیر: android/build_web_export.sh → android/build.sh؛ برای آپدیت‌های بعدی همان keystore (setab.jks، pass setab2024) الزامی است
 - محدودیت محیط: شبیه‌ساز اندروید موجود نیست — تأیید نهایی روی گوشی واقعی توسط کاربر (نصب از منابع ناشناس)
+
+## v1.0.18 (add) — GitHub Release v1.0.18 با app.apk آفلاین
+- GitHub Release «v1.0.18 — نسخهٔ اندروید کاملاً آفلاین (بدون نیاز به سرور)» ساخته شد (id 389338160، tag روی main)
+- Assets آپلود شد: app.apk (1,096,488 B) + RELEASE-NOTES-v1.0.18.md — هر دو state=uploaded
+- صحت دانلود با API (octet-stream) تست شد: MD5 یکسان با فایل اصلی (76dee9ea…)
+- لینک مستقیم: https://github.com/M-1-hashim/manufacturing-management-system/releases/download/v1.0.18/app.apk
+- /api/download/setup?info=1 حالا apk 1.0 MB را نشان می‌دهد؛ کارت اندروید صفحهٔ ورود تأیید مرورگری شد
+- نکتهٔ گیت: ریموت یک کامیت تکراری قدیمی (29b6c93 — همان پیام v1.0.17 v2 ولی با محتوای host-setup) داشت که با force-with-lease با تاریخچهٔ درست محلی (f5573c6 آفلاین + 755746e) جایگزین شد — هیچ کامیونیک محتوایی از دست نرفت (diff تأیید شد: local superset با +5458 خط)
