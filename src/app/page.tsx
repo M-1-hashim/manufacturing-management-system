@@ -48,6 +48,12 @@ import AuditModule from '@/components/modules/audit'
 // تا تمام درخواست‌های /api/* بدون هاست، در داخل خود برنامه پاسخ بگیرند
 if (LOCAL_MODE) installLocalApi()
 
+// رهگیری سراسری 401 + لایهٔ آفلاین/همگام‌سازی — در module-scope نصب می‌شوند تا fetchهای
+// همزمانِ mount-effect فرزندان (که قبل از اجرای effect والد رخ می‌دهند) هم پوشش داده شوند.
+// هر دو نصب‌کننده idempotent و گارد window دارند (در SSR بی‌اثرند).
+installAuthInterceptor()
+if (!LOCAL_MODE) installOfflineInterceptor()
+
 const NAV = [
   { id: 'dashboard', fa: 'داشبورد', ps: 'معلوماتي پاڼه', en: 'Dashboard', icon: LayoutDashboard },
   { id: 'products', fa: 'محصولات', ps: 'محصولات', en: 'Products', icon: Package },
@@ -446,11 +452,8 @@ function Shell() {
   }, [user, online])
 
   // اعتبارسنجی نشست با هاست — اگر کوکی ختم شده/نامعتبر باشد خروج خودکار
+  // (interceptor های auth/آفلاین در module-scope نصب شده‌اند — بالای فایل)
   useEffect(() => {
-    // رهگیری سراسری 401 + لایه آفلاین/همگام‌سازی — همه fetch های مستقیم ماژول‌ها را هم پوشش می‌دهد
-    installAuthInterceptor()
-    // حالت محلی (APK اندروید): موتور API محلی فعال است — لایهٔ صف/همگام‌سازی لازم نیست
-    if (!LOCAL_MODE) installOfflineInterceptor()
     if (!user) return
     let cancelled = false
     const raf = requestAnimationFrame(() => {

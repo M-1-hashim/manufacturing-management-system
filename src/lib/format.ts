@@ -24,9 +24,10 @@ export function formatNumber(n: number | null | undefined, digits = 0): string {
   })
 }
 
-/** فرمت مبلغ با علامت ارز */
+/** فرمت مبلغ با علامت ارز — تا دو رقم اعشار (تا با جمع اقلام چاپی هم‌خوان باشد؛ صحیح‌ها بدون اعشار می‌مانند) */
 export function formatMoney(n: number | null | undefined, currency: Currency = 'AFN'): string {
-  return `${formatNumber(n)} ${CURRENCY_SYMBOLS[currency]}`
+  if (n === null || n === undefined || isNaN(n)) return `0 ${CURRENCY_SYMBOLS[currency]}`
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${CURRENCY_SYMBOLS[currency]}`
 }
 
 /** تاریخ شمسی به‌صورت 1403/12/15 */

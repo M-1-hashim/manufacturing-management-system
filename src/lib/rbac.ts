@@ -1,5 +1,10 @@
 // ماتریس دسترسی نقش‌ها — ادمین: دسترسی کامل | کارکنان: دسترسی به بخش خود
 // این فایل pure است و هم در کلاینت و هم در middleware استفاده می‌شود
+// (گارد ادمین پایین فایل هم عمداً دیتابیس را مستقیم ایمپورت نمی‌کند —
+// loader از مسیر تزریق می‌شود تا کلاینت دچار ایمپورت Prisma نشود)
+
+import { getSessionFromRequest } from '@/lib/session'
+import type { SessionPayload } from '@/lib/session'
 
 export type Role = 'admin' | 'manager' | 'operator' | 'viewer'
 export type Department = 'general' | 'production' | 'sales' | 'inventory' | 'finance' | 'hr'
@@ -97,4 +102,43 @@ export function roleLabel(role: string, lang: 'fa' | 'ps' | 'en'): string {
 
 export function departmentLabel(department: string, lang: 'fa' | 'ps' | 'en'): string {
   return isDepartment(department) ? DEPARTMENT_LABELS[department][lang] : department
+}
+
+/* ------------------- گارد ادمین سمت سرور (نشست + دیتابیس) ------------------- */
+
+/** شکل کاربر که گارد از دیتابیس لازم دارد — مسیر با findUnique ساده آن را می‌دهد */
+export interface RbacDbUser {
+  id: string
+  role: string
+  active: boolean
+  tokenVersion: number
+}
+
+export type AdminGuardResult =
+  | { session: SessionPayload }
+  | { error: string; status: 401 | 403 }
+
+/**
+ * گارد سخت‌گیرانهٔ ادمین — برخلاف توکن (اسنپ‌شات لحظهٔ ورود)، نقش/فعال
+ * بودن/نسخهٔ توکن را از دیتابیس می‌خواند:
+ *  - بدون نشست یا کاربر حذف‌شده/غیرفعال یا ناهم‌خوانی pv → 401
+ *  - نقش غیر ادمین در دیتابیس → 403 با پیام مخصوص همان مسیر
+ * loader دیتابیس تزریق می‌شود تا این فایل pure بماند (در کلاینت هم
+ * استفاده می‌شود — ایمپورت مستقیم db.ts کلاینت را می‌شکند).
+ */
+export async function requireAdminDb(
+  req: Request,
+  forbiddenMessage: string,
+  loadUser: (uid: string) => Promise<RbacDbUser | null>
+): Promise<AdminGuardResult> {
+  const session = await getSessionFromRequest(req)
+  if (!session) return { error: 'ابتدا وارد سیستم شوید', status: 401 }
+  const user = await loadUser(session.uid)
+  if (!user || !user.active) return { error: 'حساب یافت نشد یا غیرفعال است', status: 401 }
+  // توکن‌های قدیمی (بدون pv) گرانه پذیرفته می‌شوند — به‌تدریج با تمدید نشست منقضی می‌شوند
+  if (session.pv !== undefined && user.tokenVersion !== session.pv) {
+    return { error: 'نشست نامعتبر است', status: 401 }
+  }
+  if (user.role !== 'admin') return { error: forbiddenMessage, status: 403 }
+  return { session }
 }

@@ -25,6 +25,43 @@ function jsonResponse(payload: unknown, status = 200): Response {
   })
 }
 
+/**
+ * گارد سراسری RBAC — آینهٔ src/middleware.ts هاست (پیش از دیسپچ هر هندلر)
+ * ---------------------------------------------------------------
+ *  - مسیرهای عمومی (بدون نشست): POST /api/auth/login و GET/HEAD /api/download/setup
+ *  - بدون نشست معتبر/ختم‌شده → 401
+ *  - ناظر (viewer) فقط خواندن — نوشتن به‌جز مسیرهای auth مثل تغییر پسورد خود → 403
+ *  - PUT تنظیمات فقط ادمین/مدیر (GET برای همهٔ واردشدگان آزاد است) → 403
+ * مسیرهای users/audit/admin جداگانه داخل هندلرهای خودشان گیت ادمین دارند.
+ * پاسخ از همان مسیر عادی خطاها (jsonResponse با status) برمی‌گردد تا
+ * res.ok=false شود و toast های موجود UI بدون تغییر کار کنند.
+ */
+function rbacResponse(pathname: string, method: string, session: LocalSession | null): Response | null {
+  // مسیرهای عمومی — مثل PUBLIC_PATHS هاست
+  const isPublic =
+    (pathname === '/api/auth/login' && method === 'POST') ||
+    (pathname === '/api/download/setup' && (method === 'GET' || method === 'HEAD'))
+  if (isPublic) return null
+
+  // هر مسیر دیگر — نشست معتبر الزامی است
+  if (!session) {
+    return jsonResponse({ error: 'دسترسی غیرمجاز — ابتدا وارد سیستم شوید' }, 401)
+  }
+
+  // PUT تنظیمات فقط ادمین/مدیر (GET برای همهٔ واردشدگان آزاد است) — مثل هاست قبل از قاعدهٔ ناظر
+  if (pathname === '/api/settings' && method === 'PUT' && !['admin', 'manager'].includes(session.role)) {
+    return jsonResponse({ error: 'تغییر تنظیمات فقط توسط مدیر مجاز است' }, 403)
+  }
+
+  // تغییر وضعیت (نوشتن) فقط برای غیرناظر — ناظر فقط خواندن
+  const isWrite = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
+  if (isWrite && session.role === 'viewer' && !pathname.startsWith('/api/auth/')) {
+    return jsonResponse({ error: 'حساب شما فقط دسترسی خواندن دارد' }, 403)
+  }
+
+  return null
+}
+
 export function installLocalApi(): void {
   if (typeof window === 'undefined' || installed) return
   installed = true
@@ -74,6 +111,10 @@ export function installLocalApi(): void {
 
       const session: LocalSession | null = getSession()
       const ctx: Ctx = { url, method, body, session }
+
+      // --- گارد دسترسی — قبل از هر هندلر، مثل middleware هاست ---
+      const blocked = rbacResponse(url.pathname, method, session)
+      if (blocked) return blocked
 
       // --- یافتن هندلر ---
       for (const r of allRoutes) {

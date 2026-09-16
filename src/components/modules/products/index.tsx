@@ -286,16 +286,21 @@ export default function ProductsModule() {
     }
     setSaving(true)
     try {
+      // موجودی فقط هنگام ایجاد فرستاده می‌شود — فیلد در تصحیح غیرفعال است و
+      // فرستادن اسنپ‌شات کهنهٔ دیالوگ، موجودی تغییرکرده در انبار/تولید را بازنویسی می‌کند
       const body = {
         name: form.name.trim(),
         code: form.code.trim(),
         categoryId: form.categoryId === 'none' ? null : form.categoryId,
         unit: form.unit,
         salePrice,
-        ...nums,
+        wholesalePrice: nums.wholesalePrice,
+        costPrice: nums.costPrice,
+        minStock: nums.minStock,
         barcode: form.barcode.trim() || null,
         description: form.description.trim() || null,
         active: form.active,
+        ...(editing ? {} : { stock: nums.stock }),
       }
       const res = await fetch(editing ? `/api/products/${editing.id}` : '/api/products', {
         method: editing ? 'PUT' : 'POST',
@@ -355,6 +360,8 @@ export default function ProductsModule() {
       setNewCat('')
       categories.refetch()
       toast.success(t('ثبت شد', 'ثبت شو', 'Saved'))
+    } catch {
+      toast.error(t('خطای ارتباط با هاست', 'د هاست سره اتصال خطا', 'Server connection error'))
     } finally {
       setCatBusy(false)
     }
@@ -380,6 +387,8 @@ export default function ProductsModule() {
       categories.refetch()
       products.refetch()
       toast.success(t('تجدید شد', 'تازه شو', 'Updated'))
+    } catch {
+      toast.error(t('خطای ارتباط با هاست', 'د هاست سره اتصال خطا', 'Server connection error'))
     } finally {
       setCatBusy(false)
     }

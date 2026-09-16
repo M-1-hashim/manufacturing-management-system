@@ -9,8 +9,9 @@
  * JSON هاست و حالت محلی به‌هر دو جهت قابل بازیابی باشند.
  * نام‌گذاری مثل هاست: backup-YYYYMMDD-HHMMSS.json — کاپی احتیاطی
  * پیش از بازیابی با پیشوند safety- ساخته می‌شود.
- * تنظیم نگهداری در Setting با کلید backupKeep (پیش‌فرض 10)؛
- * intervalHours پذیرفته می‌شود ولی در حالت محلی زمان‌بندی نداریم.
+ * تنظیمات نگهداری با کلیدهای هاست ذخیره می‌شوند: backupKeepCount (پیش‌فرض 10)
+ * و backupIntervalHours — تا بعد از سینک، ردیف‌های بی‌کاربرد سمت هاست نسازیم؛
+ * خواندن تعداد نگهداری با فال‌بک به کلید قدیمی backupKeep انجام می‌شود.
  */
 
 import { ApiError, bodyAs, route, type Ctx, type RouteDef } from '../types'
@@ -112,15 +113,37 @@ function normalizeRow(r: Record<string, unknown>): Row {
 }
 
 /** تعویض کامل دیتا با خروجی کاپی احتیاطی — تعداد سطرهای بازیابی‌شده */
-function restoreAll(data: FullExport): number {
+function restoreAll(data: FullExport, actor: { uid: string; username: string }): number {
   let totalRows = 0
+  let pwResets = 0
   // حذف همه — فرزندان اول (ترتیب معکوس)
   for (const t of [...TABLES].reverse()) writeCol(t.local, [])
   // درج — والدین اول
   for (const t of TABLES) {
-    const rows = (data.tables[t.name] ?? []).map(normalizeRow)
+    let rows = (data.tables[t.name] ?? []).map(normalizeRow)
+    // پسوردهای هش‌شدهٔ هاست (scrypt:...) در حالت محلی با مقایسهٔ ساده match نمی‌شوند
+    // و همهٔ کاربران از جمله ادمین از دسترس خارج می‌شدند — ریست به admin123
+    if (t.name === 'User') {
+      rows = rows.map((r) => {
+        if (String(r.password ?? '').startsWith('scrypt:')) {
+          pwResets++
+          return { ...r, password: 'admin123' }
+        }
+        return r
+      })
+    }
     totalRows += rows.length
     writeCol(t.local, rows)
+  }
+  // یک رخداد برای کل ریست — بازیگر همان ادمین بازیابی‌کننده است
+  if (pwResets > 0) {
+    logAudit(
+      actor,
+      'backup_restore',
+      'users',
+      undefined,
+      'پسورد کاربران واردشده از کاپی احتیاطی به admin123 ریست شد'
+    )
   }
   return totalRows
 }
@@ -142,13 +165,27 @@ function uniqueName(prefix: 'backup' | 'safety'): string {
 
 /** حذف نسخه‌های قدیمی‌تر از حد نگهداری (جدیدترین‌ها می‌مانند) */
 function pruneBackups(): void {
-  const raw = parseInt(getSetting('backupKeep', String(DEFAULT_KEEP)), 10)
-  const keep = Number.isFinite(raw) && raw >= 1 ? Math.min(raw, 100) : DEFAULT_KEEP
+  const keep = readKeep()
   const rows = readCol<BackupRow>('backups')
   rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const staleIds = new Set(rows.slice(keep).map((r) => r.id))
   if (staleIds.size === 0) return
   writeCol('backups', rows.filter((r) => !staleIds.has(r.id)))
+}
+
+/** تعداد نگهداری — کلید هاست backupKeepCount؛ فال‌بک به کلید قدیمی backupKeep */
+function readKeep(): number {
+  const raw = getSetting('backupKeepCount', '') || getSetting('backupKeep', '')
+  const n = parseInt(raw || String(DEFAULT_KEEP), 10)
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, 100) : DEFAULT_KEEP
+}
+
+/** فاصلهٔ کاپی احتیاطی خودکار به ساعت — کلید هاست؛ بدون مقدار ذخیره‌شده → 0 (غیرفعال) */
+function readIntervalHours(): number {
+  const raw = getSetting('backupIntervalHours', '')
+  if (raw === '') return 0
+  const n = parseFloat(raw)
+  return Number.isFinite(n) && n >= 0 ? Math.min(n, 24 * 30) : 0
 }
 
 /** ایجاد اسنپ‌شات جدید — برگرداندن BackupFile مثل هاست (بدون audit — در فراخوان) */
@@ -194,9 +231,7 @@ export const routes: RouteDef[] = [
     const files = readCol<BackupRow>('backups')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .map((b) => ({ name: b.name, size: b.size, createdAt: b.createdAt }))
-    const raw = parseInt(getSetting('backupKeep', String(DEFAULT_KEEP)), 10)
-    const keep = Number.isFinite(raw) && raw >= 1 ? Math.min(raw, 100) : DEFAULT_KEEP
-    return { files, intervalHours: 0, keep, dbType: 'sqlite' }
+    return { files, intervalHours: readIntervalHours(), keep: readKeep(), dbType: 'sqlite' }
   }),
 
   // POST /api/admin/backup
@@ -219,7 +254,7 @@ export const routes: RouteDef[] = [
       const row = findSnapshot(name)
       const data = validateExport(row.data)
       const safety = createSnapshot('safety') // کاپی احتیاطی از دیتای فعلی — قبل از هر تغییری
-      const restored = restoreAll(data)
+      const restored = restoreAll(data, actor)
       logAudit(
         actor,
         'backup_restore',
@@ -234,7 +269,7 @@ export const routes: RouteDef[] = [
     if (body && 'import' in body && body.import !== undefined) {
       const data = validateExport(body.import)
       const safety = createSnapshot('safety')
-      const restored = restoreAll(data)
+      const restored = restoreAll(data, actor)
       logAudit(
         actor,
         'backup_restore',
@@ -255,17 +290,20 @@ export const routes: RouteDef[] = [
   route('PUT', '/api/admin/backup', (ctx) => {
     const actor = requireAdmin(ctx)
     const body = bodyAs<{ intervalHours?: number; keep?: number }>(ctx.body) ?? {}
-    const ih = Number(body.intervalHours ?? 24)
+    const ihRaw = Number(body.intervalHours ?? 24)
+    // مثل saveBackupConfig هاست — کف 0 (غیرفعال) و سقف 720 ساعت
+    const ih = Number.isFinite(ihRaw) && ihRaw >= 0 ? Math.min(ihRaw, 24 * 30) : 24
     const k = Number(body.keep ?? 10)
     const keep = Number.isFinite(k) && k >= 1 ? Math.min(Math.floor(k), 100) : DEFAULT_KEEP
-    setSetting('backupKeep', String(keep))
-    // intervalHours در حالت محلی پذیرفته می‌شود ولی زمان‌بندی خودکار نداریم
+    // کلیدهای هاست — بعد از سینک، هاست همان مقادیر را می‌خواند
+    setSetting('backupIntervalHours', String(ih))
+    setSetting('backupKeepCount', String(keep))
     logAudit(
       actor,
       'update',
       'settings',
       'backup',
-      `هر ${Number.isFinite(ih) && ih >= 0 ? ih : 24} ساعت — نگهداری ${keep} نسخه`
+      `هر ${ih} ساعت — نگهداری ${keep} نسخه`
     )
     return { ok: true }
   }),

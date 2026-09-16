@@ -53,8 +53,8 @@ async function errFrom(res: Response): Promise<string> {
 export default function ProductionModule() {
   const { t } = useI18n()
   const { data: orders, loading, refetch } = useFetch<ProductionOrderT[]>('/api/production')
-  const { data: formulas } = useFetch<FormulaT[]>('/api/formulas')
-  const { data: products } = useFetch<ProductLite[]>('/api/products')
+  const { data: formulas, refetch: refetchFormulas } = useFetch<FormulaT[]>('/api/formulas')
+  const { data: products, refetch: refetchProducts } = useFetch<ProductLite[]>('/api/products')
 
   const [filter, setFilter] = useState('all')
 
@@ -155,6 +155,11 @@ export default function ProductionModule() {
       toast.success(t(`سفارش ${orderNo} ثبت شد و در جریان است`, `سفارش ${orderNo} ثبت شو`, `Order ${orderNo} created and in progress`))
       setWizardOpen(false)
       refetch()
+      // snapshot فورمولا/موجودی ویزارد تازه شود — پیش‌نمایش «در انبار» تنها گارد قبل از کسر است
+      refetchFormulas()
+      refetchProducts()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در ثبت سفارش', 'خطا په ثبت سفارش کې', 'Error submitting order'))
     } finally {
       setSubmitting(false)
     }
@@ -227,6 +232,11 @@ export default function ProductionModule() {
       toast.error(t('مقدار تولیدشده باید زیادتر از صفر باشد', 'د تولید مقدار باید له صفر څخه زیات وي', 'Produced quantity must be greater than zero'))
       return
     }
+    // ضایعات منفی سمت کلاینت رد شود — سرور آن را صفر می‌کند ولی پیش‌نمایش/toast نباید دروغ بگویند
+    if (waste < 0) {
+      toast.error(t('ضایعات نمی‌تواند منفی باشد', 'ضایعات نه شي منفي وي', 'Waste cannot be negative'))
+      return
+    }
     if (waste > produced) {
       toast.error(t('ضایعات نمی‌تواند زیادتر از مقدار تولید باشد', 'ضایعات نه شي کولی له تولید مقدار څخه زیات وي', 'Waste cannot exceed produced quantity'))
       return
@@ -252,6 +262,11 @@ export default function ProductionModule() {
       )
       setCompleteTarget(null)
       refetch()
+      // مواد و موجودی تازه شود — کسر مواد از انبار و ورود خالص محصول در snapshot ویزارد/موجودی منعکس گردد
+      refetchFormulas()
+      refetchProducts()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در تکمیل تولید', 'خطا په بشپړولو کې', 'Error completing production'))
     } finally {
       setCompleting(false)
     }

@@ -38,6 +38,8 @@ export async function POST(req: Request) {
       )
     if (!amount || isNaN(amount) || amount <= 0)
       return NextResponse.json({ error: 'مبلغ باید زیادتر از صفر باشد' }, { status: 400 })
+    if (body.date && Number.isNaN(new Date(String(body.date)).getTime()))
+      return NextResponse.json({ error: 'تاریخ نامعتبر است' }, { status: 400 })
 
     const employee = await db.employee.findUnique({ where: { id: employeeId } })
     if (!employee) return NextResponse.json({ error: 'کارمند یافت نشد' }, { status: 404 })

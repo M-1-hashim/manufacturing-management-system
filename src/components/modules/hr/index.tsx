@@ -46,6 +46,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -98,6 +108,12 @@ interface Sal {
   employee?: { name: string }
 }
 
+// هدف حذف با تأیید — کارمند / رکورد حاضری / پرداخت معاش
+type DeleteTarget =
+  | { kind: 'emp'; emp: Emp }
+  | { kind: 'att'; att: Att }
+  | { kind: 'sal'; sal: Sal }
+
 // درخواست JSON با پیام خطای دری
 async function jsonReq(url: string, method: string, body?: unknown) {
   const res = await fetch(url, {
@@ -114,6 +130,11 @@ async function jsonReq(url: string, method: string, body?: unknown) {
 function toISODate(d: Date) {
   const pad = (x: number) => String(x).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// آیا تاریخ متعلق به امروز است (مقایسهٔ محلی)
+function isToday(d: string) {
+  return new Date(d).toDateString() === new Date().toDateString()
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -141,6 +162,13 @@ export default function HrModule() {
   const { data: attData, loading: attLoading, refetch: refetchAtt } = useFetch<Att[]>(attUrl)
   const attendance = useMemo(() => (Array.isArray(attData) ? attData : []), [attData])
 
+  // منبع مستقل آمار «امروز» — بدون فیلتر کارمند/روز سابقهٔ حاضری تا کارت‌های صفحه از فیلتر تأثر نپذیرند
+  const { data: todayAttData, refetch: refetchTodayAtt } = useFetch<Att[]>('/api/attendance?days=1')
+  const todayAttendance = useMemo(
+    () => (Array.isArray(todayAttData) ? todayAttData : []),
+    [todayAttData]
+  )
+
   const [qEmp, setQEmp] = useState('')
   const [qStatus, setQStatus] = useState('present')
   const [qShift, setQShift] = useState('none')
@@ -159,6 +187,10 @@ export default function HrModule() {
   // چاپ — فیش معاش و گزارش حاضری
   const [printSal, setPrintSal] = useState<Sal | null>(null)
   const [attPrintOpen, setAttPrintOpen] = useState(false)
+
+  // ---------- حذف با تأیید ----------
+  const [confirmDelete, setConfirmDelete] = useState<DeleteTarget | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // ---------- کارکنان ----------
   const [searchText, setSearchText] = useState('')
@@ -185,14 +217,37 @@ export default function HrModule() {
 
   const activeEmps = employees.filter((e) => e.active)
   const totalSalaries = activeEmps.reduce((s, e) => s + e.salary, 0)
-  const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString()
-  const presentToday = attendance.filter((a) => a.status === 'present' && isToday(a.date)).length
-  const absentToday = attendance.filter((a) => a.status === 'absent' && isToday(a.date)).length
 
+  // آمار امروز: کارمندِ یکتا شمرده می‌شود نه رکورد (شیفت‌های چندگانه دوبار شمرده نمی‌شوند)
+  const presentToday = useMemo(
+    () =>
+      new Set(
+        todayAttendance.filter((a) => a.status === 'present' && isToday(a.date)).map((a) => a.employeeId)
+      ).size,
+    [todayAttendance]
+  )
+  const absentToday = useMemo(
+    () =>
+      new Set(
+        todayAttendance.filter((a) => a.status === 'absent' && isToday(a.date)).map((a) => a.employeeId)
+      ).size,
+    [todayAttendance]
+  )
+
+  // تعداد ماه‌های یکتای پرداخت‌شده برای هر کارمند — پرداخت تکراری یک ماه دوبار شمرده نمی‌شود
   const monthsByEmp = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const s of salaries) map.set(s.employeeId, (map.get(s.employeeId) ?? 0) + 1)
-    return map
+    const seen = new Map<string, Set<string>>()
+    for (const s of salaries) {
+      let set = seen.get(s.employeeId)
+      if (!set) {
+        set = new Set()
+        seen.set(s.employeeId, set)
+      }
+      set.add(s.month)
+    }
+    const counts = new Map<string, number>()
+    for (const [id, set] of seen) counts.set(id, set.size)
+    return counts
   }, [salaries])
   const totalPaid = salaries.reduce((s, x) => s + x.amount, 0)
 
@@ -213,7 +268,9 @@ export default function HrModule() {
     setEPosition(e.position)
     setEPhone(e.phone ?? '')
     setESalary(String(e.salary))
-    setEHire(toISODate(new Date(e.hireDate)))
+    // سرور تاریخ را به شکل رشتهٔ YYYY-MM-DD ذخیره می‌کند — استفادهٔ مستقیم از رشته
+    // تا پارس UTC در مناطق زمانی منفی روز را جابه‌جا نکند
+    setEHire(/^\d{4}-\d{2}-\d{2}$/.test(e.hireDate) ? e.hireDate : toISODate(new Date(e.hireDate)))
     setEActive(e.active)
     setEmpOpen(true)
   }
@@ -265,13 +322,29 @@ export default function HrModule() {
       toast.error(err instanceof Error ? err.message : t('خطا در تغییر وضعیت', 'خطا', 'Error'))
     }
   }
-  async function deleteEmp(e: Emp) {
+  // حذف با تأیید — هدف اول در state ذخیره و پس از تصدیق در دیالوگ اجرا می‌شود
+  async function runDelete(target: DeleteTarget) {
+    setDeleting(true)
     try {
-      await jsonReq(`/api/employees/${e.id}`, 'DELETE')
-      toast.success(t('کارمند حذف شد', 'کوونکی ړنګ شو', 'Employee deleted'))
-      refetchEmps()
+      if (target.kind === 'emp') {
+        await jsonReq(`/api/employees/${target.emp.id}`, 'DELETE')
+        toast.success(t('کارمند حذف شد', 'کوونکی ړنګ شو', 'Employee deleted'))
+        refetchEmps()
+      } else if (target.kind === 'att') {
+        await jsonReq(`/api/attendance/${target.att.id}`, 'DELETE')
+        toast.success(t('رکورد حذف شد', 'ریکارډ ړنګ شو', 'Record deleted'))
+        refetchAtt()
+        refetchTodayAtt()
+      } else {
+        await jsonReq(`/api/salaries/${target.sal.id}`, 'DELETE')
+        toast.success(t('پرداخت حذف شد', 'پرداخت ړنګ شو', 'Payment deleted'))
+        refetchSal()
+      }
+      setConfirmDelete(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('خطا در حذف', 'خطا په ړنګولو کې', 'Error deleting'))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -291,19 +364,11 @@ export default function HrModule() {
       })
       toast.success(t('حاضری ثبت شد', 'حاضره ثبت شوه', 'Attendance recorded'))
       refetchAtt()
+      refetchTodayAtt()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('خطا در ثبت', 'خطا په ثبت کې', 'Error saving'))
     } finally {
       setQSaving(false)
-    }
-  }
-  async function deleteAtt(a: Att) {
-    try {
-      await jsonReq(`/api/attendance/${a.id}`, 'DELETE')
-      toast.success(t('رکورد حذف شد', 'ریکارډ ړنګ شو', 'Record deleted'))
-      refetchAtt()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('خطا در حذف', 'خطا په ړنګولو کې', 'Error deleting'))
     }
   }
 
@@ -320,8 +385,15 @@ export default function HrModule() {
       toast.error(t('کارمند را انتخاب کنید', 'کوونکی وټاکنئ', 'Select an employee'))
       return
     }
-    if (!/^\d{4}-\d{2}$/.test(pMonth.trim())) {
+    const monthMatch = /^(\d{4})-(\d{2})$/.exec(pMonth.trim())
+    if (!monthMatch) {
       toast.error(t('ماه باید به شکل 1403-01 باشد', 'میاشت باید په 1403-01 شکل وي', 'Month must be like 1403-01'))
+      return
+    }
+    // اعتبارسنجی ماه شمسی 01..12 — الگوی تنهایی کافی نیست (مثلاً 1404-15 رد شود)
+    const monthNum = Number(monthMatch[2])
+    if (monthNum < 1 || monthNum > 12) {
+      toast.error(t('ماه باید بین 01 و 12 باشد', 'میاشت باید له ۰۱ تر ۱۲ وي', 'Month must be between 01 and 12'))
       return
     }
     const amount = Number(pAmount)
@@ -346,13 +418,37 @@ export default function HrModule() {
       setPSaving(false)
     }
   }
-  async function deleteSal(s: Sal) {
-    try {
-      await jsonReq(`/api/salaries/${s.id}`, 'DELETE')
-      toast.success(t('پرداخت حذف شد', 'پرداخت ړنګ شو', 'Payment deleted'))
-      refetchSal()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('خطا در حذف', 'خطا په ړنګولو کې', 'Error deleting'))
+
+  // متن دیالوگ تأیید حذف بر اساس نوع هدف
+  let confirmInfo: { title: string; desc: string } | null = null
+  if (confirmDelete) {
+    if (confirmDelete.kind === 'emp') {
+      confirmInfo = {
+        title: t('حذف کارمند', 'د کوونکي ړنګول', 'Delete employee?'),
+        desc: t(
+          `کارمند «${confirmDelete.emp.name}» برای همیشه حذف می‌شود. این عمل قابل بازگشت نیست.`,
+          `کوونکی «${confirmDelete.emp.name}» د تل لپاره ړنګېږي. دا کړنه بیرته نه ګرځي.`,
+          `Employee "${confirmDelete.emp.name}" will be permanently deleted. This cannot be undone.`,
+        ),
+      }
+    } else if (confirmDelete.kind === 'att') {
+      confirmInfo = {
+        title: t('حذف رکورد حاضری', 'د حاضرو ریکارډ ړنګول', 'Delete attendance record?'),
+        desc: t(
+          `رکورد حاضری «${confirmDelete.att.employee?.name ?? '—'}» برای همیشه حذف می‌شود.`,
+          `د حاضرو ریکارډ «${confirmDelete.att.employee?.name ?? '—'}» د تل لپاره ړنګېږي.`,
+          `Attendance record of "${confirmDelete.att.employee?.name ?? '—'}" will be permanently deleted.`,
+        ),
+      }
+    } else {
+      confirmInfo = {
+        title: t('حذف پرداخت معاش', 'د معاش پرداخت ړنګول', 'Delete salary payment?'),
+        desc: t(
+          `پرداخت معاش «${confirmDelete.sal.employee?.name ?? '—'}» برای ماه ${confirmDelete.sal.month} برای همیشه حذف می‌شود.`,
+          `د معاش پرداخت «${confirmDelete.sal.employee?.name ?? '—'}» د میاشتې ${confirmDelete.sal.month} لپاره د تل لپاره ړنګېږي.`,
+          `Salary payment of "${confirmDelete.sal.employee?.name ?? '—'}" for month ${confirmDelete.sal.month} will be permanently deleted.`,
+        ),
+      }
     }
   }
 
@@ -505,7 +601,7 @@ export default function HrModule() {
                                   size="icon"
                                   className="h-8 w-8 text-red-500 hover:text-red-600"
                                   title={t('حذف', 'ړنګول', 'Delete')}
-                                  onClick={() => deleteEmp(e)}
+                                  onClick={() => setConfirmDelete({ kind: 'emp', emp: e })}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -674,7 +770,7 @@ export default function HrModule() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-red-500 hover:text-red-600"
-                                onClick={() => deleteAtt(a)}
+                                onClick={() => setConfirmDelete({ kind: 'att', att: a })}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -745,7 +841,7 @@ export default function HrModule() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-red-500 hover:text-red-600"
-                                  onClick={() => deleteSal(s)}
+                                  onClick={() => setConfirmDelete({ kind: 'sal', sal: s })}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -971,6 +1067,26 @@ export default function HrModule() {
         rows={attendance}
         onClose={() => setAttPrintOpen(false)}
       />
+
+      {/* ---------- تصدیق حذف — کارمند / رکورد حاضری / پرداخت معاش ---------- */}
+      <AlertDialog open={!!confirmInfo} onOpenChange={(v) => { if (!v) setConfirmDelete(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmInfo?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmInfo?.desc}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t('انصراف', 'لغوه', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+              onClick={(e) => { e.preventDefault(); if (confirmDelete) runDelete(confirmDelete) }}
+            >
+              {t('حذف', 'ړنګول', 'Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

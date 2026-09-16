@@ -61,7 +61,7 @@ interface ReportsData {
   salesByMonth: { label: string; total: number }[]
   salesByCustomer: { name: string; total: number; orders: number }[]
   topProducts: { name: string; qty: number; revenue: number }[]
-  salesByPayment: { method: string; total: number; count: number }[]
+  salesByPayment: { method: string; label: string; total: number; count: number }[]
   expensesByCategory: { category: string; total: number }[]
   productionSummary: {
     byStatus: { status: string; count: number }[]
@@ -115,6 +115,12 @@ function compact(n: number): string {
   if (Math.abs(n) >= 1000000) return `${formatNumber(Math.round(n / 100000) / 10)}م`
   if (Math.abs(n) >= 1000) return `${formatNumber(Math.round(n / 100) / 10)}k`
   return formatNumber(n)
+}
+
+// تاریخ 'YYYY-MM-DD' را به‌صورت محلی پارس می‌کند (نه UTC) تا ستون شمسی با میلادی هم‌سطر بخواند
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.slice(0, 10).split('-').map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
 }
 
 export default function ReportsModule() {
@@ -235,7 +241,7 @@ export default function ReportsModule() {
                         ],
                         ...data.salesByDay.map((d) => [
                           d.date.slice(0, 10),
-                          toJalaliStr(d.date),
+                          toJalaliStr(parseLocalDate(d.date)),
                           d.total,
                           d.count,
                         ]),
@@ -368,7 +374,7 @@ export default function ReportsModule() {
                 data.salesByPayment.map((p) => (
                   <div key={p.method} className="rounded-xl border bg-card p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm text-muted-foreground">{p.method}</p>
+                      <p className="text-sm text-muted-foreground">{p.label}</p>
                       <Badge variant="outline" className={STATUS_COLORS[p.method] ?? ''}>
                         {formatNumber(p.count)} {t('بل', 'بلونه', 'invoices')}
                       </Badge>
@@ -511,8 +517,8 @@ export default function ReportsModule() {
                       </TableRow>
                     ) : (
                       productionSummary.byProduct.map((p) => {
-                        const total = p.produced + p.waste
-                        const pct = total > 0 ? (p.waste / total) * 100 : 0
+                        // produced خودش شامل ضایعات است — مخرج دوبار حساب نشود
+                        const pct = p.produced > 0 ? (p.waste / p.produced) * 100 : 0
                         return (
                           <TableRow key={p.productName}>
                             <TableCell className="max-w-52 truncate">{p.productName}</TableCell>
@@ -902,7 +908,11 @@ function SalesReportPrint({ data }: { data: ReportsData }) {
           )}
         </DocTable>
         <div className="mt-2">
-          <DocTotals rows={[]} grandLabel={t('مجموع فروش', 'ټوله پلورنه', 'Total sales')} grandValue={formatMoney(monthTotal)} />
+          <DocTotals
+            rows={[]}
+            grandLabel={t('مجموع فروش ۱۲ ماه اخیر', 'ټوله پلورنه (12 میاشتې)', 'Total sales (last 12 months)')}
+            grandValue={formatMoney(monthTotal)}
+          />
         </div>
       </PrintSection>
 
@@ -921,7 +931,7 @@ function SalesReportPrint({ data }: { data: ReportsData }) {
           ) : (
             data.salesByPayment.map((p, i) => (
               <DocRow key={p.method} index={i}>
-                <DocCell>{p.method}</DocCell>
+                <DocCell>{p.label}</DocCell>
                 <DocCell className="text-center">{formatNumber(p.count)}</DocCell>
                 <DocCell className="text-end font-semibold">{formatMoney(p.total)}</DocCell>
               </DocRow>
@@ -1062,8 +1072,8 @@ function ProductionReportPrint({ data }: { data: ReportsData }) {
             </tr>
           ) : (
             productionSummary.byProduct.map((p, i) => {
-              const total = p.produced + p.waste
-              const pct = total > 0 ? (p.waste / total) * 100 : 0
+              // produced خودش شامل ضایعات است — مخرج دوبار حساب نشود
+              const pct = p.produced > 0 ? (p.waste / p.produced) * 100 : 0
               return (
                 <DocRow key={p.productName} index={i}>
                   <DocCell>{p.productName}</DocCell>

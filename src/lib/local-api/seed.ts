@@ -215,11 +215,12 @@ function seedAll(): void {
     sales.push(s)
     for (const it of its) saleItems.push(newRow({ saleId: s.id, ...it }))
     if (method === 'credit') {
-      // ماندهٔ قرض مشتری برای فروش نسیه
-      const row = readCol<U>('customers').find((c) => c.id === customers[cust])
+      // ماندهٔ قرض مشتری برای فروش نسیه — یک بار خواندن، جهش روی همان آرایه و نوشتن آن
+      const rows = readCol<U>('customers')
+      const row = rows.find((c) => c.id === customers[cust])
       if (row) {
         row.balance = (Number(row.balance ?? 0) || 0) + total
-        writeCol('customers', readCol<U>('customers'))
+        writeCol('customers', rows)
       }
     }
   }

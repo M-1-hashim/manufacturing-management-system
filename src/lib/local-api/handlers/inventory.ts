@@ -133,37 +133,45 @@ export const routes: RouteDef[] = [
     if (!['in', 'out', 'adjust'].includes(type)) throw new ApiError(400, 'نوع حرکت نامعتبر است')
     if (!['product', 'material'].includes(itemType)) throw new ApiError(400, 'نوع قلم نامعتبر است')
     if (!itemId) throw new ApiError(400, 'قلم انتخاب نشده است')
-    if (!quantity || Number.isNaN(quantity) || quantity <= 0) {
-      throw new ApiError(400, 'مقدار باید زیادتر از صفر باشد')
+    // در «اصلاح» مقدار، موجودی مطلق جدید است — صفر مجاز است؛ فقط منفی رد می‌شود
+    if (Number.isNaN(quantity) || (type === 'adjust' ? quantity < 0 : quantity <= 0)) {
+      throw new ApiError(400, type === 'adjust' ? 'مقدار نمی‌تواند منفی باشد' : 'مقدار باید زیادتر از صفر باشد')
     }
 
     // تجدید موجودی قلم — دقیقاً مطابق منطق هاست
     let itemName = ''
     let unit = ''
     let txQty = quantity
+    // کولکشن موجودی و اسنپ‌شات پیش از تغییر — برای نوشتن جبرانی در صورت شکست نوشتن دوم
+    let stockCol: 'products' | 'rawMaterials' = 'products'
+    let nextRows: Row[] = []
+    let stockSnapshot: Row[] = []
     if (itemType === 'product') {
       const prods = readCol<LocalProductRow>('products')
       const item = prods.find((p) => p.id === itemId)
       if (!item) throw new ApiError(404, 'قلم مورد نظر یافت نشد')
       const move = computeMove(type, Number(item.stock), quantity)
+      stockSnapshot = prods.map((p) => ({ ...p }))
       item.stock = move.newStock
       txQty = move.txQty
       itemName = item.name
       unit = item.unit
-      writeCol('products', prods)
+      stockCol = 'products'
+      nextRows = prods
     } else {
       const mats = readCol<LocalMaterialRow>('rawMaterials')
       const item = mats.find((m) => m.id === itemId)
       if (!item) throw new ApiError(404, 'قلم مورد نظر یافت نشد')
       const move = computeMove(type, Number(item.stock), quantity)
+      stockSnapshot = mats.map((m) => ({ ...m }))
       item.stock = move.newStock
       txQty = move.txQty
       itemName = item.name
       unit = item.unit
-      writeCol('rawMaterials', mats)
+      stockCol = 'rawMaterials'
+      nextRows = mats
     }
 
-    const txs = readCol<LocalTx>('inventoryTransactions')
     const created: LocalTx = newRow({
       type,
       itemType,
@@ -176,8 +184,23 @@ export const routes: RouteDef[] = [
       notes,
       date: nowISO(),
     })
-    txs.push(created)
-    writeCol('inventoryTransactions', txs)
+
+    // نوشتن اتمیک هر دو کولکشن — مطابق $transaction هاست:
+    // اگر نوشتن دوم (گردش انبار) شکست بخورد، موجودی از اسنپ‌شات بازگردانده می‌شود
+    try {
+      writeCol(stockCol, nextRows)
+      const txs = readCol<LocalTx>('inventoryTransactions')
+      txs.push(created)
+      writeCol('inventoryTransactions', txs)
+    } catch (e) {
+      // نوشتن جبرانی — بازگرداندن موجودی به حالت پیش از تغییر، سپس پرتاب خطای اصلی
+      try {
+        writeCol(stockCol, stockSnapshot)
+      } catch {
+        // خطای نوشتن جبرانی کمتر از خطای اصلی مهم است — همان دوباره پرتاب می‌شود
+      }
+      throw e
+    }
 
     const typeFa = type === 'in' ? 'ورود' : type === 'out' ? 'خروج' : 'اصلاح'
     logAudit(

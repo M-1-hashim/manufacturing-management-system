@@ -435,7 +435,11 @@ function ExpensesCard({
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState<Currency>('AFN')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // تاریخ پیش‌فرض از مؤلفه‌های محلی (toISOString در نیمه‌شبِ قبل از ۰۴:۳۰ دیروز را می‌دهد)
+  const [date, setDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [saving, setSaving] = useState(false)
   const [filterCat, setFilterCat] = useState(ALL)
   const [printOpen, setPrintOpen] = useState(false)

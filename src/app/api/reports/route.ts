@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // نرخ تبدیل به افغانی
     const toAfn = (r: number | null | undefined) => (r && r > 0 ? r : 1)
 
-    const [sales, sales12, expenses, orders, products, materials] = await Promise.all([
+    const [sales, sales12, expenses, orders, products, materials, settingRows] = await Promise.all([
       db.sale.findMany({
         where: { date: { gte: rangeStart } },
         select: {
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
       }),
       db.expense.findMany({
         where: { date: { gte: rangeStart } },
-        select: { category: true, amount: true },
+        select: { category: true, amount: true, currency: true },
       }),
       db.productionOrder.findMany({
         where: { startDate: { gte: rangeStart } },
@@ -58,7 +58,18 @@ export async function GET(req: Request) {
       db.rawMaterial.findMany({
         select: { name: true, stock: true, unit: true, purchasePrice: true },
       }),
+      // نرخ‌های ارز از تنظیمات — یک‌بار در هر درخواست
+      db.setting.findMany({
+        where: { key: { in: ['usdRate', 'pkrRate'] } },
+        select: { key: true, value: true },
+      }),
     ])
+
+    // مصارف به ارز خودشان ثبت می‌شوند — نرخ تبدیل به افغانی (نرخ ناموجود/نامعتبر → ۱)
+    const usdRate = toAfn(Number(settingRows.find((r) => r.key === 'usdRate')?.value))
+    const pkrRate = toAfn(Number(settingRows.find((r) => r.key === 'pkrRate')?.value))
+    const expenseRate = (currency: string | null | undefined) =>
+      currency === 'USD' ? usdRate : currency === 'PKR' ? pkrRate : 1
 
     // ---- فروش به تفکیک روز (همه روزهای بازه حتی بدون فروش) ----
     const dayMap = new Map<string, { total: number; count: number }>()
@@ -76,7 +87,8 @@ export async function GET(req: Request) {
       const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
       const cur = dayMap.get(key)
       salesByDay.push({
-        date: d.toISOString(),
+        // تاریخ محلی YYYY-MM-DD (نه ISO) — تا ستون میلادی CSV با ستون شمسی هم‌سطر بخواند
+        date: key,
         label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
         total: Math.round(cur?.total ?? 0),
         count: cur?.count ?? 0,
@@ -149,13 +161,18 @@ export async function GET(req: Request) {
       payAgg.set(s.paymentMethod, cur)
     }
     const salesByPayment = Array.from(payAgg.entries())
-      .map(([method, v]) => ({ method: METHOD_NAMES[method] ?? method, total: Math.round(v.total), count: v.count }))
+      .map(([method, v]) => ({
+        method, // کلید خام (cash/credit/transfer) برای رنگ‌بندی badge در کلاینت
+        label: METHOD_NAMES[method] ?? method, // برچسب فارسی برای نمایش
+        total: Math.round(v.total),
+        count: v.count,
+      }))
       .sort((a, b) => b.total - a.total)
 
-    // ---- مصارف به تفکیک دسته ----
+    // ---- مصارف به تفکیک دسته (تبدیل همهٔ ارزها به افغانی قبل از جمع) ----
     const expAgg = new Map<string, number>()
     for (const e of expenses) {
-      expAgg.set(e.category, (expAgg.get(e.category) ?? 0) + e.amount)
+      expAgg.set(e.category, (expAgg.get(e.category) ?? 0) + e.amount * expenseRate(e.currency))
     }
     const expensesByCategory = Array.from(expAgg.entries())
       .map(([category, total]) => ({ category, total: Math.round(total) }))

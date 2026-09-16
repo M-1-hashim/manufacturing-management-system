@@ -1,6 +1,6 @@
 // کاپی احتیاطی JSON — مستقل از نوع دیتابیس (SQLite و MySQL هر دو کاپی احتیاطی می‌شوند)
 // برای انتقال دیتا بین SQLite محلی و MySQL هاست اشتراکی استفاده می‌شود
-import { db } from '@/lib/db'
+import { db, dbInternal } from '@/lib/db'
 import type { AuditActor } from '@/lib/audit'
 
 type Delegate = {
@@ -117,31 +117,39 @@ export async function restoreFromJson(data: unknown): Promise<JsonRestoreResult>
   }))
   const totalRows = parsed.reduce((s, t) => s + t.rows.length, 0)
 
-  await db.$transaction(async (tx) => {
-    const txc = (model: string) => tx[model as keyof typeof tx] as unknown as Delegate
+  // ژورنال حذف در طول بازیابی معلق می‌شود — حذف‌های «خالی‌کردن جدول‌ها»
+  // (deleteMany بدون شرط) هرگز نباید ژورنال شوند؛ در غیر این صورت پخش
+  // دوبارهٔ ژورنال روی هاست همهٔ جدول‌ها را پاک می‌کند
+  dbInternal.setJournalSuspended(true)
+  try {
+    await db.$transaction(async (tx) => {
+      const txc = (model: string) => tx[model as keyof typeof tx] as unknown as Delegate
 
-    // 1) حذف همه رکوردها — فرزندان اول (ترتیب معکوس)
-    for (const t of [...parsed].reverse()) {
-      await txc(t.name).deleteMany()
-    }
-
-    // 2) درج رکوردها — والدین اول، دسته‌ای
-    for (const t of parsed) {
-      for (let i = 0; i < t.rows.length; i += CHUNK) {
-        const chunk = t.rows.slice(i, i + CHUNK).map((r) => parseRow(t.name, t.dates, r))
-        // بدون skipDuplicates — جدول خالی است و کلیدها از کاپی احتیاطی عیناً برمی‌گردند
-        await txc(t.name).createMany({ data: chunk })
+      // 1) حذف همه رکوردها — فرزندان اول (ترتیب معکوس)
+      for (const t of [...parsed].reverse()) {
+        await txc(t.name).deleteMany()
       }
-    }
 
-    // 3) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق کاپی احتیاطی باشد
-    for (const t of parsed) {
-      const found = await txc(t.name).findMany()
-      if (found.length !== t.rows.length) {
-        throw new Error(`جدول ${t.name}: ${found.length} سطر به‌جای ${t.rows.length} بازیابی شد`)
+      // 2) درج رکوردها — والدین اول، دسته‌ای
+      for (const t of parsed) {
+        for (let i = 0; i < t.rows.length; i += CHUNK) {
+          const chunk = t.rows.slice(i, i + CHUNK).map((r) => parseRow(t.name, t.dates, r))
+          // بدون skipDuplicates — جدول خالی است و کلیدها از کاپی احتیاطی عیناً برمی‌گردند
+          await txc(t.name).createMany({ data: chunk })
+        }
       }
-    }
-  })
+
+      // 3) راستی‌آزمایی داخل تراکنش — تعداد رکوردها باید دقیقاً مطابق کاپی احتیاطی باشد
+      for (const t of parsed) {
+        const found = await txc(t.name).findMany()
+        if (found.length !== t.rows.length) {
+          throw new Error(`جدول ${t.name}: ${found.length} سطر به‌جای ${t.rows.length} بازیابی شد`)
+        }
+      }
+    })
+  } finally {
+    dbInternal.setJournalSuspended(false)
+  }
 
   return { restoredTables: parsed.length, restoredRows: totalRows }
 }

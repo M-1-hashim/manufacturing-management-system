@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { readFile } from 'node:fs/promises'
-import { getSessionFromRequest } from '@/lib/session'
+import { db } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
+import { requireAdminDb } from '@/lib/rbac'
 import {
   listBackups,
   createBackup,
@@ -17,16 +18,13 @@ import {
 import { exportAllJson, currentDbType } from '@/lib/json-backup'
 
 // همه مسیرهای /api/admin فقط برای ادمین (middleware) — اینجا هم دوباره بررسی می‌شود
-
+// گارد مشترک: نقش/فعال بودن/نسخهٔ توکن از دیتابیس خوانده می‌شود، نه از توکن
 async function requireAdmin(req: Request) {
-  const session = await getSessionFromRequest(req)
-  if (!session) {
-    return { error: NextResponse.json({ error: 'ابتدا وارد سیستم شوید' }, { status: 401 }) }
-  }
-  if (session.role !== 'admin') {
-    return { error: NextResponse.json({ error: 'فقط مدیر سیستم به کاپی احتیاطی دسترسی دارد' }, { status: 403 }) }
-  }
-  return { session }
+  return requireAdminDb(
+    req,
+    'فقط مدیر سیستم به کاپی احتیاطی دسترسی دارد',
+    (uid) => db.user.findUnique({ where: { id: uid } })
+  )
 }
 
 // GET /api/admin/backup                 → فهرست + تنظیمات + نوع دیتابیس
@@ -35,7 +33,7 @@ async function requireAdmin(req: Request) {
 export async function GET(req: Request) {
   try {
     const guard = await requireAdmin(req)
-    if (guard.error) return guard.error
+    if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
 
     const url = new URL(req.url)
 
@@ -93,8 +91,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const guard = await requireAdmin(req)
-    if (guard.error) return guard.error
-    const actor = { uid: guard.session!.uid, username: guard.session!.username }
+    if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
+    const actor = { uid: guard.session.uid, username: guard.session.username }
     const contentType = req.headers.get('content-type') || ''
 
     // آپلود فایل کاپی احتیاطی و بازیابی
@@ -151,11 +149,11 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const guard = await requireAdmin(req)
-    if (guard.error) return guard.error
+    if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
     const body = (await req.json().catch(() => ({}))) as { intervalHours?: number; keep?: number }
     await saveBackupConfig(Number(body.intervalHours ?? 24), Number(body.keep ?? 10))
     await logAudit(
-      { uid: guard.session!.uid, username: guard.session!.username },
+      { uid: guard.session.uid, username: guard.session.username },
       'update',
       'settings',
       'backup',
@@ -172,13 +170,13 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const guard = await requireAdmin(req)
-    if (guard.error) return guard.error
+    if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
     const url = new URL(req.url)
     const file = url.searchParams.get('file') ?? ''
     if (!isValidBackupName(file)) {
       return NextResponse.json({ error: 'نام فایل نامعتبر است' }, { status: 400 })
     }
-    await deleteBackup(file, { uid: guard.session!.uid, username: guard.session!.username })
+    await deleteBackup(file, { uid: guard.session.uid, username: guard.session.username })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'خطا در حذف فایل کاپی احتیاطی' }, { status: 500 })

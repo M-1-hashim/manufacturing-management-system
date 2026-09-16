@@ -84,8 +84,18 @@ export async function POST(req: Request) {
     if (!['product', 'material'].includes(itemType))
       return NextResponse.json({ error: 'نوع قلم نامعتبر است' }, { status: 400 })
     if (!itemId) return NextResponse.json({ error: 'قلم انتخاب نشده است' }, { status: 400 })
-    if (!quantity || isNaN(quantity) || quantity <= 0)
-      return NextResponse.json({ error: 'مقدار باید زیادتر از صفر باشد' }, { status: 400 })
+    // در «اصلاح» مقدار، موجودی مطلق جدید است — صفر مجاز است؛ فقط منفی رد می‌شود
+    if (isNaN(quantity) || (type === 'adjust' ? quantity < 0 : quantity <= 0)) {
+      return NextResponse.json(
+        {
+          error:
+            type === 'adjust'
+              ? 'مقدار نمی‌تواند منفی باشد'
+              : 'مقدار باید زیادتر از صفر باشد',
+        },
+        { status: 400 }
+      )
+    }
 
     const created = await db.$transaction(async (tx) => {
       const item =

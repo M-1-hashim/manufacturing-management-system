@@ -284,15 +284,19 @@ export default function MaterialsModule() {
     }
     setSaving(true)
     try {
+      // موجودی فقط هنگام ایجاد فرستاده می‌شود — فیلد در تصحیح غیرفعال است و
+      // فرستادن اسنپ‌شات کهنهٔ دیالوگ، موجودی تغییرکرده در خرید/تولید را بازنویسی می‌کند
       const body = {
         name: form.name.trim(),
         code: form.code.trim(),
         unit: form.unit,
         purchasePrice,
-        ...nums,
+        minStock: nums.minStock,
+        maxStock: nums.maxStock,
         expiryDate: form.expiryDate ? new Date(`${form.expiryDate}T00:00:00`).toISOString() : null,
         supplierId: form.supplierId === 'none' ? null : form.supplierId,
         notes: form.notes.trim() || null,
+        ...(editing ? {} : { stock: nums.stock }),
       }
       const res = await fetch(editing ? `/api/raw-materials/${editing.id}` : '/api/raw-materials', {
         method: editing ? 'PUT' : 'POST',
@@ -377,6 +381,8 @@ export default function MaterialsModule() {
       setSupFormOpen(false)
       suppliers.refetch()
       materials.refetch()
+    } catch {
+      toast.error(t('خطای ارتباط با هاست', 'له هوسټ سره د اتصال ستونزه', 'Server connection error'))
     } finally {
       setSupBusy(false)
     }

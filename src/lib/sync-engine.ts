@@ -87,6 +87,21 @@ const OVERLAP_MS = 1500
 const TOMBSTONE_TTL_MS = 30 * 24 * 3600 * 1000
 const TOMBSTONE_PULL_LIMIT = 2000
 
+/**
+ * ستون‌های «فقط محلی» که در اسکیمای MySQL هاست نیستند — اگر به هاست
+ * فرستاده شوند کلاینت MySQL خطای Unknown argument می‌دهد. tokenVersion
+ * (نسخهٔ توکن نشست) فقط برای گاردهای همین دستگاه معنا دارد.
+ */
+const LOCAL_ONLY_FIELDS = ['tokenVersion']
+
+function stripLocalOnlyFields(row: Row): Row {
+  const out: Row = {}
+  for (const k of Object.keys(row)) {
+    if (!LOCAL_ONLY_FIELDS.includes(k)) out[k] = row[k]
+  }
+  return out
+}
+
 function del(client: PrismaClient, name: string): Delegate {
   return (client as unknown as Record<string, Delegate>)[name]
 }
@@ -329,6 +344,13 @@ export function installOfflineJournaling(): void {
   if (!sqlite) return
   const pair: ClientPair = { server: sqlite, local: sqlite } // ژورنال فقط روی local نوشته می‌شود
   dbInternal.registerDeleteJournal((table, where) => {
+    // دفاع دوم (defense-in-depth): deleteMany بدون شرط (where خالی) هرگز
+    // حذف واقعی کاربر نیست — فقط بازیابی JSON برای خالی‌کردن جدول‌ها این‌طور
+    // حذف می‌کند. اگر به هر راهی ژورنال شد، پخش دوبارهٔ آن روی هاست جدول را
+    // کامل پاک می‌کرد (push دلتا-محور است و سطرهای بازگردانده‌شده دیگر
+    // ارسال نمی‌شوند)
+    const w = (where ?? {}) as Record<string, unknown>
+    if (typeof w !== 'object' || Object.keys(w).length === 0) return
     void (async () => {
       try {
         await ensureJournalTable(pair)
@@ -417,6 +439,8 @@ async function pushTableDelta(pair: ClientPair, table: string, since: Date | nul
   const where: Row = since ? { updatedAt: { gt: since } } : {}
   let rows = await localDel.findMany({ where, take: TAKE_LIMIT })
   if (table === 'Setting') rows = rows.filter((r) => !stripMetaSetting(r))
+  // ستون‌های فقط-محلی هرگز به هاست نمی‌روند (اسکیمای هاست هنوز آن‌ها را ندارد)
+  if (table === 'User') rows = rows.map(stripLocalOnlyFields)
   if (rows.length === 0) return 0
 
   const serverDel = del(pair.server, table)
@@ -710,6 +734,13 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
   if (snapshotBusy) throw new Error('اسنپ‌شات قبلی هنوز در حال اجراست')
   snapshotBusy = true
   try {
+    // 0) tokenVersion (نسخهٔ توکن نشست) فقط-محلی است — بعد از اسنپ‌شات
+    // حفظ می‌شود وگرنه همهٔ نشست‌های همین دستگاه بعد از هر اتصال دوباره بی‌اعتبار می‌شدند
+    const localUserVersions = new Map<string, number>()
+    for (const u of await del(pair.local, 'user').findMany({ select: { id: true, tokenVersion: true } })) {
+      localUserVersions.set(String(u.id), Number(u.tokenVersion) || 0)
+    }
+
     // 1) خواندن کامل از هاست
     const data = new Map<string, Row[]>()
     for (const t of TABLES) {
@@ -731,7 +762,14 @@ export async function snapshotServerToLocal(pair: ClientPair): Promise<{ rows: n
 
       // درج — والدین اول
       for (const t of TABLES) {
-        const rows = data.get(t.name) ?? []
+        let rows = data.get(t.name) ?? []
+        if (t.name === 'User') {
+          // نسخهٔ توکن هر کاربر از مقدار قبلی همین دستگاه برمی‌گردد
+          rows = rows.map((r) => ({
+            ...r,
+            tokenVersion: localUserVersions.get(String(r.id)) ?? 0,
+          }))
+        }
         const finalRows =
           t.name === 'Setting'
             ? [...rows.filter((r) => !isSyncMetaKey(r.key)), ...preserved]
@@ -895,7 +933,9 @@ export async function migrateLocalToServer(pair: ClientPair): Promise<MigrateRes
   let updated = 0
   try {
     for (const t of TABLES) {
-      const localRows = await del(pair.local, t.name).findMany({ take: TAKE_LIMIT })
+      const localRows = (await del(pair.local, t.name).findMany({ take: TAKE_LIMIT })).map((r) =>
+        t.name === 'User' ? stripLocalOnlyFields(r) : r
+      )
       let c = 0
       let u = 0
       if (localRows.length > 0) {

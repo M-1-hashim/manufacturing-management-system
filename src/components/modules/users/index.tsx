@@ -91,7 +91,9 @@ export default function UsersModule() {
 
   const { data, error, refetch } = useFetch<UserRow[]>('/api/users')
   const users = useMemo(() => (Array.isArray(data) ? data : []), [data])
-  const accessDenied = !!error && error.includes('403')
+  // useFetch پیام سرور را جایگزین متن خام HTTP می‌کند — تشخیص 403 با پیام‌های دری:
+  // میاندوار: «شما به این بخش دسترسی ندارید» | محلی/روت: «فقط مدیر سیستم به مدیریت کاربران...»
+  const accessDenied = !!error && /دسترسی ندارید|فقط مدیر|مجاز نیست/.test(error)
 
   // ---------- فیلترها ----------
   const [search, setSearch] = useState('')

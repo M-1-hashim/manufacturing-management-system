@@ -138,6 +138,9 @@ export const routes: RouteDef[] = [
       if (isNaN(unitPrice) || unitPrice < 0) {
         throw new ApiError(400, 'فی کالا نامعتبر است')
       }
+      if (discount < 0) {
+        throw new ApiError(400, 'تخفیف نمی‌تواند منفی باشد')
+      }
       const lineTotal = quantity * unitPrice - discount
       subtotal += lineTotal
       cleanItems.push({
@@ -152,14 +155,24 @@ export const routes: RouteDef[] = [
     }
 
     const discount = Number(body.discount) || 0
+    if (discount < 0) {
+      throw new ApiError(400, 'تخفیف نمی‌تواند منفی باشد')
+    }
     const requestedTax = Number(body.taxRate) || 0
     const taxRate = [0, 2, 10].includes(requestedTax) ? requestedTax : 0
     const taxable = Math.max(0, subtotal - discount)
     const taxAmount = (taxable * taxRate) / 100
     const total = taxable + taxAmount
     const paidAmount = Number(body.paidAmount) || 0
+    if (paidAmount < 0) {
+      throw new ApiError(400, 'مبلغ پرداخت نمی‌تواند منفی باشد')
+    }
     const status = total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
-    const invoiceNumber = `INV-${Date.now().toString().slice(-9)}`
+    // گارد برخورد شماره بل در همان میلی‌ثانیه — مثل هاست (P2002) یک پسوند تازه می‌گیرد
+    let invoiceNumber = `INV-${Date.now().toString().slice(-9)}`
+    if (readCol<LocalSale>('sales').some((s) => s.invoiceNumber === invoiceNumber)) {
+      invoiceNumber = `INV-${Date.now().toString().slice(-9)}-${Math.floor(Math.random() * 1000)}`
+    }
     const currency = ['AFN', 'USD', 'PKR'].includes(String(body.currency)) ? String(body.currency) : 'AFN'
     const exchangeRate = Number(body.exchangeRate) > 0 ? Number(body.exchangeRate) : 1
     const paymentMethod = ['cash', 'credit', 'transfer'].includes(String(body.paymentMethod))
@@ -170,7 +183,7 @@ export const routes: RouteDef[] = [
     const customerId = body.customerId ? String(body.customerId) : null
     const customers = readCol<LocalCustomer>('customers')
     const customer = customerId ? customers.find((c) => c.id === customerId) : null
-    if (customerId && !customer) throw new ApiError(500, 'خطا در ثبت فروش')
+    if (customerId && !customer) throw new ApiError(400, 'مشتری انتخاب‌شده معتبر نیست')
     const customerName = body.customerName ? String(body.customerName) : null
     const notes = body.notes ? String(body.notes) : null
 
@@ -229,9 +242,9 @@ export const routes: RouteDef[] = [
     writeCol('products', products)
     writeCol('inventoryTransactions', txs)
 
-    // افزایش قرض مشتری در صورت پرداخت ناقص
+    // افزایش قرض مشتری در صورت پرداخت ناقص — باقیات همیشه به افغانی است (تبدیل با نرخ بل)
     if (customer && status !== 'paid') {
-      customer.balance = Number(customer.balance ?? 0) + (total - paidAmount)
+      customer.balance = Number(customer.balance ?? 0) + (total - paidAmount) * (exchangeRate || 1)
       customer.updatedAt = nowISO()
       writeCol('customers', customers)
     }
@@ -272,8 +285,11 @@ export const routes: RouteDef[] = [
     const id = params[0]
     const body = bodyAs<Record<string, unknown>>(ctx.body) ?? {}
     const paidAmount = Number(body.paidAmount)
-    if (isNaN(paidAmount) || paidAmount < 0) {
+    if (isNaN(paidAmount)) {
       throw new ApiError(400, 'مبلغ پرداخت نامعتبر است')
+    }
+    if (paidAmount < 0) {
+      throw new ApiError(400, 'مبلغ پرداخت نمی‌تواند منفی باشد')
     }
 
     const sales = readCol<LocalSale>('sales')
@@ -283,12 +299,14 @@ export const routes: RouteDef[] = [
     const newStatus =
       sale.total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
 
-    // تعدیل قرض مشتری — کاهش مانده به اندازهٔ اختلاف باقیات قدیم و جدید
+    // تعدیل قرض مشتری — اختلاف باقیات قدیم و جدید؛ باقیات همیشه به افغانی است (تبدیل با نرخ بل)
+    // delta مثبت = کاهش قرض؛ delta منفی = کاهش پرداخت → برگشت قرض به دفتر
     if (sale.customerId) {
-      const oldRemaining = Math.max(0, sale.total - sale.paidAmount)
-      const newRemaining = Math.max(0, sale.total - paidAmount)
+      const rate = Number(sale.exchangeRate) || 1
+      const oldRemaining = Math.max(0, (sale.total - sale.paidAmount) * rate)
+      const newRemaining = Math.max(0, (sale.total - paidAmount) * rate)
       const delta = oldRemaining - newRemaining
-      if (delta > 0.001) {
+      if (Math.abs(delta) > 0.001) {
         const customers = readCol<LocalCustomer>('customers')
         const customer = customers.find((c) => c.id === sale.customerId)
         if (customer) {
@@ -338,9 +356,10 @@ export const routes: RouteDef[] = [
     }
     writeCol('products', products)
 
-    // کاهش قرض مشتری اگر بل پرداخت‌نشده یا ناقص بود
+    // کاهش قرض مشتری اگر بل پرداخت‌نشده یا ناقص بود — باقیات به افغانی (تبدیل با نرخ بل)
     if (sale.customerId && sale.status !== 'paid') {
-      const remaining = Math.max(0, sale.total - sale.paidAmount)
+      const remaining =
+        Math.max(0, sale.total - sale.paidAmount) * (Number(sale.exchangeRate) || 1)
       const customers = readCol<LocalCustomer>('customers')
       const customer = customers.find((c) => c.id === sale.customerId)
       if (customer && remaining > 0) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getSessionFromRequest } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
-import { dbInternal } from '@/lib/db'
+import { requireAdminDb } from '@/lib/rbac'
+import { db, dbInternal } from '@/lib/db'
 import type { ClientPair } from '@/lib/sync-engine'
 import { ensureHostReady, createHostTables, getHostSetupStatus } from '@/lib/host-setup'
 import { migrateLocalToServer } from '@/lib/sync-engine'
@@ -22,15 +22,13 @@ import { migrateLocalToServer } from '@/lib/sync-engine'
 
 export const dynamic = 'force-dynamic'
 
+// گارد مشترک: نقش/فعال بودن/نسخهٔ توکن از دیتابیس خوانده می‌شود، نه از توکن
 async function requireAdmin(req: Request) {
-  const session = await getSessionFromRequest(req)
-  if (!session) {
-    return { error: NextResponse.json({ error: 'ابتدا وارد سیستم شوید' }, { status: 401 }) }
-  }
-  if (session.role !== 'admin') {
-    return { error: NextResponse.json({ error: 'فقط مدیر سیستم به این بخش دسترسی دارد' }, { status: 403 }) }
-  }
-  return { session }
+  return requireAdminDb(
+    req,
+    'فقط مدیر سیستم به این بخش دسترسی دارد',
+    (uid) => db.user.findUnique({ where: { id: uid } })
+  )
 }
 
 function getPair(): ClientPair | null {
@@ -41,7 +39,7 @@ function getPair(): ClientPair | null {
 
 export async function GET(req: Request) {
   const guard = await requireAdmin(req)
-  if (guard.error) return guard.error
+  if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
   try {
     const status = await getHostSetupStatus()
     return NextResponse.json({ ok: true, ...status })
@@ -52,7 +50,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const guard = await requireAdmin(req)
-  if (guard.error) return guard.error
+  if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status })
   try {
     const body = (await req.json().catch(() => ({}))) as { action?: string }
     const action = String(body.action || '')

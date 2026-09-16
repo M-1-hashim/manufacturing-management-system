@@ -220,8 +220,15 @@ export default function InventoryModule() {
       return
     }
     const q = Number(mQty)
-    if (!q || isNaN(q) || q <= 0) {
-      toast.error(t('مقدار باید زیادتر از صفر باشد', 'اندازه باید له صفر لوی وي', 'Quantity must be greater than zero'))
+    // در «اصلاح» مقدار، موجودی مطلق جدید است — صفر مجاز است (سرور هم ≥ 0 می‌پذیرد)
+    if (isNaN(q) || (mType === 'adjust' ? q < 0 : q <= 0)) {
+      toast.error(
+        t(
+          mType === 'adjust' ? 'مقدار نمی‌تواند منفی باشد' : 'مقدار باید زیادتر از صفر باشد',
+          mType === 'adjust' ? 'اندازه نه شي منفي کېدلی' : 'اندازه باید له صفر لوی وي',
+          mType === 'adjust' ? 'Quantity cannot be negative' : 'Quantity must be greater than zero'
+        )
+      )
       return
     }
     setSaving(true)
@@ -360,16 +367,14 @@ export default function InventoryModule() {
         <TabsContent value="tx" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
-              title={t('ورود امروز', 'د نن ورود', "Today's In")}
-              value={`${formatNumber(inToday.reduce((s, x) => s + x.quantity, 0))} ${inToday[0]?.unit ?? ''}`}
-              hint={t(`${inToday.length} حرکت`, `${inToday.length} حرکت`, `${inToday.length} movements`)}
+              title={t('تراکنش ورود امروز', 'د نن د ورود حرکتونه', "Today's In Transactions")}
+              value={formatNumber(inToday.length)}
               icon={ArrowDownToLine}
               tone="green"
             />
             <StatCard
-              title={t('خروج امروز', 'د نن وتلو', "Today's Out")}
-              value={`${formatNumber(outToday.reduce((s, x) => s + x.quantity, 0))} ${outToday[0]?.unit ?? ''}`}
-              hint={t(`${outToday.length} حرکت`, `${outToday.length} حرکت`, `${outToday.length} movements`)}
+              title={t('تراکنش خروج امروز', 'د نن د وتلو حرکتونه', "Today's Out Transactions")}
+              value={formatNumber(outToday.length)}
               icon={ArrowUpFromLine}
               tone="red"
             />
@@ -1043,8 +1048,10 @@ function MovementsReportDialog({
   fDays: string
 }) {
   const { t } = useI18n()
-  const sumIn = txs.filter((x) => x.type === 'in').reduce((a, x) => a + x.quantity, 0)
-  const sumOut = txs.filter((x) => x.type === 'out').reduce((a, x) => a + x.quantity, 0)
+  // شمارش تراکنش‌ها به‌جای جمع مقدار — جمع مقدار در بین واحدهای مخلوط (کیلو/لیتر/عدد) بی‌معناست
+  const countIn = txs.filter((x) => x.type === 'in').length
+  const countOut = txs.filter((x) => x.type === 'out').length
+  const countAdjust = txs.filter((x) => x.type === 'adjust').length
   const daysLabel = TX_DAYS_LABELS[fDays] ?? [`${fDays} روز`, `${fDays} ورځې`, `${fDays} days`]
 
   return (
@@ -1104,12 +1111,12 @@ function MovementsReportDialog({
 
       <DocTotals
         rows={[
-          { label: t('مجموع ورود', 'ټول راتګ', 'Total in'), value: formatNumber(sumIn) },
-          { label: t('مجموع خروج', 'ټول راوتل', 'Total out'), value: formatNumber(sumOut) },
-          { label: t('تعداد حرکت‌ها', 'د حرکتونو شمېر', 'Movements count'), value: formatNumber(txs.length) },
+          { label: t('تراکنش‌های ورود', 'د ورود حرکتونه', 'In transactions'), value: formatNumber(countIn) },
+          { label: t('تراکنش‌های خروج', 'د وتلو حرکتونه', 'Out transactions'), value: formatNumber(countOut) },
+          { label: t('تراکنش‌های اصلاح', 'د سمون حرکتونه', 'Adjustment transactions'), value: formatNumber(countAdjust) },
         ]}
-        grandLabel={t('مجموع خالص (ورود − خروج)', 'ټول خالص (راتګ − راوتل)', 'Net total (in − out)')}
-        grandValue={formatNumber(sumIn - sumOut)}
+        grandLabel={t('مجموع تراکنش‌ها', 'د ټولو حرکتونو شمېر', 'Total transactions')}
+        grandValue={formatNumber(txs.length)}
       />
     </PrintDocDialog>
   )

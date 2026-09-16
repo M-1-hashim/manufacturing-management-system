@@ -1261,3 +1261,289 @@ Work Log:
 Stage Summary:
 - سایدبار (برند + برچسب گروه‌ها + ۱۳ آیتم منو + نام کاربر) کمی بزرگ‌تر و کمی توپُرتر شد — تمایز آیتم فعال با رنگ/پس‌زمینه/نوار فعال حفظ شد
 - فایل‌ها: src/app/page.tsx، src/app/globals.css، android/app.apk (gitignored)، download/app.apk، worklog.md
+
+---
+Task ID: 3-d
+Agent: code-review-biz-modules
+Task: deep bug hunt in sales/products/materials/inventory modules (research only, no source edits)
+
+Work Log:
+- worklog.md (۱۲۰ خط آخر) + ۴ ماژول کامل خوانده شد: sales (1700), products (1154), materials (1106), inventory (1116) + lib/hooks.ts, lib/format.ts
+- قراردادها با سرور چک شد: api/sales(+[id]), api/products(+[id]), api/raw-materials/[id], api/inventory + هندلرهای محلی sales.ts/inventory.ts (موتور آفلاین)
+- محاسبات فروش (lineTotal، تخفیف، taxable=max(0,..)، مالیات 0/2/10، status آستانه 0.001) بین UI/سرور/محلی یکسان تأیید شد؛ چرخهٔ stock در create/delete بل + تراکنش انبار + تعدیل قرض، متقارن و کامل
+- ۸ یافته ثبت شد (۱ HIGH، ۳ MEDIUM، ۴ LOW) — مهم‌ترین: PayDialog باقیات را به‌عنوان «مجموع پرداخت‌شدهٔ تجمیعی» به PUT می‌فرستد (پیش‌فرِس = remaining ولی API تجمیعی است → در بل‌های partial پول کمتر ثبت می‌شود)
+
+Stage Summary:
+- HIGH sales: PayDialog prefill(remaining) vs PUT {paidAmount} تجمیعی — بل partial (100/30) → ثبت 70 یعنی 40، باقیات 30 می‌ماند؛ fix: paidAmount+val یا prefill=total
+- MEDIUM sales: فروش محصولات غیرفعال ممکن است (products بدون ?active=true) برخلاف وعدهٔ UI محصولات
+- MEDIUM products/materials: فرم ادیت، فیلد disabled «موجودی» stale را در PUT می‌فرستد → بازنویسی موجودی با مقدار قدیم
+- MEDIUM format: formatMoney گرد به 0 رقم — گرند توتال چاپی با جمع اقلام (2 رقم) نمی‌خواند؛ فرم ثبت همان عدد را ۲-رقمی نشان می‌دهد
+- LOW: حذف مشتری بدون تأیید؛ addCategory/renameCategory/saveSupplier بدون catch (بدون toast خطا)؛ min="0" جلوی منفی تایپی را نمی‌گیرد (discount/paidAmount سرور هم چک نمی‌کند)؛ جمع آمار انبار با واحدهای مخلوط (کیلو+عدد)
+- inventory: قرارداد POST (in/out/adjust مطلق، کفایت out) و فیلتر days/type/itemType سالم؛ keys و refetch ها در هر ۴ ماژول سالم
+
+---
+Task ID: 3-f
+Agent: code-review-hr-prod
+Task: deep bug hunt in hr/production/formulas/dashboard modules
+Work Log:
+- خواندن کامل hr (1113), production (864), formulas (702), dashboard (500) + cross-check با سرور: api/{attendance,employees,salaries,production(+complete),formulas(+[id]),dashboard,settings}/route.ts + prisma/schema.prisma + hooks.ts/offline-client.ts/local-api engine + handlers (formulas, production, attendance, dashboard, settings)
+- ۰ ویرایش در سورس — فقط گزارش (RESEARCH ONLY)
+- یافته‌های کلیدی: کارت‌های «حاضران/غایبان امروز» HR از لیست فیلترشدهٔ سابقهٔ حاضری محاسبه می‌شوند (فیلتر کارمند → کارت عوض می‌شود)؛ شمارش رکورد نه کارمند یکتا (شیفت‌های چندگانه)؛ stale بودن snapshot فورمولا/موجود مواد در ویزارد تولید پس از complete (فقط orders در refetch)؛ try/finally بدون catch در submit ها؛ فیلد «نسخه» در دیالوگ تصحیح فورمولا بی‌اثر (سرور در PUT تصحیح version را نمی‌خواند)؛ «ماه پرداخت‌شده» رکوردها را می‌شمارد نه ماه یکتا؛ حذف‌های HR بدون تأیید؛ waste منفی در complete سمت کلاینت رد نمی‌شود و سرور آن را 0 می‌کند → toast خالص اشتباه؛ productionActive داشبورد فقط سفارش‌های ۶ ماه اخیر را می‌شمارد؛ hireDate در TZ منفی یک‌روزه جابه‌جا می‌شود؛ ماه معاش 1404-13..99 رد نمی‌شود
+Stage Summary:
+- 3 MEDIUM (کارت‌های حاضری HR ×2، stale stock ویزارد تولید) + 8 LOW — هیچ باگ CRITICAL/HIGH؛ عوارض جانبی complete تولید (کسر مواد/ورود خالص/costPrice) و آینهٔ محلی‌اش تأیید صحیح؛ قرارداد hr/production/formulas/dashboard با هندلرهای سرور و local مطابق است؛ حذف فورمولای استفاده‌شده در تولید به‌درستی بلاک می‌شود
+---
+Task ID: 3-a
+Agent: code-review-core
+Task: deep bug hunt in local-api core + sales/production/formulas/backup handlers
+
+Work Log:
+- worklog.md (۱۵۰ خط آخر) خواند شد؛ هر ۱۱ فایل scope کامل خوانده شد: engine.ts, bridge.ts, db.ts, index.ts, types.ts, seed.ts, handlers/{index,sales,production,formulas,backup}.ts
+- برای هر یافته، متن دقیق route هاست مقایسه شد: api/sales (route + [id])، api/production (route + [id] + [id]/complete)، api/formulas (route + [id])، api/admin/backup، lib/json-backup.ts، lib/passwords.ts، api/auth/login، api/users (hash)
+- مصرف‌کننده‌های UI برای چک field-match خوانده شد: modules/{sales,production,formulas}/index.tsx، shared/backup-menu.tsx، modules/settings (بخش بیک‌اپ)، lib/api.ts، page.tsx (ترتیب installLocalApi قبل از auth interceptor ✓)
+- باگ seed با شبیه‌سازی node (خارج از ریپو) اثبات شد: mutation روی پارسیهٔ دورریزده گم می‌شود — balance بعد از seed = 0 به‌جای 4712.4
+- تطبیق محاسبات: فروش (lineTotal/subtotal/taxable/tax/total/status-threshold 0.001)، فیصد فورمولا، ضریب تولید و کسر مواد/ورود خالص/costPrice — همه سطر‌به‌سطر مثل هاست ✓؛ regex های route انکر شده و تداخل ندارند ✓؛ روش‌های PUT/DELETE و استخراج :id ✓؛ صفر تقسیم (outputQty||1، sumQty>0، goodQty>0) ✓؛ TABLES بیک‌اپ ۱۹ جدول هم‌نام و هم‌ترتیب json-backup ✓
+
+Stage Summary:
+- ۳ باگ: ۱ HIGH + ۱ MEDIUM + ۱ LOW
+- [HIGH] backup.ts restoreAll: بازیابی کاپیِ هاست روی دستگاه → پسوردهای scrypt: هش با مقایسهٔ سادهٔ auth.ts لوکال match نمی‌شوند → همهٔ کاربران 401 و چون restore خودش ادمین می‌خواهد، دستگاه کامل قفل می‌شود (راه نجات فقط پاک‌کردن دیتا) — فیکس: normalize پسورد User هنگام restore
+- [MEDIUM] seed.ts:222: balance مشتریِ فروش نسیه هرگز ذخیره نمی‌شود (mutation روی readCol دورریزده؛ writeCol دوباره از localStorage می‌خواند) — در نصب تازه، «فروشگاه پامیر» با بل نپرداختهٔ 4712.4 قرض صفر نشان داده می‌شود (لیست بدهکاران finance هم خالی)
+- [LOW] backup.ts GET:199: intervalHours همیشه 0 برمی‌گردد ولی PUT آن را با toast موفق «ذخیره» می‌کند — تنظیم ذخیره‌شده بعد از بازکردن دوباره صفر نمایش می‌یابد
+- بقیه بررسی‌شده‌ها سالم: engine/bridge/db/types/index و هندلرهای sales/production/formulas بدون باگ فانکشنال یافت‌شده (جزئیات در گزارش)
+
+---
+Task ID: 3-e
+Agent: code-review-settings-reports
+Task: deep bug hunt in settings/reports/finance/users/audit + shared components (research only, no edits)
+Work Log:
+- هر ۹ فایلِ اسکوپ کامل خوانده شد: settings (۱۸۳۱)، reports (۱۲۳۵)، finance (۹۵۳)، users (۶۵۹)، audit (۳۲۶)، setup-wizard (۵۱۹)، print-doc (۲۹۵)، backup-menu (۲۷۷)، common (۱۱۴)
+- برای راستی‌آزمایی بدون false-positive، این‌ها هم خوانده شد: api/routes {settings, users/[id], reports, expenses, sales/[id](بخش PUT/DELETE)}، lib/{hooks, api, format, rbac, exchange-rate}، local-api/handlers {reports, users, audit, settings} — تطبیق قرارداد UI/سرور/موتور محلی سطربه‌سطر
+- بررسی‌شده و سالم: محافظت‌های users (partial PUT، خود-حذف/خود-تنزل، آخرین ادمین فعال — هم هاست هم محلی یکسان)، قواعد پسورد ≥6 و username ≥3، بازیابی بیک‌اپ (تأیید + safety + clearOfflineCache + reload، خطای JSON.parse هندل‌شده در هر دو مسیر settings و backup-menu)، کلیدهای تم 'mfg-color-theme'/'mfg-theme' بین settings/page.tsx/wizard هم‌خوان، persist شدن ratesUpdatedAt/ratesSource توسط exchange-rate API، تبدیل ارز در fin (total×exchangeRate هر بل) با semantics ثبت فروش (AFN=1/USD=usdRate/PKR=pkrRate) هم‌خوان، کلیدهای React یکتا، محافظت تقسیم بر صفر در waste٪/compact
+- ۹ یافته ثبت شد (۰ بحرانی / ۱ high / ۲ medium / ۶ low) — هیچ فایل سورسی تغییر نکرد
+Stage Summary:
+- HIGH: reports «مصارف به تفکیک کتگوری» ارزها را می‌مکد — سرور/موتور محلی e.amount خام را جمع می‌کنند (route.ts:156-159 و local reports.ts:186-189) بدون تبدیل USD/PKR؛ پای‌چارت/CSV/چاپ با لیبل AFG عدد غلط می‌دهند و با opex تبدیل‌شدهٔ ماژول مالی نمی‌خواند
+- MEDIUM: نسبت ضایعات در reports (UI:514-515 و چاپ:1065-1066) = waste/(produced+waste) در حالی که produced=producedQty (شامل ضایعات) است → مخرج دوبار حساب می‌شود (۱۰٪ واقعی → ۹.۱٪)
+- MEDIUM: ستون «تاریخ میلادی» CSV گزارش فروش یک روز عقب است — سرور date را toISOString نیمه‌شب محلی می‌فرستد (+04:30 → روز قبل UTC) و CSV د.position(0,10) می‌برد؛ ستون شمسی همان سطر درست است → دو ستون متناقض
+- LOW: accessDenied در users:94 و audit:127 به دنبال '403' در پیام خطاست ولی hooks.ts پیام سرور را جایگزین می‌کند → حالت «دسترسی محدود» هرگز نمایش داده نمی‌شود
+- LOW: رنگ badge روش پرداخت (reports:372) با STATUS_COLORS['نقد'|'نسیه'|'حواله'] می‌گردد در حالی که کلیدها cash/credit/transfer هستند → همیشه بی‌رنگ
+- LOW: تاریخ پیش‌فرض فرم مصرف (finance:438) با toISOString→UTC است؛ بین ۰۰:۰۰–۰۴:۳۰ محلی دیروز پیشنهاد می‌شود
+- LOW: در چاپ گزارش فروش دو جمع با یک لیبل «مجموع فروش» و دو مقدار متفاوت (جمع ۱۲ ماه vs جمع بازه) — گمراه‌کننده
+- LOW: setup-wizard handleTest (۹۲-۱۱۲) catch ندارد → اگر IPC پل دسکتاپ reject شود unhandled rejection
+- LOW: حذف فایل بیک‌اپ در settings (۱۱۸۲) بدون دیالوگ تأیید و یک‌کلیکی است (برخلاف بازیابی)
+- محدودیت LOCAL_MODE (کارت هاست/APK پنهان) طبق طراحی — باگ شمرده نشد؛ doRestore مسیر محلی {import} اکنون درست کار می‌کند (یادداشت قدیمی worklog منتفی است)
+
+---
+Task ID: 3-b
+Agent: code-review-handlers
+Task: deep bug hunt in remaining local-api handlers (products, raw-materials, inventory, users, employees, attendance, auth, customers, expenses, salaries, suppliers, categories, warehouses, settings, audit, exchange-rate, download, system, reports, dashboard)
+Work Log:
+- worklog (۱۵۰ خط آخر) + types/db/engine/seed/handlers/index خوانده شد؛ هر ۲۰ فایل سکو، خط‌به‌خط مقابل route هاست مقایسه شد (api/{auth,users,products,categories,raw-materials,suppliers,warehouses,inventory,employees,attendance,salaries,customers,expenses,dashboard,reports,settings,audit,exchange-rate,download,system})
+- قرارداد پاسخ‌ها تأیید شد: شکل فیلدها، includeهای توکار (category/supplier/warehouse/employee/_count)، ترتیب validation، پیام‌های دری، مرتب‌سازی‌ها (createdAt desc/asc، name asc، date desc + take 500)، فیلترهای کوئری (search/categoryId/active/stock/employeeId/days/limit/range)، clamp بازهٔ reports (7..365) و توAfn(نرخ<=0→1) — همه آینهٔ هاست؛ هیچ CRITICAL/HIGH یافت نشد
+- مصرف‌کننده‌های UI هم اسپات‌چک شدند (users/hr/products/reports/audit/settings/sales/finance/dashboard): فیلدهای خواندنی (employee{name,position}, _count, balance, customer?.name ?? customerName, taxReport, inventoryValuation…) با خروجی هندلرها منطبق است
+- tsc --noEmit: صفر خطا در src/ (خطاهای موجود فقط در examples/prisma/scripts — خارج از src و پیشین)
+Stage Summary:
+- [MEDIUM] engine.ts: معادل middleware هاست در حالت محلی اعمال نمی‌شود — به‌جز users/audit/backup/system-db-setup، بقیهٔ هندلرها نشست چک نمی‌کنند: (۱) درخواست بی‌نشست/ختم‌شده روی GET/POST ها 200 می‌دهد (هاست 401 + خروج خودکار)؛ (۲) قاعدهٔ «viewer فقط خواندن» (403) وجود ندارد؛ (۳) settings PUT برای غیر admin/manager باز است (هاست middleware 403 «تغییر تنظیمات فقط توسط مدیر مجاز است») — اپراتور/ناظر می‌تواند حتی usdRate/pkrRate را عوض کند و تبدیل داشبورد را منحرف کند؛ UI مسیرها را می‌بندد ولی API بی‌حفاظ است؛ پیشنهاد: گارد سراسری در engine.ts (سفیدلیست login/download)
+- [LOW] employees.ts:59 POST — ترتیب validation: hireDate قبل از name/position/salary چک می‌شود (هاست برعکس) → برای بار ارسالی چندخطایی، پیام خطای متفاوت با هاست («تاریخ استخدام نامعتبر است» به‌جای «نام کارمند الزامی است»)
+- [LOW] auth.ts login — قفل حساب بعد از ۵ کوشش ناکام (هاست 423 + پیام قفل) در حالت محلی پیاده نشده؛ بروت‌فورس روی دستگاه قفل نمی‌شود
+- [LOW] settings.ts PUT — برای هر ذخیرهٔ تنظیمات audit 'update/settings' ثبت می‌کند درحالی‌که هاست برای settings اصلاً audit ندارد → ردیف‌های اضافه در گزارش فعالیت‌های محلی
+- [LOW] inventory.ts POST — نوشتن چندکولکشنی اتمیک نیست: stock اول نوشته می‌شود، بعد inventoryTransaction؛ اگر writeCol دوم (پرشدن حافظه) fail شود موجودی عوض شده ولی گردش/audit ثبت نمی‌شود و 500 برمی‌گردد (هاست $transaction دارد) — الگوی repair/ترتیب برعکس پیشنهاد می‌شود
+- مابقی: تأیید OK — جزئیات در پیام نهایی
+
+---
+Task ID: 3-g
+Agent: code-review-api-routes
+Task: deep bug hunt in src/app/api routes (46 فایل) + Prisma + session/audit/db/exchange-rate libs + middleware — تحقیق فقط، بدون تغییر سورس
+Work Log:
+- هر ۴۶ route.ts خوانده شد + session.ts, db.ts, audit.ts, exchange-rate.ts, passwords.ts, rbac.ts, backup.ts, json-backup.ts, schema.prisma, middleware.ts, instrumentation.ts؛ برای داوری قرارداد، هندلرهای محلی sales/dashboard/backup/production/auth و UI فروش (exchangeRate/balance) هم بررسی شد
+- param های داینامیک: همه `await params` صحیح (Next 15/16) — صفر مورد
+- زنجیرهٔ بحرانی یافت شد: قلاب ژورنال حذف در db.ts (wrapTxForJournal) عملیات `deleteMany()` بدون شرطِ restoreFromJson (json-backup.ts:125) را هم ژورنال می‌کند (where={}) → replayJournal (sync-engine.ts:370) همین deleteMany({}) را روی هاست اجرا می‌کند و چون push دلتا-محور است (updatedAt > نشان)، سطرهای بازگردانده‌شده با updatedAt قدیم دیگر push نمی‌شوند → پاک‌شدن جدول‌های هاست بعد از یک JSON-restore در استقرار محلی+هاست
+- اثر دوم همان قلاب: ژورنال از اتصال جدا (نه tx) و پیش از commit نوشته می‌شود → rollback تراکنش، ردیف ژورنال شبح به‌جا می‌گذارد
+- نشست‌ها: توکن فقط uid/role/… امضاشده است؛ middleware و گاردهای route (requireAdmin ها) نقش/active را از توکن می‌خوانند نه DB → غیرفعال‌سازی کاربر یا تنزیل ادمین تا ۷ روز اثری روی نشست جاری ندارد؛ change-password هم نشست‌های دیگر را باطل نمی‌کند
+- قرض مشتری: افزایش/کاهش balance با مبلغ ارزِ خودِ بل (بدون ضرب در exchangeRate) — قرض دالری/کلداری یک‌به‌یک به دفتر افغانی اضافه می‌شود (هاست و محلی هر دو)؛ حتی audit همان‌جا مبلغ را تبدیل می‌کند
+- PUT پرداخت: گارد `delta > 0.001` — کاهش paidAmount (اصلاح پرداخت بیشتر) قرض را برنمی‌گرداند (هاست و محلی)
+- داشبورد/گزارشات: جمع مصارف بدون تبدیل ارز (برخلاف فروش‌ها که toAfn دارند) — USD/PKR یک‌به‌یک با AFN جمع می‌شود
+- inventory adjust: چون quantity مطلق است ولی اعتبارسنجی quantity>0 دارد، صفر کردن موجودی غیرممکن است (هاست و محلی)
+- موارد کم‌اهمیت: paidAmount/discount منفی در POST فروش رد نمی‌شود؛ برخورد INV-/PR- در همان میلی‌ثانیه → 500؛ customerId نامعتبر و تاریخ نامعتبر (salaries/production) → 500 به‌جای 400؛ settings PUT مقدار غیررشته‌ای → 500؛ کلید تنظیم keep هاست (backupKeepCount) با محلی (backupKeep) فرق دارد؛ قفل حساب ورود بر اساس username (DoS قفل)؛ کوکی بدون secure (عمداً برای HTTP شبکهٔ محلی)؛ باکت‌های روزانه داشبورد به TZ سرور (روی هاست UTC، «امروز» با کابل فرق می‌کند / APK با TZ دستگاه)
+- جدول enforce احراز هویت تهیه شد: فقط login و download/setup عمومی‌اند؛ users/audit/admin دوبل (mw+route)؛ db-setup تک‌لایه route؛ بقیه فقط middleware؛ محدودیت department فقط UI است (rbac.canAccess سمت سرور اعمال نمی‌شود)
+Stage Summary:
+- ۱ CRITICAL (ژورنال حذف + restore JSON → پاک‌شدن هاست)، ۲ HIGH (نشست مبتنی بر اسنپ‌شات نقش/active، قرض بین‌ارزی)، بقیه MEDIUM/LOW؛ هر یافته با خط دقیق و فیکس پیشنهادی در گزارش نهایی آمده
+- قرارداد route.ts ↔ local-api در همهٔ شکل‌های پاسخ/پیام‌ها/حد آستانه‌ها یکسان است (شامل کوارک‌های مشترک بالا)؛ تنها تفاوت‌های ثبت‌شده: کلید backupKeep، وضعیت ۲۰۱/۴۰۰ هاست در برابر ۲۰۰ همیشگی محلی (مستند قبلی)، و TZ سرور در برابر دستگاه
+- سمت دانلود: /api/download/setup و download پشتیبان هر دو با whitelist/regex سخت‌گیرانه — بدون path traversal، Content-Type و Range صحیح
+
+---
+Task ID: 3-c
+Agent: code-review-frontend-core
+Task: deep bug hunt in app shell + core libs (page.tsx, layout.tsx, lib/{hooks,api,offline-client,format,amount-words,store,session,rbac,i18n,auth-client,local-schema} + local-api engine/auth/seed/db/system/download)
+
+Work Log:
+- همهٔ فایل‌های scope کامل خواند + for بررسی قرارداد: engine/types/db/seed/handlers(auth,system,download,index)، middleware.ts، offline-db.ts، globals.css (dark variant)، package.json
+- تست‌های اسکرچ (خارج از ریپو، حذف شد): شبیه‌سازی جهش balance در seed (تأیید: مقدار نوشته‌شده ۰ می‌ماند)، تست edge های amountToWords با bun، صحت‌سنجی جلالی (کبیسه ۱۴۰۳/نوروز ۱۴۰۳-۱۴۰۴ درست)، جست‌وجوی URL مطلق در کل src (به‌جز favicon، هیچ)
+- بررسی ترتیب نصب interceptor ها (installLocalApi در module-scope قبل از auth wrapper ✓) و شکاف رضایت اولین fetchهای مستقیم effect فرزند قبل از effect والد Shell
+- تطبیق RBAC سه‌لایه: rbac.ts ⇔ NAV (۱۳/۱۳) ⇔ middleware؛ نبود معادل middleware در هندلرهای محلی برای نوشتن‌های business تأیید شد (فقط users/audit/backup/system ادمین‌گیت دارند)
+
+Stage Summary:
+- یافته‌ها (بدون فالس‌پازیتیو، همه با اثر کاربر-دید):
+  1) [MEDIUM] local-api/handlers — موتور محلی قواعد RBAC هاست را روی نوشتن‌ها اعمال نمی‌کند (viewer می‌تواند در APK بنویسد؛ PUT settings بدون چک نقش) — نیازمند requireSession/بلاک viewer + گیت admin/manager برای settings PUT
+  2) [LOW] local-api/seed.ts:219-222 — جهش balance مشتریِ فروش نسیه روی readCol دوم می‌افتد و گم می‌شود (تأیید اجرایی) → ماندهٔ «فروشگاه پامیر» در نصب تازه ۰ نمایش داده می‌شود
+  3) [LOW] amount-words.ts:73-79 — مبالغ ≥ ۱۰۰۰ میلیارد: 1e12 → " AFG فقط" خالی و 1.5e12 → "صد میلیارد" (۲×|۳× خطا) — افزودن scale تریلیون/فال‌بک عددی
+  4) [LOW] page.tsx:449-462 — interceptor های auth/offline در effect والد نصب می‌شوند؛ fetchهای مستقیمِ اولیهٔ فرزندان (settings/index.tsx) قبل از آن اجرا می‌شوند → بار اولِ آفلاین روی تب تنظیمات خطا به‌جای کش — پیشنهاد: نصب در module-scope
+  5) [LOW] layout.tsx:15 — favicon از CDN مطلق (تنها URL مطلق باندل) → در APK آفلاین لود نمی‌شود
+- سالم تأیید شد: قرارداد fetch (همه relative، method/body/پیام خطا/401-exempt)، session محلی و هاست، persist sync زوستند و اعتبارسنجی /api/auth/me، تطبیق کامل NAV/TabId/canAccess/middleware، فرمت جلالی (کبیسه درست)، تم کلاس‌محور + پایداری، i18n سه‌زبانه کامل، کلیدهای لیست یکتا، صف آفلاین (پیشوند invalidate، سقف تلاش، فیلتر کاربر)
+- هیچ فایل پروژه‌ای تغییر نکرد (RESEARCH ONLY) — همین worklog اضافه شد
+---
+Task ID: 5-b
+Agent: fix-sales-money
+Task: sales currency-aware balance + payment dialog + validation fixes (host+local+UI)
+
+Work Log:
+- قرض بین‌ارزی فیکس شد (HIGH — یافتهٔ 3-g): در هر سه مسیر POST/PUT/DELETE تضدیل باقیات مشتری حالا در `(total - paidAmount) × (exchangeRate || 1)` به افغانی انجام می‌شود — هاست api/sales/route.ts (increment داخل تراکنش)، api/sales/[id]/route.ts و هندلر محلی handlers/sales.ts آینه شدند؛ historical balances مهاجرت نشد (طبق دستور)
+- PUT پرداخت: delta حالا از باقیات قدیم × نرخ قدیم و باقیات جدید × نرخ جدید حساب می‌شود و `balance = max(0, balance - delta)` برای هر دو علامت اعمال می‌شود (`Math.abs(delta) > 0.001`) — قبلاً delta منفی (کاهش paidAmount) بی‌صدا رد می‌شد و قرض برنمی‌گشت (هاست + محلی)
+- رد پول منفی (MEDIUM): تخفیف کلی، تخفیف سطری و paidAmount منفی → 400 با پیام «تخفیف نمی‌تواند منفی باشد» / «مبلغ پرداخت نمی‌تواند منفی باشد» در هر دو موتور؛ PUT هاست/محلی حالا NaN («نامعتبر») و منفی را با دو پیام جدا می‌کند
+- customerId نامعتبر در POST (LOW): هاست قبل از تراکنش pre-validate می‌کند و 400 «مشتری انتخاب‌شده معتبر نیست» برمی‌گرداند (قبلاً 500)؛ هندلر محلی از ApiError(500) به همان 400/پیام تغییر کرد
+- برخورد شماره بل (LOW): هاست روی خطای یکتایی P2002 یک بار کل تراکنش را با پسوند تازه `INV-…-<rand>` دوباره اجرا می‌کند (runCreate پارامتری شد تا reference تراکنش انبار هم هم‌نام بل باشد)؛ موتور محلی uid() ندارد و شمارهٔ بل همان Date.now است → گارد سادهٔ چک تکراری بودن invoiceNumber در کولکشن sales اضافه شد (ذخیره‌سازی محلی قید unique ندارد و DELETE با reference پاک می‌کند)
+- PayDialog (HIGH — یافتهٔ 3-d): سرور paidAmount را «مجموع تجمیعی» می‌داند؛ دیالوگ حالا `paidAmount: sale.paidAmount + val` می‌فرستد (ورودی = دریافتی همین مرحله)، لیبل «مبلغ پرداخت جدید (کل)» → «مبلغ پرداختی در این مرحله» و پیش‌نمایش باقیات → «باقیات بعد از این پرداخت» با `max(0, total - (paidAmount + val))` زنده آپدیت می‌شود؛ سایر لیبل‌های «کل» (مبلغ کل، تخفیف کلی) بررسی شد — صحیح و دست‌نخورده
+- پیکر محصولات فروش جدید فقط فعال‌ها: `/api/products?active=true` — پشتیبانی فیلتر `active` هم در route هاست و هم در handlers/products.ts (خوانده شد، ادیت نشد) تأیید شد
+- اعتبارسنجی سمت کلاینت submit فروش جدید: سطر/کلی تخفیف و paidAmount منفی → toast.error با همان پیام‌ها و ترتیب سرور؛ PayDialog هم پیام منفی را جدا کرد
+- حذف مشتری (LOW): تک‌کلیک → AlertDialog تأیید (همان الگوی حذف بل با deleting/loading و متن سه‌زبانه «این عمل قابل بازگشت نیست»)
+- `bunx tsc --noEmit`: صفر خطا در src/ (خطاهای موجود فقط examples/prisma/scripts/skills — خارج از src و پیشین)
+
+Stage Summary:
+- دفتر قرض مشتری حالا همیشه افغانی است: فروش دالری/کلداری با نرخ خود بل به باقیات تبدیل و اعمال می‌شود؛ کاهش/اصلاح پرداخت قرض را برمی‌گرداند؛ پول منفی در هر دو موتور و UI رد می‌شود؛ PayDialog دیگر پرداخت جزئی را زیرثبت نمی‌کند؛ محصولات غیرفعال در فروش جدید پیشنهاد نمی‌شوند؛ حذف مشتری دو مرحله‌ای شد
+- فایل‌ها: src/app/api/sales/route.ts، src/app/api/sales/[id]/route.ts، src/lib/local-api/handlers/sales.ts، src/components/modules/sales/index.tsx، worklog.md — هیچ فایل دیگر لمس نشد
+
+---
+Task ID: 5-e
+Agent: fix-reports-dashboard
+Task: expense currency conversion + CSV local date + badge method + waste pct + print label + finance default date
+
+Work Log:
+- [HIGH تبدیل ارز مصارف] جمع مصارف بدون تبدیل USD/PKR به افغانی بود (فروش‌ها toAfn داشتند، مصارف نه). فیکس در هر چهار موتور: نرخ‌ها یک‌بار در هر درخواست از Setting خوانده می‌شوند (کلیدهای usdRate/pkrRate — تأیید از finance/index.tsx و exchange-rate)؛ rate = USD→usdRate، PKR→pkrRate، بقیه→۱ و نرخ ناموجود/نامعتبر→۱ (با همان toAfn موجود)
+- هاست reports (route.ts): select مصارف +currency شد؛ کوئری db.setting.findMany({where:{key:{in:['usdRate','pkrRate']}}}) به Promise.all اضافه شد؛ expenseRate() روی جمع «مصارف به تفکیک دسته» اعمال شد — سایر رفتار aggregation دست نخورد
+- هاست dashboard (route.ts): همین الگو — select +currency، settingRows در Promise.all، expensesThisMonth = Σ amount×expenseRate(currency)
+- موتور محلی reports.ts/dashboard.ts: آینهٔ سطربه‌سطر هاست؛ نرخ‌ها با getSetting('usdRate'/'pkrRate') از کولکشن settings (همان الگوی exchange-rate.ts هندلر)؛ LocalExpense +currency — خروجی هر دو مسیر به‌طور ساختاری یکسان ماند
+- [MEDIUM تاریخ CSV] salesByDay[].date از d.toISOString() نیمه‌شب محلی (روز قبل در +04:30) به رشتهٔ محلی YYYY-MM-DD (همان key روز) تغییر کرد — هاست + محلی؛ ستون «تاریخ میلادی» CSV حالا با ستون شمسی هم‌سطر می‌خواند؛ در کلاینت parseLocalDate() اضافه شد تا رشتهٔ YYYY-MM-DD به‌صورت محلی (نه UTC) پارس و به toJalaliStr داده شود (در همهٔ TZها هم‌سطر می‌ماند)
+- [LOW رنگ badge روش پرداخت] قرارداد پاسخ حالا هر دو را می‌دهد: method خام (cash/credit/transfer) + label فارسی (نقد/نسیه/حواله) — هاست + محلی؛ کلاینت (نمایش + چاپ) label را نشان می‌دهد و رنگ badge از STATUS_COLORS[p.method] خام می‌آید (کلیدهای خام از قبل در format.ts موجود بودند)؛ key={p.method} خام و یکتاست
+- [MEDIUM ضایعات٪] مخرج waste/(produced+waste) دوبار شمارش می‌شد چون producedQty شامل ضایعات است → هر دو کپی (جدول صفحهٔ تولید + چاپ گزارش تولید) به waste/produced اصلاح شد با گارد p.produced>0
+- [LOW لیبل چاپ] DocTotals بخش «فروش ماهانه» در چاپ گزارش فروش «مجموع فروش» بود (برابر لیبل جمع بخش روش پرداخت با مقدار متفاوت) → «مجموع فروش ۱۲ ماه اخیر» / 'ټوله پلورنه (12 میاشتې)' / 'Total sales (last 12 months)'؛ لیبل بخش روش پرداخت دست نخورد
+- [LOW تاریخ پیش‌فرض فرم مصرف] finance/index.tsx ExpensesCard: default از toISOString().slice(0,10) به ساخت YYYY-MM-DD از مؤلفه‌های محلی (getFullYear/getMonth/getDate) تغییر کرد — بین ۰۰:۰۰–۰۴:۳۰ دیگر دیروز پیشنهاد نمی‌شود
+- صحت‌سنجی: bunx tsc --noEmit → صفر خطا در src/ (فقط خطاهای پیشین examples/prisma/scripts/skills خارج از scope)؛ git status: فقط ۶ فایلِ scope تغییر کرده
+
+Stage Summary:
+- ۶ باگ گزارش/داشبورد/مالی فیکس شد: مصارف چندارزی حالا قبل از جمع به AFG تبدیل می‌شوند (پای‌چارت/CSV/چاپ/expensesThisMonth با opex ماژول مالی هم‌خوان)، ستون میلادی CSV با شمسی برابر شد، رنگ‌های badge روش پرداخت با کلید خام فعال و برچسب فارسی حفظ شد، نسبت ضایعات دیگر دوبار شمارش نمی‌شود، دو جمع چاپی با لیبل یکسان تفکیک شدند و تاریخ پیش‌فرض فرم مصرف محلی شد
+- قرارداد REST هاست ↔ موتور محلی برای reports/dashboard سطربه‌سطر آینه ماند (شکل پاسخ فقط با label اضافه و date محلی تغییر کرد و کلاینت همان‌جا به‌روز شد)
+- فایل‌ها: src/app/api/reports/route.ts، src/app/api/dashboard/route.ts، src/lib/local-api/handlers/reports.ts، src/lib/local-api/handlers/dashboard.ts، src/components/modules/reports/index.tsx، src/components/modules/finance/index.tsx، worklog.md
+
+---
+Task ID: 5-c
+Agent: fix-stock-modules
+Task: stale stock overwrite + inventory adjust>=0 + atomic local write + unit-mixing stats
+
+Work Log:
+- [MEDIUM] stale stock: products/index.tsx و materials/index.tsx — body در saveProduct/saveMaterial دیگر `...nums` را کامل نمی‌پاشد؛ `stock` فقط هنگام ایجاد (POST) فرستاده می‌شود (`...(editing ? {} : { stock: nums.stock })`)؛ در PUT حذف شد چون فیلد موجودی در دیالوگ ادیت disabled است و ارسال اسنپ‌شات کهنه، موجودی تغییرکرده در انبار/خرید/تولید را بی‌صدا بازنویسی می‌کرد؛ هر دو سرور (host products/[id] و raw-materials/[id] + هندلرهای محلی) با الگوی `if (f in body)` کار می‌کنند → نبودن stock یعنی دست‌نخوردن آن (routes طبق دستور دست‌نخورده)
+- [LOW] خطای بی‌پاسخ: catch به addCategory و renameCategory در products و saveSupplier در materials اضافه شد (try/finally بدون catch → unhandled rejection و دیالوگ گیرکرده بدون toast) — پیام «خطای ارتباط با هاست» دقیقاً مثل سیورهای هم‌فایل (products: 'د هاست سره اتصال خطا'، materials: 'له هوسټ سره د اتصال ستونزه')
+- [MEDIUM] adjust=0: اعتبارسنجی quantity در POST انبار — هر دو موتور یکسان: برای 'adjust' مقدار ≥ 0 پذیرفته می‌شود (فقط منفی با پیام «مقدار نمی‌تواند منفی باشد» رد می‌شود)، 'in'/'out' همان «مقدار باید زیادتر از صفر باشد» — پیام‌ها بین host (api/inventory/route.ts) و local (handlers/inventory.ts) کاراکتربه‌کاراکتر یکسان؛ فیلد adjust چون مطلق است حالا صفر کردن موجودی ممکن شد
+- UI هم‌راستا شد: submitMove در inventory/index.tsx هم برای adjust اجازهٔ 0 می‌دهد و همان پیام جدید را نشان می‌دهد (وگرنه فیکس سرور از مسیر UI رسیدنی نبود)
+- [MEDIUM] نوشتن غیراتمیک محلی: POST هندلر محلی انبار اتمیک شد — اسنپ‌شات کولکشن موجودی (کپی per-row) قبل از جهش stock گرفته می‌شود؛ هر دو نوشتن (موجودی + inventoryTransactions) داخل try؛ در شکست نوشتن دوم، نوشتن جبرانی موجودی را از اسنپ‌شات برمی‌گرداند و بعد خطای اصلی rethrow می‌شود (نوشتن جبرانی خودش try/catch دارد تا خطای اصلی گم نشود) — معادل $transaction هاست؛ مسیر 404 قبل از هر نوشتن می‌ماند
+- [MEDIUM] جمع واحدهای مخلوط: کارت‌های «ورود/خروج امروز» انبار دیگر مقدار kg+لیتر+عدد را جمع نمی‌کنند → «تراکنش ورود امروز» / «تراکنش خروج امروز» با شمارش تراکنش‌ها (formatNumber(length))؛ hint تکراری حذف شد؛ گزارش چاپی ورود و خروج هم صادق شد: ردیف‌ها «تراکنش‌های ورود/خروج/اصلاح» (شمارش) + گرند «مجموع تراکنش‌ها» به‌جای «مجموع خالص (ورود − خروج)» بی‌معنا؛ واحد هر سطر جدول دست‌نخورده
+- bunx tsc --noEmit: صفر خطا در src/ — خطاهای موجود فقط examples/prisma/scripts/skills (پیشین، خارج از src)؛ فقط ۵ فایل scope ویرایش شد؛ lint اجرا نشد (طبق دستور)؛ بدون commit
+
+Stage Summary:
+- هر ۵ فیکس تأییدشدهٔ review اعمال شد: stale stock PUT (محصولات/مواد)، toast خطای کتگوری/تأمین‌کننده، adjust ≥ 0 در هر دو موتور + UI، نوشتن اتمیک با نوشتن جبرانی در موتور محلی، و آمار/گزارش شمارش-محور به‌جای جمع واحدهای مخلوط
+- قرارداد host ↔ local انبار هنوز آینهٔ کامل است (پیام‌ها، ترتیب validation، شکل پاسخ)؛ رفتار PUT بدون stock در هر دو موتور «بدون تغییر» است
+- فایل‌ها: src/components/modules/products/index.tsx، src/components/modules/materials/index.tsx، src/components/modules/inventory/index.tsx، src/app/api/inventory/route.ts، src/lib/local-api/handlers/inventory.ts، worklog.md
+
+---
+Task ID: 5-d
+Agent: fix-local-engine
+Task: engine RBAC guard + login lockout + settings/backup/seed fixes
+
+Work Log:
+- worklog.md (۱۵۰ خط آخر) + middleware.ts + api/auth/login/route.ts + lib/backup.ts + هندلرهای مقصد خوانده شد؛ همهٔ ۶ فیکس روی متن دقیق هاست سطربه‌سطر تطبیق داده شد
+- engine.ts: گارد سراسری rbacResponse قبل از دیسپچ هر هندلر (بعد از استخراج نشست) — آینهٔ middleware هاست: مسیرهای عمومی فقط POST /api/auth/login و GET/HEAD /api/download/setup؛ بقیه بدون نشست معتبر/ختم‌شده → 401 «دسترسی غیرمجاز — ابتدا وارد سیستم شوید»؛ PUT /api/settings برای غیر admin/manager → 403 «تغییر تنظیمات فقط توسط مدیر مجاز است» (قبل از قاعدهٔ ناظر — همان ترتیب middleware)؛ نوشتنِ viewer به‌جز /api/auth/* → 403 «حساب شما فقط دسترسی خواندن دارد»؛ پاسخ‌ها از همان jsonResponse مسیر عادی خطاها برمی‌گردند (res.ok=false → toast های موجود UI بدون تغییر کار می‌کنند)؛ /api/auth/me بدون نشست → 401 مثل هاست؛ users/audit/admin مثل قبل گیت ادمین داخل هندلر خودشان
+- handlers/auth.ts: قفل حساب مثل هاست — شمارنده در localStorage با کلید setab-local.loginFails به شکل {username: {count, until}}؛ ۵ کوشش ناکام → قفل ۱۵ دقیقه و پاسخ 423 «حساب شما موقتاً قفل شده است؛ N دقیقه دیگر کوشش کنید» (وضعیت و پیام دقیق هاست)؛ بررسی قفل قبل از تطبیق پسورد؛ ورود موفق شمارنده را پاک می‌کند (کاربر غیرفعال مثل هاست شمارنده را دست‌نخورده می‌گذارد)؛ پاک‌سازی فرصتی مدخل‌های منقضی در هر خواندن؛ کلید شمارنده lowercase چون تطبیق کاربر در حالت محلی به حروف بزرگ/کوچک حساس نیست
+- handlers/settings.ts: logAudit روی PUT حذف شد (هاست برای تنظیمات اصلاً audit ندارد) — importهای بی‌استفاده هم پاک شد
+- handlers/backup.ts: (۱) restoreAll اکنون پسوردهای User شروع‌شده با scrypt: (هش هاست) را به admin123 تبدیل و در صورت وقوع فقط «یک» رخداد audit با بازیگرِ همان ادمین بازیابی‌کننده ثبت می‌کند: «پسورد کاربران واردشده از کاپی احتیاطی به admin123 ریست شد» — هر دو مسیر بازیابی (restore/import) پوشش داده شد و دستگاه دیگر بعد از بازیابی کاپیِ هاست قفل نمی‌شود؛ (۲) کلید تنظیمات به کلیدهای هاست یک‌سان شد: نوشتن backupKeepCount + backupIntervalHours (بعد از سینک هاست ردیف بی‌کاربرد نمی‌بیند) و خواندن backupKeepCount با فال‌بک به کلید قدیمی backupKeep در GET و pruneBackups؛ GET اکنون intervalHours ذخیره‌شده را با فال‌بک 0 برمی‌گرداند تا فرم بیک‌اپ تنظیمات بعد از رفرش همان مقدار ذخیره‌شده را نشان دهد (فیکس در backup.ts اعمال شد چون UI تنظیمات intervalHours را فقط با PUT /api/admin/backup می‌فرستد — PUT /api/settings هرگز آن را دریافت نمی‌کند و کلید عمومی settings مثل هاست verbatim ذخیره می‌شود)
+- handlers/employees.ts: ترتیب validation در POST مثل هاست شد — name → position → salary → hireDate (قبلاً hireDate اول چک می‌شد و پیام خطا با هاست فرق می‌کرد)
+- seed.ts: جهش گم‌شدهٔ balance مشتری اصلاح شد — یک بار readCol، جهش روی همان آرایه و نوشتن همان مرجع؛ ماندهٔ «فروشگاه پامیر» بعد از seed می‌ماند (۴۷۱۲ = ۴۶۲۰ + مالیات گردشده ۹۲ مطابق Math.round خود seed که پرت prisma/seed.ts است؛ تخمین ۴۷۱۲.۴ گزارش بازبینی بدون آن گردکردن بود)
+- صحت‌سنجی اجرایی خارج از ریپو: شبیه‌سازی قفل (۵ ناکام → 423 با 15 دقیقه، منقضی → شمارش از نو، موفق → پاک شدن، کلید یکسان برای Admin/admin) و شبیه‌سازی جهش balance (مقدار ماندگار شد) ✓
+- bunx tsc --noEmit: صفر خطا در src/ (هر ۲۴ خطای موجود پیشین و خارج از src: examples/prisma/scripts/skills)؛ lint اجرا نشد؛ هیچ commit انجام نشد؛ فقط ۶ فایلِ scop دست خورد
+
+Stage Summary:
+- موتور محلی اکنون RBAC هاست را سراسری اعمال می‌کند: بدون نشست 401، ناظر فقط‌خواندن 403، PUT تنظیمات ادمین/مدیر — با همان پیام‌های دری هاست و از مسیر عادی پاسخ خطا (toast های UI سالم)
+- ورود محلی مثل هاست بعد از ۵ کوشش ناکام ۱۵ دقیقه قفل می‌شود (423) و ورود موفق شمارنده را پاک می‌کند
+- بازیابی کاپی احتیاطیِ هاست روی دستگاه دیگر همهٔ کاربران را از دسترس خارج نمی‌کند (پسورد scrypt → admin123 + یک رخداد audit) و کلیدهای تنظیم بیک‌اپ با هاست یکسان شد (backupKeepCount/backupIntervalHours، فال‌بک خواندن به backupKeep) — GET فاصلهٔ ذخیره‌شده را برمی‌گرداند
+- audit نویزِ PUT تنظیمات حذف، ترتیب validation کارکنان مثل هاست، و ماندهٔ قرض مشتریِ نمونهٔ seed دیگر گم نمی‌شود
+- فایل‌ها: src/lib/local-api/{engine.ts, seed.ts, handlers/{auth,settings,employees,backup}.ts} + worklog.md
+
+---
+Task ID: 5-f
+Agent: fix-hr-ui-libs
+Task: HR stats/dialogs + production refetch + formulas/misc UI + format libs + shell interceptor + favicon
+
+Work Log:
+- hr/index.tsx — [MEDIUM] کارت‌های «حاضران/غایبان امروز» دیگر از لیست فیلترشدنی سابقهٔ حاضری محاسبه نمی‌شوند: منبع مستقل `useFetch('/api/attendance?days=1')` (بدون employeeId/فیلتر روز) + فیلتر isToday در محاسبه؛ refetch این منبع در ثبت حاضری و حذف رکورد هم اضافه شد
+- hr/index.tsx — [MEDIUM] شمارش «امروز» به employeeId یکتا (Set) تغییر کرد — شیفت‌های چندگانه دیگر دوبار شمرده نمی‌شوند؛ isToday به module-scope منتقل شد
+- hr/index.tsx — [LOW] بج «N ماه پرداخت‌شده» اکنون ماه‌های یکتا (Set از s.month برای هر employeeId) را می‌شمارد نه رکوردهای پرداخت
+- hr/index.tsx — [LOW] حذف کارمند / رکورد حاضری / پرداخت معاش با الگوی AlertDialog ماژول تولید تأییددار شد (state اتحادیهٔ DeleteTarget + runDelete مشترک + دیالوگ تک با متن سه‌زبانه بر اساس kind؛ دکمه‌ها فقط setConfirmDelete می‌کنند)؛ توست خطای قبلی در catch حفظ شد
+- hr/index.tsx — [LOW] اعتبارسنجی ماه معاش پس از چک الگو: بازهٔ 01..12 (مثل 1404-15 رد می‌شود با توست «ماه باید بین 01 و 12 باشد»)
+- hr/index.tsx — [LOW] prefill تاریخ استخدام در ادیت: اگر hireDate با ^\d{4}-\d{2}-\d{2}$ هم‌خوان بود، رشتهٔ خام مستقیم استفاده می‌شود (پارس UTC و جابه‌جایی روز در TZ منفی حذف شد)
+- production/index.tsx — [MEDIUM] پس از submitWizard و submitComplete علاوه بر سفارش‌ها، formulas و products هم refetch می‌شوند (refetchFormulas/refetchProducts از هوک‌های موجود) — ستون «در انبار» و هشدار کفایت موجودی ویزارد دیگر stale نمی‌ماند
+- production/index.tsx — [LOW] ضایعات منفی در submitComplete سمت کلاینت رد می‌شود (توست «ضایعات نمی‌تواند منفی باشد»)
+- production/index.tsx — [LOW] submitWizard و submitComplete از try/finally به try/catch/finally تبدیل شدند — catch توست خطای سه‌زبانه می‌دهد
+- formulas/index.tsx — [LOW] فیلد «نسخه» در دیالوگ تصحیح disabled={!!editing} (فقط در ساخت/نسخهٔ جدید معنا دارد)؛ submit و toggleActive هر دو catch → toast.error گرفتند
+- users/index.tsx + audit/index.tsx — [LOW] accessDenied مرده (`error.includes('403')`) با regex پیام‌های واقعی دری جایگزین شد: /دسترسی ندارید|فقط مدیر|مجاز نیست/ — پوشش middleware هاست («شما به این بخش دسترسی ندارید»)، هندلر محلی users («فقط مدیر سیستم به مدیریت کاربران...») و پیام audit محلی/روت («دسترسی به گزارش فعالیت‌ها مجاز نیست»)
+- settings/index.tsx — [LOW] حذف فایل بیک‌اپ با AlertDialog تأییددار شد (deleteFileTarget + دیالوگ هم‌سبک بازیابی؛ removeBackupFile در finally تارگت را می‌بندد)
+- setup-wizard.tsx — [LOW] handleTest از try/finally به try/catch/finally — reject شدن conn.test به‌جای unhandled rejection در formError می‌نشیند (مثل handleSave)
+- format.ts — [LOW] formatMoney اکنون تا ۲ رقم اعشار (maximumFractionDigits: 2، minimumFractionDigits: 0) — گرند توتال چاپی دیگر با جمع اقلام ۲-رقمی نمی‌خواند؛ grouping و هندل NaN/صفر حفظ شد («0 AFG»)
+- amount-words.ts — [LOW] مقیاس تریلیون (و «هزار تریلیون»/quadrillion) به هر سه زبان اضافه شد + fallback عددی بعد از حلقه (n × 10^(3i)) — تست اجرایی: 1e12 → «یک تریلیون AFG فقط»، 1.5e12 → «یک تریلیون و پانصد میلیارد»، 2e12 → «دو تریلیون»، 1e15 → «یک هزار تریلیون»، 1234.56 و صفر بدون تغییر رفتار (fa/ps/en همه سالم)
+- page.tsx — [LOW] installAuthInterceptor() و installOfflineInterceptor() (فقط !LOCAL_MODE) به module-scope منتقل شدند (بلافاصله بعد از installLocalApi) — هر دو راستی‌آزمایی شد که idempotent + گارد typeof window دارند (auth-client: __authInterceptorInstalled؛ offline-client: installed + window guard) پس SSR-safe است؛ effect والد فقط اعتبارسنجی نشست را نگه داشت
+- layout.tsx — [LOW] favicon از CDN مطلق به «/logo.svg» محلی (موجود در public/) تغییر کرد — در APK آفلاین هم لود می‌شود
+
+Stage Summary:
+- ۱۱ فایل، همهٔ ۱۵ یافتهٔ تأییدشدهٔ راند ۳ اصلاح شد (۲ MEDIUM حاضری HR، ۱ MEDIUM stale snapshot تولید، ۱۲ LOW شامل UX حذف‌ها، اعتبارسنجی ماه/ضایعات، dead-code 403، formatMoney، تریلیون در amount-words، interceptor module-scope و favicon محلی)
+- قراردادها و الگوها حفظ شد: toast سه‌زبانهٔ t(fa,ps,en)، shadcn AlertDialog (الگوی deleteTarget/cancelTarget تولید)، RTL و متن‌های دری دست‌نخورده
+- رفتارهای جانبی مرتب هم پوشش داده شد: refetch آمار «امروز» پس از ثبت/حذف حاضری، بستن دیالوگ حذف بیک‌اپ در finally، بازگرداندن سوییچ فورمولا در خطای شبکه از طریق refetch در مسیر موفق فقط
+- tsc --noEmit: صفر خطا در src/ و صفر خطا در هر ۱۱ فایلِ این تسک (۲۴ خطای پیشین فقط در examples/prisma/scripts/skills — خارج از scope)
+
+---
+Task ID: 5-a
+Agent: fix-host-core
+Task: sync-journal restore wipe + session tokenVersion + API validations
+
+Work Log:
+- [CRITICAL] ژورنال حذف + restore JSON (سه لایه دفاع): (۱) db.ts — فیلد `journalSuspended` به DbCore (پیش‌فرض false) + چک قبل از فراخوانی core.journalHook در wrapDelegateForJournal + `setJournalSuspended(v)` در DbInternals/dbInternal؛ (۲) json-backup.ts — کل `db.$transaction` در restoreFromJson داخل try/finally پیچیده شد (تعلیق قبل، رفع در finally) تا deleteManyهای «خالی‌کردن جدول‌ها» ژورنال نشوند؛ (۳) sync-engine.ts — داخل قلاب installOfflineJournaling حذف با `where` خالی (بدون کلید) کلاً رد می‌شود با کامنت فارسی (bare deleteMany هرگز حذف واقعی کاربر نیست). تست دود با SQLite واقعی: bare deleteMany ژورنال نشد ✓، restoreFromJson (۱۹ جدول) ژورنال نشد ✓، setJournalSuspended(true/false) حذف شرط‌دار را قطع/وصل کرد ✓
+- [HIGH] نشست اسنپ‌شات: schema.prisma — `tokenVersion Int @default(0)` روی User؛ session.ts — `pv?: number` در SessionPayload و پارامتر signSession حالا `tokenVersion?: number` می‌پذیرد (فقط وقتی تعریف‌شده باشد pv امضا می‌شود)؛ login — tokenVersion از کاربر DB داخل توکن می‌آید + قفل حساب حالا با کلید `${username}::${ip}` (اولین مقدار x-forwarded-for وگرنه local) و نقشهٔ قفل با سقف ۱۰۰۰ (حذف قدیمی‌ترین‌ها) — DoS قفل حساب و رشد بی‌حد حافظه بسته شد؛ change-password — tokenVersion +1 در همان update و کوکی جدید از کاربر به‌روزشده صادر می‌شود (دستگاه جاری می‌ماند، نشست‌های دیگر می‌میرند)؛ users/[id] PUT — تغییر role/active در همان update tokenVersion را +1 می‌کند؛ me — اگر pv توکن با tokenVersion DB نخواند → 401 «نشست نامعتبر است»
+- گارد مشترک ادمین: rbac.ts — `requireAdminDb(req, forbiddenMessage, loadUser)` افزودنی شد (نشست → کاربر DB → 401 برای «ابتدا وارد سیستم شوید»/«حساب یافت نشد یا غیرفعال است»/ناهم‌خوانی pv «نشست نامعتبر است» → 403 با پیام مخصوص هر مسیر). چون rbac.ts pure است و در کلاینت (page.tsx، users module) هم ایمپورت می‌شود، db با loader تزریقی داده می‌شود نه ایمپورت مستقیم (ایمپورت db.ts کلاینت را می‌شکست) — ۴ گارد محلی users، users/[id]، admin/backup، system/db-setup به آن رفکتور شدند (پیام‌های فارسی فعلی هر مسیر عیناً حفظ شد) و نقش حالا از DB خوانده می‌شود نه توکن
+- اعتبارسنجی تاریخ: salaries POST (`date`) و production POST (`startDate`) — `new Date(v)` نامعتبر → 400 «تاریخ نامعتبر است» (در زنجیرهٔ validation فعلی هر مسیر)
+- settings PUT — `value` با `String(value ?? '')` رشته می‌شود (غیررشته‌ای دیگر 500 نمی‌دهد) + logAudit('update','settings') با بازیگر از نشست و فهرست کلیدهای ذخیره‌شده
+- سازگاری همگام‌سازی بعد از ستون جدید: چون schema.mysql.prisma (مالک خارج از اسکوپ) ستون tokenVersion را ندارد، sync-engine.ts در pushTableDelta و migrateLocalToServer فیلدهای فقط-محلی (`LOCAL_ONLY_FIELDS=['tokenVersion']`) را از سطرهای User قبل از ارسال به هاست حذف می‌کند و در snapshotServerToLocal نسخهٔ توکن هر کاربر از مقدار قبلی همین دستگاه حفظ می‌شود (وگرنه بعد از هر اتصال دوباره همه نشست‌ها با pv نامعتبر می‌شدند) — بدون این، پوش User با خطای Unknown argument می‌شکست
+- محدودیت مستندشده: تا وقتی ستون tokenVersion به اسکیمای MySQL (schema.mysql.prisma + DDL/SYNC_COLUMNS در host-setup.ts) اضافه نشود، ابطال نشست بین‌دستگاهی (پسورد/نقش تغییرکرده روی دستگاه دیگر) فقط از مسیر خواندن role/active از DB کار می‌کند و bump tokenVersion دستگاه‌محلی است؛ همچنین bootstrap کاربران در ensureHostReady (host-setup.ts، خارج از اسکوپ) برای هاستِ خالیِ تازه خطای Unknown argument می‌دهد (گیرفته و در گزارش ویزارد نمایش داده می‌شود) — فالوآپ: افزودن ستون به schema.mysql.prisma و host-setup.ts
+- `bun run db:push` → «Your database is now in sync with your Prisma schema. Done in 17ms» + generate موفق (ستون additive روی db/custom.db)
+- `bunx tsc --noEmit` → صفر خطا در src/ (خطاهای باقی‌مانده فقط examples/prisma seed/scripts/skills — پیشین و خارج از src)
+- فایل‌ها: prisma/schema.prisma، src/lib/{db,json-backup,sync-engine,session,rbac}.ts، src/app/api/auth/{login,me,change-password}/route.ts، src/app/api/users/{route,[id]/route}.ts، src/app/api/admin/backup/route.ts، src/app/api/system/db-setup/route.ts، src/app/api/{salaries,production,settings}/route.ts
+
+Stage Summary:
+- زنجیرهٔ بحرانی «restore JSON → ژورنال deleteMany({}) → پاک‌شدن هاست در تیک بعدی» با سه لایه بسته شد (تعلیق ژورنال در restore + رد حذف بدون شرط در قلاب + چک تعلیق در db.ts) و با تست دود اجرایی تأیید شد
+- نشست‌ها دیگر اسنپ‌شات نیستند: نقش/active/tokenVersion در گاردهای ادمین و /api/auth/me از دیتابیس خوانده می‌شود؛ تغییر پسورد/نقش/غیرفعال‌سازی نشست‌های باز را می‌میراند (tokenVersion فعلاً دستگاه‌محلی — فالوآپ اسکیمای هاست ثبت شد)
+- قفل ورود بر اساس username::ip با سقف حافظه؛ تاریخ نامعتبر salaries/production → 400؛ settings PUT مقدار رشته‌ای + audit
+- db:push موفق (additive) — tsc: صفر خطای src — بدون lint و بدون commit
+
+---
+Task ID: 13
+Agent: coordinator (main)
+Task: «سیستم را deep test کن — کدها، منطق سیستم و ظاهر سیستم؛ اگر باگ داشت برطرف کن»
+
+Work Log:
+- بازبینی کد با ۷ agent موازی (3-a..3-g): موتور محلی + handlers، routeهای هاست + Prisma، شِل و libs فرانت، ۱۳ ماژول UI، sharedها — نتیجه: ۱ CRITICAL، ۴ HIGH، ~۱۲ MEDIUM، ~۲۰ LOW
+- رفع با ۶ agent موازی (5-a..5-f) + follow-up دستی coordinator (schema.mysql.prisma + host-setup SYNC_COLUMNS برای tokenVersion)
+- CRITICAL: بازیابی JSON-backup روی دسکتاپِ متصل به هاست، دیتابیس هاست MySQL را خالی می‌کرد — deleteMany({}) داخل تراکنش restore توسط ژورنال حذف ثبت و روی هاست replay می‌شد؛ رفع: journalSuspended در db.ts + skip حذف‌های without-where در sync-engine + تست دود SQLite
+- HIGH امنیتی: session ها اسنپ‌شات بودند — tokenVersion به User اضافه شد (SQLite+MySQL+مهاجرت خودکار هاست)، بامپ هنگام تغییر role/active/پسورد، requireAdminDb (نقش از DB)، me با چک pv/active، lockout لاگین keyed username+ip با cap
+- HIGH مالی: balance مشتری ارزها را قاطی می‌کرد → ضرب در exchangeRate در POST/PUT/DELETE فروش (هر دو موتور)؛ کاهش پرداخت دیگر قرض را برنمی‌گرداند → دلتای دوراهی؛ PayDialog ورودی را به‌عنوان «کل پرداخت‌شده» می‌فرستاد → حالا «پرداختی این مرحله» و جمع تجمعی
+- MEDIUM: stale-stock در ویرایش محصول/ماده (stock از PUT حذف شد)، adjust صفر ممکن شد (>=0)، نوشتن غیراتمیک انبار محلی → جبرانی، RBAC کامل در موتور محلی (401/403 مثل middleware)، تبدیل ارز مصارف در dashboard/reports، CSV یک روز عقب، درصد ضایعات، کارت‌های HR (منبع مجزا + شمارش کارمند متمایز)، refetch فرمول بعد از تولید، seed قرض مشتری
+- LOW: تأیید حذف (مشتری/کارمند/حاضری/معاش/فایل بک‌آپ)، catchهای گم‌شده، badge روش پرداخت، فرمت پول ۲ رقم اعشار، اعداد.word تریلیون+، favicon محلی، interceptorها در module-scope، ماه 01-12، هیردیت بدون شیفت UTC، برچسب چاپ «۱۲ ماه اخیر»، تاریخ پیش‌فرض مالی محلی
+- تست مرورگری عمیق (agent-browser): ورود، داشبورد (سازگاری 360 AFG با گزارشات)، stale-stock (۱۵ ماند بعد از ویرایش)، picker فقط فعال، پرداخت جزئی 50→+100=150→+50=200 paid، قرض 160→0، رگرسیون API (۹ مورد: منفی‌ها 400، مشتری نامعتبر 400، adjust=0 → 201، settings عددی 200، تاریخ بد 400)، HR distinct، دیالوگ تأیید حذف بک‌آپ، تیره/روشن، موبایل 390px (padding 11px)، فوتر چسبان، صفر خطای کنسول
+- پاک‌سازی داده‌های تست از db/custom.db (فقط admin باقی ماند)؛ tsc: صفر خطای src؛ lint: پاک
+
+Stage Summary:
+- ۳۷+ باگ واقعی یافت و رفع شد؛ سیستم روی هر دو بک‌اند (هاست/آفلاین) هم‌رفتار شد
+- فایل‌ها: ~۴۵ فایل (schemaها، ۱۷ route، موتور محلی، ۱۳ ماژول، libs، شِل)
+- نکته: tokenVersion هنگام بوت‌استرپ هاستِ نو از طریق SYNC_COLUMNS خودکار مهاجرت می‌شود؛ تجمیع cross-device نشست‌ها همچنان از مسیر نقش/فعال از DB کنترل می‌شود

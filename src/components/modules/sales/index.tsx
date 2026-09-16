@@ -197,7 +197,7 @@ export default function SalesModule() {
   const { t } = useI18n()
   const sales = useFetch<SaleRow[]>('/api/sales')
   const customers = useFetch<CustomerRow[]>('/api/customers')
-  const products = useFetch<ProductRow[]>('/api/products')
+  const products = useFetch<ProductRow[]>('/api/products?active=true')
   const settings = useFetch<Record<string, string>>('/api/settings')
 
   const [search, setSearch] = useState('')
@@ -671,6 +671,19 @@ function NewSaleDialog({
       }))
     if (items.length === 0) {
       toast.error(t('حداقل یک کالا با مقدار معتبر علاوه کنید', 'لږ تر لږه یو توک اضافه کړئ', 'Add at least one valid item'))
+      return
+    }
+    // اعتبارسنجی سمت کلاینت — همان پیام‌های سرور (به همان ترتیب)
+    if (items.some((it) => it.discount < 0)) {
+      toast.error(t('تخفیف نمی‌تواند منفی باشد', 'ټکۍ نه شي منفي', 'Discount cannot be negative'))
+      return
+    }
+    if (discVal < 0) {
+      toast.error(t('تخفیف نمی‌تواند منفی باشد', 'ټکۍ نه شي منفي', 'Discount cannot be negative'))
+      return
+    }
+    if (paidVal < 0) {
+      toast.error(t('مبلغ پرداخت نمی‌تواند منفی باشد', 'د تادیې مبلغ نه شي منفي', 'Paid amount cannot be negative'))
       return
     }
     setSaving(true)
@@ -1298,23 +1311,32 @@ function PayDialog({
   onSaved: () => void
 }) {
   const { t } = useI18n()
-  // مقدار اولیه = کل باقیات (دیالوگ با هر بل از نو مونت می‌شود)
+  // مقدار اولیه = کل باقیات (دیالوگ با هر بل از نو مونت می‌شود) — ورودی = پول دریافتی «همین حالا»
   const [amount, setAmount] = useState(() =>
     sale ? String(Math.max(0, Number((sale.total - sale.paidAmount).toFixed(2)))) : ''
   )
   const [saving, setSaving] = useState(false)
 
-  const remaining = sale ? sale.total - sale.paidAmount : 0
+  // پیش‌نمایش باقیات «بعد از» این پرداخت — paidAmount سرور تجمیعی است
+  const val = Number(amount) || 0
+  const remainingAfter = sale ? Math.max(0, sale.total - (sale.paidAmount + val)) : 0
 
   async function submit() {
     if (!sale) return
     const val = Number(amount)
-    if (isNaN(val) || val < 0) {
+    if (isNaN(val)) {
       toast.error(t('مبلغ نامعتبر است', 'مبلغ ناسم دی', 'Invalid amount'))
       return
     }
+    if (val < 0) {
+      toast.error(t('مبلغ پرداخت نمی‌تواند منفی باشد', 'د تادیې مبلغ نه شي منفي', 'Paid amount cannot be negative'))
+      return
+    }
     setSaving(true)
-    const res = await callApi<SaleRow>(`/api/sales/${sale.id}`, 'PUT', { paidAmount: val })
+    // سرور paidAmount را به‌عنوان «مجموع پرداخت‌شدهٔ تجمیعی» ثبت می‌کند → پرداخت این مرحله جمع می‌شود
+    const res = await callApi<SaleRow>(`/api/sales/${sale.id}`, 'PUT', {
+      paidAmount: sale.paidAmount + val,
+    })
     setSaving(false)
     if (!res.ok) {
       toast.error(res.error || t('خطا در ثبت پرداخت', 'د تادیې ستونزه', 'Payment failed'))
@@ -1347,14 +1369,14 @@ function PayDialog({
                 <p className="font-semibold">{formatMoney(sale.total, sale.currency as Currency)}</p>
               </div>
               <div className="rounded-md bg-amber-500/10 p-2">
-                <p className="text-xs text-muted-foreground">{t('باقیات', 'پاتې', 'Remaining')}</p>
+                <p className="text-xs text-muted-foreground">{t('باقیات بعد از این پرداخت', 'پاتې وروسته له دې تادیې', 'Remaining after this payment')}</p>
                 <p className="font-semibold text-amber-700 dark:text-amber-400">
-                  {formatMoney(remaining, sale.currency as Currency)}
+                  {formatMoney(remainingAfter, sale.currency as Currency)}
                 </p>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>{t('مبلغ پرداخت جدید (کل)', 'نوې تادیه (ټوله)', 'New total paid')}</Label>
+              <Label>{t('مبلغ پرداختی در این مرحله', 'تادیه په دې مرحله کې', 'Amount received now')}</Label>
               <Input type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
           </div>
@@ -1396,6 +1418,8 @@ function CustomersDialog({
   const [type, setType] = useState<'retail' | 'wholesale'>('retail')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [delCustomer, setDelCustomer] = useState<CustomerRow | null>(null)
+  const [deletingCustomer, setDeletingCustomer] = useState(false)
 
   function resetForm() {
     setEditingId(null)
@@ -1435,13 +1459,16 @@ function CustomersDialog({
     onChanged()
   }
 
-  async function remove(c: CustomerRow) {
+  async function handleDeleteCustomer(c: CustomerRow) {
+    setDeletingCustomer(true)
     const res = await callApi<{ ok: boolean }>(`/api/customers/${c.id}`, 'DELETE')
+    setDeletingCustomer(false)
     if (!res.ok) {
       toast.error(res.error || t('خطا در حذف مشتری', 'د پیرودونکي د ړنګولو ستونزه', 'Delete failed'))
       return
     }
     toast.success(t('مشتری حذف شد', 'پیرودونکی ړنګ شو', 'Customer deleted'))
+    setDelCustomer(null)
     if (editingId === c.id) resetForm()
     onChanged()
   }
@@ -1548,7 +1575,7 @@ function CustomersDialog({
                           variant="ghost"
                           size="icon"
                           title={t('حذف', 'ړنګول', 'Delete')}
-                          onClick={() => remove(c)}
+                          onClick={() => setDelCustomer(c)}
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
@@ -1569,6 +1596,42 @@ function CustomersDialog({
         sales={sales}
         onClose={() => setStatementCustomer(null)}
       />
+
+      {/* تصدیق حذف مشتری — همان الگوی حذف بل */}
+      <AlertDialog open={!!delCustomer} onOpenChange={(o) => !o && setDelCustomer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('حذف مشتری', 'د پیرودونکي ړنګول', 'Delete customer')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {delCustomer && (
+                <>
+                  {t('مشتری ', 'پیرودونکی ', 'Customer ')}
+                  <span className="font-medium">{delCustomer.name}</span>
+                  {t(
+                    ' حذف شود؟ این عمل قابل بازگشت نیست.',
+                    ' ړنګ شي؟ دا کړنه بیرته نه ګرځي.',
+                    ' will be deleted? This action cannot be undone.'
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('لغو', 'لغوه', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deletingCustomer}
+              onClick={(e) => {
+                e.preventDefault()
+                if (delCustomer) handleDeleteCustomer(delCustomer)
+              }}
+            >
+              {deletingCustomer && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t('حذف', 'ړنګول', 'Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

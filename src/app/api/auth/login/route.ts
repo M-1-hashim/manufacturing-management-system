@@ -8,12 +8,37 @@ import { ensureInitialPull } from '@/lib/connection-manager'
 // قفل شدن حساب بعد از 5 بار داخل شدن ناکام به مدت 15 دقیقه (حافظه محلی هاست)
 const MAX_FAILS = 5
 const LOCK_MS = 15 * 60 * 1000
+// سقف حافظهٔ نقشهٔ کوشش‌های ناموفق — جلوگیری از رشد بی‌حد حافظه
+const FAIL_MAP_MAX = 1000
 const failMap = new Map<string, { count: number; lockedUntil: number }>()
 
 function isLocked(entry: { count: number; lockedUntil: number } | undefined): number {
   if (!entry) return 0
   if (entry.lockedUntil > Date.now()) return Math.ceil((entry.lockedUntil - Date.now()) / 60000)
   return 0
+}
+
+/** IP کلاینت — اولین مقدار x-forwarded-for وگرنه «local» */
+function clientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for') || ''
+  const first = fwd.split(',')[0]?.trim()
+  return first || 'local'
+}
+
+/** کلید قفل = نام کاربری + IP — قفل فقط بر اساس نام کاربری باعث DoS قفل
+ * حساب می‌شد (هر کسی با نام دلخواه حتی admin می‌توانست حساب را قفل کند) */
+function failKey(username: string, req: Request): string {
+  return `${username}::${clientIp(req)}`
+}
+
+/** سقف نقشهٔ قفل: وقتی از حد گذشت، قدیمی‌ترین کلیدها حذف می‌شوند
+ * (Map ترتیب درج را نگه می‌دارد — قدیمی‌ها اول جدول‌اند) */
+function pruneFailMap(): void {
+  while (failMap.size > FAIL_MAP_MAX) {
+    const oldest = failMap.keys().next().value
+    if (oldest === undefined) break
+    failMap.delete(oldest)
+  }
 }
 
 // POST /api/auth/login — تصدیق هویت با نقش و بخش سازمانی + نشست کوکی امن
@@ -25,7 +50,8 @@ export async function POST(req: Request) {
     }
 
     const uname = String(username).trim()
-    const lockMin = isLocked(failMap.get(uname))
+    const lockKey = failKey(uname, req)
+    const lockMin = isLocked(failMap.get(lockKey))
     if (lockMin > 0) {
       return NextResponse.json(
         { error: `حساب شما موقتاً قفل شده است؛ ${lockMin} دقیقه دیگر کوشش کنید` },
@@ -56,13 +82,14 @@ export async function POST(req: Request) {
 
     const user = await db.user.findUnique({ where: { username: uname } })
     if (!user || !verifyPassword(String(password), user.password)) {
-      const entry = failMap.get(uname) || { count: 0, lockedUntil: 0 }
+      const entry = failMap.get(lockKey) || { count: 0, lockedUntil: 0 }
       entry.count += 1
       if (entry.count >= MAX_FAILS) {
         entry.lockedUntil = Date.now() + LOCK_MS
         entry.count = 0
       }
-      failMap.set(uname, entry)
+      failMap.set(lockKey, entry)
+      pruneFailMap()
       await logAudit(null, 'login_failed', 'auth', undefined, `نام کاربری: ${uname}`)
       return NextResponse.json({ error: 'نام کاربری یا پسورد اشتباه است' }, { status: 401 })
     }
@@ -76,8 +103,10 @@ export async function POST(req: Request) {
       await db.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {})
     }
 
-    failMap.delete(uname)
+    failMap.delete(lockKey)
 
+    // tokenVersion کاربر از دیتابیس در توکن می‌آید (pv) — تغییر پسورد/نقش
+    // بعداً نشست‌های قدیمی را باطل می‌کند
     const token = await signSession(user)
     const res = NextResponse.json({
       id: user.id,

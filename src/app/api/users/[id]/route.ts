@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSessionFromRequest } from '@/lib/session'
 import { hashPassword } from '@/lib/passwords'
-import { isRole, isDepartment } from '@/lib/rbac'
+import { isRole, isDepartment, requireAdminDb } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 
 function sanitize(u: { id: string; username: string; fullName: string; role: string; department: string; active: boolean; createdAt: Date; updatedAt: Date }) {
@@ -18,11 +17,13 @@ function sanitize(u: { id: string; username: string; fullName: string; role: str
   }
 }
 
+// گارد مشترک: نقش/فعال بودن/نسخهٔ توکن از دیتابیس خوانده می‌شود، نه از توکن
 async function requireAdmin(req: Request) {
-  const session = await getSessionFromRequest(req)
-  if (!session) return { error: 'ابتدا وارد سیستم شوید', status: 401 as const }
-  if (session.role !== 'admin') return { error: 'فقط مدیر سیستم به مدیریت کاربران سیستم دسترسی دارد', status: 403 as const }
-  return { session }
+  return requireAdminDb(
+    req,
+    'فقط مدیر سیستم به مدیریت کاربران سیستم دسترسی دارد',
+    (uid) => db.user.findUnique({ where: { id: uid } })
+  )
 }
 
 /** تعداد ادمین‌های فعال به‌جز این کاربر */
@@ -78,6 +79,16 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         return NextResponse.json({ error: 'پسورد باید حداقل 6 کاراکتر باشد' }, { status: 400 })
       }
       data.password = hashPassword(password)
+    }
+
+    // تغییر نقش/فعال بودن → نسخهٔ توکن هم +1 می‌شود تا نشست‌های باز همین
+    // کاربر بلافاصله باطل شوند (نقش جدید بعداً از دیتابیس خوانده می‌شود،
+    // نه از توکن قدیمی). اگر ستون در این استقرار نباشد، ارتقا رد می‌شود.
+    if (
+      user.tokenVersion !== undefined &&
+      (data.role !== undefined || data.active !== undefined)
+    ) {
+      data.tokenVersion = Number(user.tokenVersion) + 1
     }
 
     const updated = await db.user.update({ where: { id }, data })

@@ -16,15 +16,16 @@ datasource db {
 
 // ------------------- Users & Auth -------------------
 model User {
-  id         String   @id @default(cuid())
-  username   String   @unique
-  password   String
-  fullName   String
-  role       String   @default("viewer") // admin | manager | operator | viewer
-  department String   @default("general") // general | production | sales | inventory | finance | hr
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(cuid())
+  username     String   @unique
+  password     String
+  fullName     String
+  role         String   @default("viewer") // admin | manager | operator | viewer
+  department   String   @default("general") // general | production | sales | inventory | finance | hr
+  active       Boolean  @default(true)
+  tokenVersion Int      @default(0) // با تغییر پسورد/نقش/غیرفعال‌شدن +1 می‌شود — نشست‌های قدیمی (با pv قدیمی) نامعتبر می‌شوند
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // ------------------- Audit Log -------------------

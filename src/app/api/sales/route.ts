@@ -66,6 +66,9 @@ export async function POST(req: Request) {
       if (isNaN(unitPrice) || unitPrice < 0) {
         return NextResponse.json({ error: 'فی کالا نامعتبر است' }, { status: 400 })
       }
+      if (discount < 0) {
+        return NextResponse.json({ error: 'تخفیف نمی‌تواند منفی باشد' }, { status: 400 })
+      }
       const lineTotal = quantity * unitPrice - discount
       subtotal += lineTotal
       cleanItems.push({
@@ -80,12 +83,18 @@ export async function POST(req: Request) {
     }
 
     const discount = Number(body.discount) || 0
+    if (discount < 0) {
+      return NextResponse.json({ error: 'تخفیف نمی‌تواند منفی باشد' }, { status: 400 })
+    }
     const requestedTax = Number(body.taxRate) || 0
     const taxRate = [0, 2, 10].includes(requestedTax) ? requestedTax : 0
     const taxable = Math.max(0, subtotal - discount)
     const taxAmount = (taxable * taxRate) / 100
     const total = taxable + taxAmount
     const paidAmount = Number(body.paidAmount) || 0
+    if (paidAmount < 0) {
+      return NextResponse.json({ error: 'مبلغ پرداخت نمی‌تواند منفی باشد' }, { status: 400 })
+    }
     const status = total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
     const invoiceNumber = `INV-${Date.now().toString().slice(-9)}`
     const currency = ['AFN', 'USD', 'PKR'].includes(body.currency) ? body.currency : 'AFN'
@@ -96,7 +105,16 @@ export async function POST(req: Request) {
     let date = body.date ? new Date(body.date) : new Date()
     if (isNaN(date.getTime())) date = new Date()
 
-    const sale = await db.$transaction(async (tx) => {
+    // اعتبارسنجی مشتری — نبود مشتری به‌جای 500 باید 400 برگرداند
+    if (body.customerId) {
+      const customer = await db.customer.findUnique({ where: { id: String(body.customerId) } })
+      if (!customer) {
+        return NextResponse.json({ error: 'مشتری انتخاب‌شده معتبر نیست' }, { status: 400 })
+      }
+    }
+
+    const runCreate = (invNumber: string) =>
+      db.$transaction(async (tx) => {
       // کسر موجودی انبار و ثبت تراکنش خروج
       for (const it of cleanItems) {
         await tx.product.update({
@@ -111,22 +129,22 @@ export async function POST(req: Request) {
             itemName: it.productName,
             unit: it.unit,
             quantity: it.quantity,
-            reference: invoiceNumber,
+            reference: invNumber,
           },
         })
       }
 
-      // افزایش قرض مشتری در صورت پرداخت ناقص
+      // افزایش قرض مشتری در صورت پرداخت ناقص — باقیات همیشه به افغانی است (تبدیل با نرخ بل)
       if (body.customerId && status !== 'paid') {
         await tx.customer.update({
           where: { id: String(body.customerId) },
-          data: { balance: { increment: total - paidAmount } },
+          data: { balance: { increment: (total - paidAmount) * (exchangeRate || 1) } },
         })
       }
 
       return tx.sale.create({
         data: {
-          invoiceNumber,
+          invoiceNumber: invNumber,
           customerId: body.customerId ? String(body.customerId) : null,
           customerName: body.customerName ? String(body.customerName) : null,
           date,
@@ -154,6 +172,17 @@ export async function POST(req: Request) {
         include: { customer: true, items: { include: { product: true } } },
       })
     })
+
+    // برخورد شماره بل در همان میلی‌ثانیه (P2002) → یک بار با پسوند تازه تلاش می‌شود
+    let sale: Awaited<ReturnType<typeof runCreate>>
+    try {
+      sale = await runCreate(invoiceNumber)
+    } catch (e) {
+      if ((e as { code?: string }).code !== 'P2002') throw e
+      sale = await runCreate(
+        `INV-${Date.now().toString().slice(-9)}-${Math.floor(Math.random() * 1000)}`
+      )
+    }
 
     const session = await getSessionFromRequest(req)
     await logAudit(session, 'create', 'sale', sale.id, `بل ${sale.invoiceNumber} به مبلغ ${Math.round(sale.total * sale.exchangeRate)} AFG`)

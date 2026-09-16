@@ -56,18 +56,19 @@ export const routes: RouteDef[] = [
     const phone = body.phone ? String(body.phone) : null
     const salary = Number(body.salary)
     const active = body.active === undefined ? true : Boolean(body.active)
+
+    // ترتیب validation مثل هاست — name → position → salary → hireDate
+    if (!name) throw new ApiError(400, 'نام کارمند الزامی است')
+    if (!position) throw new ApiError(400, 'وظیفه الزامی است')
+    if (!salary || isNaN(salary) || salary <= 0) {
+      throw new ApiError(400, 'معاش باید زیادتر از صفر باشد')
+    }
     let hireDate: Date | undefined = undefined
     if (body.hireDate) {
       hireDate = new Date(String(body.hireDate))
       if (isNaN(hireDate.getTime())) {
         throw new ApiError(400, 'تاریخ استخدام نامعتبر است')
       }
-    }
-
-    if (!name) throw new ApiError(400, 'نام کارمند الزامی است')
-    if (!position) throw new ApiError(400, 'وظیفه الزامی است')
-    if (!salary || isNaN(salary) || salary <= 0) {
-      throw new ApiError(400, 'معاش باید زیادتر از صفر باشد')
     }
 
     const row = newRow({

@@ -41,6 +41,8 @@ const EXPECTED = MYSQL_TABLES.filter((t) => !t.name.startsWith('_')).length
 
 /** ستون‌هایی که همگام‌سازی لحظه‌ای به آن‌ها نیاز دارد — جدول → ستون‌ها */
 const SYNC_COLUMNS: { table: string; columns: { name: string; sql: string }[] }[] = [
+  // tokenVersion — نسخهٔ توکن نشست کاربر (بطلان نشست‌های قدیمی پس از تغییر نقش/فعال‌سازی/پسورد)
+  { table: 'User', columns: [{ name: 'tokenVersion', sql: 'ADD COLUMN `tokenVersion` INT NOT NULL DEFAULT 0' }] },
   { table: 'AuditLog', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
   { table: 'ProductCategory', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
   { table: 'Product', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },

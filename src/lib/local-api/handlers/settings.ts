@@ -7,7 +7,7 @@
  */
 
 import { bodyAs, route, type RouteDef } from '../types'
-import { actorFrom, logAudit, readCol, setSetting, type Row } from '../db'
+import { readCol, setSetting, type Row } from '../db'
 
 interface SettingRow extends Row {
   key: string
@@ -26,17 +26,11 @@ export const routes: RouteDef[] = [
   route('GET', '/api/settings', () => allSettings()),
 
   // PUT /api/settings — ذخیره چند تنظیم باهم
+  // (هاست برای تنظیمات audit ثبت نمی‌کند — اینجا هم چیزی ثبت نمی‌شود تا گزارش فعالیت‌ها یکی بماند)
   route('PUT', '/api/settings', (ctx) => {
     const body = bodyAs<Record<string, unknown>>(ctx.body)
     if (body && Object.keys(body).length > 0) {
       for (const [key, value] of Object.entries(body)) setSetting(key, String(value))
-      logAudit(
-        actorFrom(ctx.session),
-        'update',
-        'settings',
-        undefined,
-        `ذخیرهٔ تنظیمات: ${Object.keys(body).join(', ')}`
-      )
     }
     return allSettings()
   }),

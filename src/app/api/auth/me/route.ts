@@ -13,6 +13,10 @@ export async function GET(req: Request) {
     if (!user || !user.active) {
       return NextResponse.json({ error: 'حساب یافت نشد یا غیرفعال است' }, { status: 401 })
     }
+    // ناهم‌خوانی نسخهٔ توکن (تغییر پسورد/نقش/غیرفعال‌شدن در جای دیگر) → نشست قدیمی می‌میرد
+    if (session.pv !== undefined && user.tokenVersion !== session.pv) {
+      return NextResponse.json({ error: 'نشست نامعتبر است' }, { status: 401 })
+    }
     // تمدید خودکار نشست فعال (sliding session) — کاربر فعال هرگز وسط کار خارج نمی‌شود
     const token = await signSession(user)
     const res = NextResponse.json({

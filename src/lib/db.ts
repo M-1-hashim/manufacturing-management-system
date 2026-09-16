@@ -74,6 +74,8 @@ interface DbCore {
   active: PrismaClient
   mode: DbMode
   journalHook: ((table: string, where: unknown) => void) | null
+  /** بازیابی JSON در جریان است — حذف‌های داخلی آن نباید ژورنال شوند */
+  journalSuspended: boolean
 }
 
 const globalForDb = globalThis as unknown as { __mfgDbCore?: DbCore }
@@ -114,7 +116,7 @@ function buildCore(): DbCore {
   const active = (activeName === 'mysql' ? mysql : sqlite) as PrismaClient
   const mode: DbMode = mysql ? 'host-mysql' : 'local'
 
-  return { sqlite, mysql, activeName, active, mode, journalHook: null }
+  return { sqlite, mysql, activeName, active, mode, journalHook: null, journalSuspended: false }
 }
 
 const core: DbCore = globalForDb.__mfgDbCore ?? buildCore()
@@ -136,6 +138,10 @@ function wrapDelegateForJournal(table: string, delegate: object): object {
           Promise.resolve(result)
             .then(() => {
               try {
+                // وقتی بازیابی JSON معلق است، حذف‌های داخلی آن (deleteMany بدون شرط
+                // برای خالی‌کردن جدول‌ها) ژورنال نمی‌شوند — پخش دوبارهٔ همین حذف‌ها
+                // روی هاست همهٔ جدول‌ها را پاک می‌کرد
+                if (core.journalSuspended) return
                 core.journalHook?.(table, args?.where ?? {})
               } catch (e) {
                 // ژورنال هرگز نباید اجراؤات اصلی را بشکند
@@ -217,6 +223,8 @@ export interface DbInternals {
   mysqlInfo(): { host: string; port: string; database: string } | null
   /** ثبت قلاب ژورنال حذف (sync-engine) */
   registerDeleteJournal(fn: (table: string, where: unknown) => void): void
+  /** معلق/ازسرگیری ژورنال حذف — فقط بازیابی JSON (json-backup) */
+  setJournalSuspended(v: boolean): void
 }
 
 export const dbInternal: DbInternals = {
@@ -254,5 +262,8 @@ export const dbInternal: DbInternals = {
   },
   registerDeleteJournal(fn) {
     core.journalHook = fn
+  },
+  setJournalSuspended(v) {
+    core.journalSuspended = v
   },
 }

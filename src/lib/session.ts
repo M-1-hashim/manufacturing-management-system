@@ -8,6 +8,9 @@ export interface SessionPayload {
   role: string
   department: string
   exp: number // epoch millis
+  /** نسخهٔ توکن کاربر در لحظهٔ صدور — با تغییر پسورد/نقش/غیرفعال‌شدن
+   * در دیتابیس +1 می‌شود؛ ناهم‌خوانی pv یعنی نشست قدیمی است و باید بمیرد */
+  pv?: number
 }
 
 export const SESSION_COOKIE = 'mfg_session'
@@ -61,7 +64,7 @@ async function hmac(data: string): Promise<Uint8Array> {
 
 /** ساخت توکن نشست از payload کاربر */
 export async function signSession(
-  user: { id: string; username: string; fullName: string; role: string; department: string }
+  user: { id: string; username: string; fullName: string; role: string; department: string; tokenVersion?: number }
 ): Promise<string> {
   const payload: SessionPayload = {
     uid: user.id,
@@ -71,6 +74,9 @@ export async function signSession(
     department: user.department,
     exp: Date.now() + SESSION_TTL_MS,
   }
+  // نسخهٔ توکن فقط وقتی در دیتابیس موجود باشد در توکن می‌آید
+  // (استقرارهای قدیمی‌تر بدون این ستون، توکن بدون pv می‌دهند — گرانه پذیرفته می‌شوند)
+  if (user.tokenVersion !== undefined) payload.pv = user.tokenVersion
   const payloadStr = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)))
   const sig = await hmac(payloadStr)
   return `${payloadStr}.${bytesToHex(sig)}`

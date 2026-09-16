@@ -7,7 +7,7 @@
  */
 
 import { route, type RouteDef } from '../types'
-import { readCol, type Row } from '../db'
+import { getSetting, readCol, type Row } from '../db'
 
 interface LocalSale extends Row {
   date: string
@@ -51,6 +51,7 @@ interface LocalCustomer extends Row {
 interface LocalExpense extends Row {
   category: string
   amount: number
+  currency: string
   date: string
 }
 
@@ -73,6 +74,13 @@ export const routes: RouteDef[] = [
     const pad = (x: number) => String(x).padStart(2, '0')
     // نرخ تبدیل به افغانی
     const toAfn = (r: number | null | undefined) => (r && r > 0 ? r : 1)
+
+    // نرخ‌های ارز از تنظیمات — یک‌بار برای هر درخواست
+    // (مصارف به ارز خودشان ثبت می‌شوند — نرخ ناموجود/نامعتبر → ۱)
+    const usdRate = toAfn(Number(getSetting('usdRate')))
+    const pkrRate = toAfn(Number(getSetting('pkrRate')))
+    const expenseRate = (currency: string | null | undefined) =>
+      currency === 'USD' ? usdRate : currency === 'PKR' ? pkrRate : 1
 
     const allSales = readCol<LocalSale>('sales')
     const saleItems = readCol<LocalSaleItem>('saleItems')
@@ -105,7 +113,8 @@ export const routes: RouteDef[] = [
       const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
       const cur = dayMap.get(key)
       salesByDay.push({
-        date: d.toISOString(),
+        // تاریخ محلی YYYY-MM-DD (نه ISO) — تا ستون میلادی CSV با ستون شمسی هم‌سطر بخواند
+        date: key,
         label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
         total: Math.round(cur?.total ?? 0),
         count: cur?.count ?? 0,
@@ -179,13 +188,18 @@ export const routes: RouteDef[] = [
       payAgg.set(s.paymentMethod, cur)
     }
     const salesByPayment = Array.from(payAgg.entries())
-      .map(([method, v]) => ({ method: METHOD_NAMES[method] ?? method, total: Math.round(v.total), count: v.count }))
+      .map(([method, v]) => ({
+        method, // کلید خام (cash/credit/transfer) برای رنگ‌بندی badge در کلاینت
+        label: METHOD_NAMES[method] ?? method, // برچسب فارسی برای نمایش
+        total: Math.round(v.total),
+        count: v.count,
+      }))
       .sort((a, b) => b.total - a.total)
 
-    // ---- مصارف به تفکیک دسته ----
+    // ---- مصارف به تفکیک دسته (تبدیل همهٔ ارزها به افغانی قبل از جمع) ----
     const expAgg = new Map<string, number>()
     for (const e of expenses) {
-      expAgg.set(e.category, (expAgg.get(e.category) ?? 0) + e.amount)
+      expAgg.set(e.category, (expAgg.get(e.category) ?? 0) + e.amount * expenseRate(e.currency))
     }
     const expensesByCategory = Array.from(expAgg.entries())
       .map(([category, total]) => ({ category, total: Math.round(total) }))

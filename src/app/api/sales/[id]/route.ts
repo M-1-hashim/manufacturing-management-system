@@ -27,8 +27,11 @@ export async function PUT(req: Request, { params }: Ctx) {
     const { id } = await params
     const body = await req.json()
     const paidAmount = Number(body.paidAmount)
-    if (isNaN(paidAmount) || paidAmount < 0) {
+    if (isNaN(paidAmount)) {
       return NextResponse.json({ error: 'مبلغ پرداخت نامعتبر است' }, { status: 400 })
+    }
+    if (paidAmount < 0) {
+      return NextResponse.json({ error: 'مبلغ پرداخت نمی‌تواند منفی باشد' }, { status: 400 })
     }
 
     const sale = await db.sale.findUnique({ where: { id } })
@@ -38,12 +41,14 @@ export async function PUT(req: Request, { params }: Ctx) {
       const newStatus =
         sale.total - paidAmount <= 0.001 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'
 
-      // تعدیل قرض مشتری: کاهش مانده به اندازه اختلاف باقیات قدیم و جدید
+      // تعدیل قرض مشتری: اختلاف باقیات قدیم و جدید — باقیات همیشه به افغانی است (تبدیل با نرخ بل)
+      // delta مثبت = پرداخت بیشتر → کاهش قرض؛ delta منفی = کاهش پرداخت → برگشت قرض به دفتر
       if (sale.customerId) {
-        const oldRemaining = Math.max(0, sale.total - sale.paidAmount)
-        const newRemaining = Math.max(0, sale.total - paidAmount)
+        const rate = Number(sale.exchangeRate) || 1
+        const oldRemaining = Math.max(0, (sale.total - sale.paidAmount) * rate)
+        const newRemaining = Math.max(0, (sale.total - paidAmount) * rate)
         const delta = oldRemaining - newRemaining
-        if (delta > 0.001) {
+        if (Math.abs(delta) > 0.001) {
           const customer = await tx.customer.findUnique({ where: { id: sale.customerId } })
           if (customer) {
             await tx.customer.update({
@@ -90,9 +95,10 @@ export async function DELETE(req: Request, { params }: Ctx) {
         })
       }
 
-      // کاهش قرض مشتری اگر بل پرداخت‌نشده یا ناقص بود
+      // کاهش قرض مشتری اگر بل پرداخت‌نشده یا ناقص بود — باقیات به افغانی (تبدیل با نرخ بل)
       if (sale.customerId && sale.status !== 'paid') {
-        const remaining = Math.max(0, sale.total - sale.paidAmount)
+        const remaining =
+          Math.max(0, sale.total - sale.paidAmount) * (Number(sale.exchangeRate) || 1)
         const customer = await tx.customer.findUnique({ where: { id: sale.customerId } })
         if (customer && remaining > 0) {
           await tx.customer.update({

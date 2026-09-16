@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     "سیستم جامع مدیریت چرخه تولید از مواد خام تا محصول نهایی و فروش — طراحی‌شده برای کارخانه‌های افغانستان",
   keywords: ["مدیریت تولید", "ERP", "افغانستان", "تولید", "انبار", "فروش"],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/logo.svg",
   },
 };
 

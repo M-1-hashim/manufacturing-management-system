@@ -196,6 +196,8 @@ export default function FormulasModule() {
         : t('فورمولا جدید ثبت شد', 'نوی فورمول ثبت شو', 'Formula created'))
       setOpen(false)
       refetch()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در ذخیره', 'خطا په خوندي کولو کې', 'Error saving'))
     } finally {
       setSaving(false)
     }
@@ -203,19 +205,23 @@ export default function FormulasModule() {
 
   // ---------- اجراؤات کارت ----------
   async function toggleActive(f: FormulaT, next: boolean) {
-    const res = await fetch(`/api/formulas/${f.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: next }),
-    })
-    if (!res.ok) {
-      toast.error(await errFrom(res))
-      return
+    try {
+      const res = await fetch(`/api/formulas/${f.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: next }),
+      })
+      if (!res.ok) {
+        toast.error(await errFrom(res))
+        return
+      }
+      toast.success(next
+        ? t('فورمولا فعال شد', 'فورمول فعال شو', 'Formula activated')
+        : t('فورمولا غیرفعال شد', 'فورمول غیرفعال شو', 'Formula deactivated'))
+      refetch()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('خطا در تغییر وضعیت', 'خطا په بدلون حالت کې', 'Error toggling status'))
     }
-    toast.success(next
-      ? t('فورمولا فعال شد', 'فورمول فعال شو', 'Formula activated')
-      : t('فورمولا غیرفعال شد', 'فورمول غیرفعال شو', 'Formula deactivated'))
-    refetch()
   }
 
   async function makeNewVersion(f: FormulaT) {
@@ -447,7 +453,8 @@ export default function FormulasModule() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>{t('نسخه', 'نسخه', 'Version')}</Label>
-                    <Input type="number" min={1} value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
+                    {/* نسخه فقط در ساخت/نسخهٔ جدید معنا دارد — سرور آن را در تصحیح نمی‌خواند */}
+                    <Input type="number" min={1} value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} disabled={!!editing} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>{t('خروجی بچ', 'د بچې محصول', 'Output qty')} *</Label>

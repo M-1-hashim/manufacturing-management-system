@@ -42,9 +42,11 @@ model User {
   fullName   String
   role       String   @default("viewer") // admin | manager | operator | viewer
   department String   @default("general") // general | production | sales | inventory | finance | hr
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  active       Boolean  @default(true)
+  // نسخهٔ توکن نشست — با تغییر نقش/فعال‌سازی/پسورد افزایش می‌یابد تا نشست‌های قدیمی باطل شوند
+  tokenVersion Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // ------------------- Audit Log -------------------

@@ -124,7 +124,9 @@ export default function AuditModule() {
 
   const { data, error, refetch } = useFetch<AuditEvent[]>(url)
   const events = useMemo(() => (Array.isArray(data) ? data : []), [data])
-  const accessDenied = !!error && error.includes('403')
+  // useFetch پیام سرور را جایگزین متن خام HTTP می‌کند — تشخیص 403 با پیام‌های دری:
+  // میاندوار: «شما به این بخش دسترسی ندارید» | محلی/روت: «دسترسی به گزارش فعالیت‌ها مجاز نیست»
+  const accessDenied = !!error && /دسترسی ندارید|فقط مدیر|مجاز نیست/.test(error)
 
   function actionLabel(a: string) {
     const l = ACTION_LABELS[a]

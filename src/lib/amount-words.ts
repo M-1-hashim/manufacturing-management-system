@@ -13,7 +13,7 @@ const NUM_WORDS: Record<
     teens: ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'],
     tens: ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'],
     hundreds: ['', 'صد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'],
-    scales: ['', 'هزار', 'میلیون', 'میلیارد'],
+    scales: ['', 'هزار', 'میلیون', 'میلیارد', 'تریلیون', 'هزار تریلیون'],
     zero: 'صفر',
     join: ' و ',
   },
@@ -22,7 +22,7 @@ const NUM_WORDS: Record<
     teens: ['لس', 'یوولس', 'دولس', 'دیارلس', 'څوارلس', 'پنځلس', 'شپاړلس', 'اوه لس', 'اتلس', 'نولس'],
     tens: ['', '', 'شل', 'دېرش', 'څلویښت', 'پنځوس', 'شپېته', 'اویا', 'اتیا', 'نوي'],
     hundreds: ['', 'سل', 'دوه سوه', 'درې سوه', 'څلور سوه', 'پنځه سوه', 'شپږ سوه', 'اوه سوه', 'اته سوه', 'نهه سوه'],
-    scales: ['', 'زره', 'میلیون', 'میلیارد'],
+    scales: ['', 'زره', 'میلیون', 'میلیارد', 'تریلیون', 'زره تریلیون'],
     zero: 'صفر',
     join: ' او ',
   },
@@ -34,7 +34,7 @@ const NUM_WORDS: Record<
       '', 'one hundred', 'two hundred', 'three hundred', 'four hundred',
       'five hundred', 'six hundred', 'seven hundred', 'eight hundred', 'nine hundred',
     ],
-    scales: ['', 'thousand', 'million', 'billion'],
+    scales: ['', 'thousand', 'million', 'billion', 'trillion', 'quadrillion'],
     zero: 'zero',
     join: ' ',
   },
@@ -76,6 +76,9 @@ function intWords(lang: NumLang, n: number): string {
     n = Math.floor(n / 1000)
     i++
   }
+  // اگر مقدار از بزرگ‌ترین مقیاس هم گذشت (≥ ۱۰^۱۸ — غیرمحتمل)، باقی‌مانده به‌صورت عددی
+  // ضمیمه می‌شود تا خروجی هرگز خالی یا گمراه‌کننده نباشد (باقی‌مانده = n × 1000^i)
+  if (n > 0) groups.unshift(`${n.toLocaleString('en-US')} × 10^${i * 3}`)
   return groups.join(w.join)
 }
 

@@ -7,7 +7,7 @@
  */
 
 import { route, type RouteDef } from '../types'
-import { readCol, type Row } from '../db'
+import { getSetting, readCol, type Row } from '../db'
 
 interface LocalSale extends Row {
   date: string
@@ -50,6 +50,7 @@ interface LocalCustomer extends Row {
 }
 interface LocalExpense extends Row {
   amount: number
+  currency: string
   date: string
 }
 
@@ -80,6 +81,13 @@ export const routes: RouteDef[] = [
     // نرخ تبدیل به افغانی (برای فروش‌های دالری/کلداری)
     const toAfn = (r: number | null | undefined) => (r && r > 0 ? r : 1)
 
+    // نرخ‌های ارز از تنظیمات — یک‌بار برای هر درخواست
+    // (مصارف به ارز خودشان ثبت می‌شوند — نرخ ناموجود/نامعتبر → ۱)
+    const usdRate = toAfn(Number(getSetting('usdRate')))
+    const pkrRate = toAfn(Number(getSetting('pkrRate')))
+    const expenseRate = (currency: string | null | undefined) =>
+      currency === 'USD' ? usdRate : currency === 'PKR' ? pkrRate : 1
+
     const allSales = readCol<LocalSale>('sales')
     const saleItems = readCol<LocalSaleItem>('saleItems')
     const products = readCol<LocalProduct>('products')
@@ -103,9 +111,10 @@ export const routes: RouteDef[] = [
       }
     }
 
+    // جمع مصارف ماه فقط بعد از تبدیل همهٔ ارزها به افغانی
     const expensesThisMonth = readCol<LocalExpense>('expenses')
       .filter((e) => timeOf(e.date) >= monthStart.getTime())
-      .reduce((a, e) => a + e.amount, 0)
+      .reduce((a, e) => a + e.amount * expenseRate(e.currency), 0)
 
     // موجودی کم (فقط اقلام که حداقل موجودی برایشان تعیین شده)
     const lowStockProducts = products.filter((p) => p.minStock > 0 && p.stock <= p.minStock)

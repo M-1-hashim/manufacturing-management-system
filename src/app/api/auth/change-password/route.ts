@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSessionFromRequest } from '@/lib/session'
+import { getSessionFromRequest, signSession, SESSION_COOKIE, SESSION_MAX_AGE_S } from '@/lib/session'
 import { hashPassword, verifyPassword } from '@/lib/passwords'
 import { logAudit } from '@/lib/audit'
 
@@ -24,12 +24,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'پسورد فعلی اشتباه است' }, { status: 400 })
     }
 
-    await db.user.update({
-      where: { id: user.id },
-      data: { password: hashPassword(String(newPassword)) },
-    })
+    // نسخهٔ توکن +1 می‌شود تا نشست‌های دیگر دستگاه‌ها باطل شوند؛
+    // همین دستگاه با کوکی تازه (صادرشده از کاربر به‌روزشده) داخل می‌ماند.
+    // اگر ستون tokenVersion در این استقرار موجود نباشد، فقط ارتقا نادیده
+    // گرفته می‌شود و خود تغییر پسورد سالم می‌ماند
+    const data: Record<string, unknown> = { password: hashPassword(String(newPassword)) }
+    if (user.tokenVersion !== undefined) data.tokenVersion = Number(user.tokenVersion) + 1
+    const updated = await db.user.update({ where: { id: user.id }, data })
     await logAudit({ uid: user.id, username: user.username }, 'change_password', 'auth', user.id)
-    return NextResponse.json({ ok: true })
+    const token = await signSession(updated)
+    const res = NextResponse.json({ ok: true })
+    res.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_MAX_AGE_S,
+    })
+    return res
   } catch (e) {
     console.error('change-password error', e)
     return NextResponse.json({ error: 'خطای داخلی هاست' }, { status: 500 })

@@ -106,6 +106,8 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
       } else {
         toast.error(t('هاست SSH در دسترس نیست — آدرس/پورت یا انترنت را بررسی کنید', 'د SSH هاست نه لرېږي — پته/پورت یا انترنت وګورئ', 'SSH server unreachable — check address/port or internet'))
       }
+    } catch (e) {
+      setFormError(String((e as Error)?.message || e))
     } finally {
       setTesting(false)
     }

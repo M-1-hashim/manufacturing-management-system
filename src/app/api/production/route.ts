@@ -35,6 +35,9 @@ export async function POST(req: Request) {
     if (!(quantity > 0)) {
       return NextResponse.json({ error: 'مقدار تولید باید زیادتر از صفر باشد' }, { status: 400 })
     }
+    if (body.startDate && Number.isNaN(new Date(body.startDate).getTime())) {
+      return NextResponse.json({ error: 'تاریخ نامعتبر است' }, { status: 400 })
+    }
 
     const formula = await db.formula.findUnique({
       where: { id: formulaId },

@@ -204,6 +204,7 @@ export default function SettingsModule() {
   const [bSaving, setBSaving] = useState(false)
   const [bCreating, setBCreating] = useState(false)
   const [bDeleting, setBDeleting] = useState<string | null>(null)
+  const [deleteFileTarget, setDeleteFileTarget] = useState<string | null>(null) // فایل کاپی احتیاطی برای حذف با تأیید
 
   // ---------- اتصال به هاست از داخل برنامه (فقط نسخه ویندوز جدید) ----------
   const [connApi] = useState<DbConnApiT | null>(() => (typeof window !== 'undefined' ? window.dbConnection ?? null : null))
@@ -630,6 +631,7 @@ export default function SettingsModule() {
       toast.error(e instanceof Error ? e.message : t('خطا در حذف', 'د حذف ستونزه', 'Delete failed'))
     } finally {
       setBDeleting(null)
+      setDeleteFileTarget(null)
     }
   }
 
@@ -1179,7 +1181,7 @@ export default function SettingsModule() {
                               <Download className="h-3.5 w-3.5" />
                               {t('دانلود', 'ښکته کړئ', 'Download')}
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => removeBackupFile(f.name)} disabled={bDeleting === f.name} aria-label={t('حذف', 'حذف', 'Delete')}>
+                            <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => setDeleteFileTarget(f.name)} disabled={bDeleting === f.name} aria-label={t('حذف', 'حذف', 'Delete')}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -1240,6 +1242,40 @@ export default function SettingsModule() {
                     className="bg-destructive text-white hover:bg-destructive/90"
                   >
                     {restoring ? t('در حال بازیابی…', 'په بیا رغولو…', 'Restoring…') : t('بازیابی و تعویض دیتا', 'بیا رغونه او بدلون', 'Restore & replace data')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* تصدیق حذف فایل کاپی احتیاطی — مثل بازیابی، با دیالوگ تأیید */}
+            <AlertDialog open={!!deleteFileTarget} onOpenChange={(o) => { if (!o && !bDeleting) setDeleteFileTarget(null) }}>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    {t('حذف فایل کاپی احتیاطی', 'د بیک اپ فایل له منځه وړل', 'Delete backup file')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2 text-sm">
+                    <span className="block">
+                      {t('فایل', 'فایل', 'File')}:{' '}
+                      <b dir="ltr">{deleteFileTarget}</b>
+                    </span>
+                    <span className="block font-medium text-destructive">
+                      {t('این فایل برای همیشه حذف می‌شود و قابل بازگشت نیست!', 'دا فایل د تل لپاره له منځه ځي او بیرته نه راګرځي!', 'This file will be permanently deleted and cannot be recovered!')}
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={!!bDeleting}>{t('لغو', 'لغوه', 'Cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (deleteFileTarget) void removeBackupFile(deleteFileTarget)
+                    }}
+                    disabled={!!bDeleting}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    {bDeleting ? t('در حال حذف…', 'په له منځه وړل کې…', 'Deleting…') : t('حذف', 'حذف', 'Delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

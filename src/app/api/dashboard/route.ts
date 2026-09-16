@@ -17,7 +17,7 @@ export async function GET() {
     // نرخ تبدیل به افغانی (برای فروش‌های دالری/کلداری)
     const toAfn = (r: number | null | undefined) => (r && r > 0 ? r : 1)
 
-    const [salesWindow, sales90, unpaidSales, recentSaleRows, expenses, products, materials, orders] =
+    const [salesWindow, sales90, unpaidSales, recentSaleRows, expenses, products, materials, orders, settingRows] =
       await Promise.all([
         db.sale.findMany({
           where: { date: { gte: trendStart } },
@@ -52,7 +52,7 @@ export async function GET() {
         }),
         db.expense.findMany({
           where: { date: { gte: monthStart } },
-          select: { amount: true },
+          select: { amount: true, currency: true },
         }),
         db.product.findMany({
           select: { name: true, stock: true, minStock: true, unit: true, costPrice: true },
@@ -63,6 +63,11 @@ export async function GET() {
         db.productionOrder.findMany({
           where: { startDate: { gte: month6Start } },
           select: { status: true, quantity: true, producedQty: true, startDate: true },
+        }),
+        // نرخ‌های ارز از تنظیمات — یک‌بار در هر درخواست
+        db.setting.findMany({
+          where: { key: { in: ['usdRate', 'pkrRate'] } },
+          select: { key: true, value: true },
         }),
       ])
 
@@ -80,7 +85,14 @@ export async function GET() {
       receivables += (s.total - s.paidAmount) * toAfn(s.exchangeRate)
     }
 
-    const expensesThisMonth = expenses.reduce((a, e) => a + e.amount, 0)
+    // مصارف به ارز خودشان ثبت می‌شوند — نرخ تبدیل به افغانی (نرخ ناموجود/نامعتبر → ۱)
+    const usdRate = toAfn(Number(settingRows.find((r) => r.key === 'usdRate')?.value))
+    const pkrRate = toAfn(Number(settingRows.find((r) => r.key === 'pkrRate')?.value))
+    const expenseRate = (currency: string | null | undefined) =>
+      currency === 'USD' ? usdRate : currency === 'PKR' ? pkrRate : 1
+
+    // جمع مصارف ماه فقط بعد از تبدیل همهٔ ارزها به افغانی
+    const expensesThisMonth = expenses.reduce((a, e) => a + e.amount * expenseRate(e.currency), 0)
 
     // موجودی کم (فقط اقلام که حداقل موجودی برایشان تعیین شده)
     const lowStockProducts = products.filter((p) => p.minStock > 0 && p.stock <= p.minStock)
