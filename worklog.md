@@ -1564,3 +1564,25 @@ Work Log:
 Stage Summary:
 - ریلیز منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.19
 - دیتابیس dev پس از تست مرورگری به حالت پاک برگشت (فقط کاربر admin)
+
+---
+Task ID: 15
+Agent: coordinator (main)
+Task: «نسخه کامپیوتر را هم پوش کن» — بیلد و انتشار نسخهٔ دسکتاپ ویندوز (Electron) در GitHub Release v1.0.19
+
+Work Log:
+- محیط NSIS دوباره ساخته شد (sandbox reset): nsis_3.08-3+deb12u1_amd64.deb + nsis-common (همان نسخهٔ v1.0.16) → ~/nsis-works/nsis-root؛ makensis v3.08 تست شد ✓
+- bash electron/build-desktop.sh: تولید prisma-mysql-client (موتور ویندوز ✓) → next build با NEXT_DIST_DIR=.next-electron (ایزوله از dev سرور) → electron-builder 26.15.3 win dir (Electron 44.2.0 دانلود و استخراج شد) → کپی standalone + ssh2 + patch productName
+- راستی‌آزمایی win-unpacked (592MB): server.js ✓، static ✓، هر دو موتور ویندوز پرایسما (sqlite+mysql) ✓، demo-db/custom.db ✓، ssh2 از بستهٔ نهایی load می‌شود ✓، packaged version=1.0.19 / productName=ManufacturingERP ✓
+- رفع‌باگ‌های deep-test داخل باندل تأیید شد: «journalSuspended» و «tokenVersion» در chunks سرور ✓، رشتهٔ «1.0.19» در باندل کلاینت ✓
+- تست دود سرور تعبیه‌شده روی لینوکس: node server.js با دیتابیس دمو → GET / = 200، POST /api/auth/login (admin/admin123) = موفق، حالت SQLite محلی با ۱۹ جدول ✓ — سپس پردازش پاک شد
+- آرتیفکت‌ها: ManufacturingERP-Windows-Portable.zip (266,542,226 B — زیپ win-unpacked) + ManufacturingERP-Setup.exe (168,492,043 B — NSIS 3.08، نصاب ۱.۰.۱۹.۰ با LZMA)
+- آپلود به Release v1.0.19 (id 389860268): Setup.exe (asset 568262218) + Portable.zip (asset 568262726) — هر دو state=uploaded
+- RELEASE-NOTES-v1.0.19.md به‌روز شد (بخش «نسخهٔ ویندوز» + MD5ها؛ asset قدیمی حذف و نسخهٔ جدید آپلود شد)؛ README-DESKTOP.md به ۱.۰.۱۹ به‌روز شد (هدر، حجم‌ها، راهنمای rebuild با ~/nsis-works، حذف ادعای قدیمی حساب‌های دمو — دیتای دمو حالا فقط admin دارد)؛ body ریلیز فهرست فایل‌ها را نشان می‌دهد
+- تأیید نهایی: sha256 لوکال == digest گیت‌هاب برای هر دو فایل (8a900213… / 342b5a27…) ✓؛ URL عمومی هر دو 302 به CDN ✓
+
+Stage Summary:
+- ریلیز v1.0.19 حالا هر سه نسخه را دارد: app.apk + ManufacturingERP-Setup.exe + ManufacturingERP-Windows-Portable.zip
+- https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.19
+- MD5: Setup.exe 5a0e3e113801581b13d179ef745120bf · Portable.zip a10c904b29bc9c0dbe7c341bc20cf99f
+- نکتهٔ محیطی: makensis این بار در ~/nsis-works (پایدار) است نه /tmp؛ اسکریپت‌ها و README همان مسیر را مستند می‌کنند

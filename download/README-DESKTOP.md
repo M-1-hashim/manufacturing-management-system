@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.7** — 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC**: when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**: offline changes are pushed to the host (last-write-wins), offline deletions are replayed, and a fresh copy of the server data is pulled back. No buttons, no data loss. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
+**Version 1.0.19** — 🧪 **DEEP-TESTED RELEASE**: the whole system (code, logic and UI) was deep-tested and **37+ real bugs fixed** across both backends — safe JSON-backup restore (no more host-wipe), session invalidation on password/role change, currency-aware customer debts, cumulative payment dialog, stock-overwrite fix, offline-engine RBAC and more. Plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7): when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | File | Size | What it is |
 |---|---|---|
-| `ManufacturingERP-Setup.exe` | ~159 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA-solid). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~251 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `ManufacturingERP-Setup.exe` | ~161 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
+| `ManufacturingERP-Windows-Portable.zip` | ~254 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
 | `README-DESKTOP.md` | — | This file. |
 
 Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and database clients for BOTH SQLite (offline local mode) and MySQL (shared-hosting mode). **No internet connection and no Node.js are required** — local mode works fully offline; host mode needs your hosting MySQL to be reachable.
@@ -36,9 +36,7 @@ Supported OS: **Windows 10 / 11, 64-bit** (x64).
 |---|---|---|
 | `admin` | `admin123` | Full admin access |
 
-(Demo also includes department accounts, e.g. `manager`, `prodstaff`, `salesstaff`, `storestaff`, `finstaff`, `hrstaff`, `viewer` — see in-app Users module; change all passwords after first login.)
-
-**Please change the default passwords immediately** (Profile dialog → change password).
+The bundled first-run database starts clean with the `admin` account only — create your staff accounts in the in-app **Users** module (each with its own role/department). Change the default password immediately.
 
 ## 3) Where your data lives (important)
 
@@ -91,8 +89,10 @@ On this Linux build machine:
 ```bash
 bun run desktop:build                       # builds .next-electron + desktop-dist/win-unpacked
 # NSIS installer (native, no wine):
-NSISDIR=/tmp/nsis-root/usr/share/nsis /tmp/nsis-root/usr/bin/makensis -V2 ../electron/installer.nsi
-#   ^ run from the desktop-dist/ directory; makensis comes from Debian's nsis debs extracted to /tmp/nsis-root
+NSISDIR=$HOME/nsis-works/nsis-root/usr/share/nsis \
+  $HOME/nsis-works/nsis-root/usr/bin/makensis -V2 ../electron/installer.nsi
+#   ^ run from the desktop-dist/ directory; makensis comes from Debian's nsis debs
+#     (nsis_3.08-3+deb12u1_amd64.deb + nsis-common_…_all.deb) extracted to ~/nsis-works/nsis-root
 cd desktop-dist && zip -qr ../download/ManufacturingERP-Windows-Portable.zip win-unpacked
 ```
 
@@ -107,8 +107,8 @@ npx electron-builder --win nsis
 ## نسخهٔ دری — خلاصهٔ راهنما
 
 ### فایل‌های تحویل‌شده
-- **`ManufacturingERP-Setup.exe`** (~۱۵۹ مېگابایت): نصاب اصلی ویندوز. یک بار اجرا کنید، پوشه را انتخاب کنید و تمام. شورتکات در منوی استارت و دسکتاپ ساخته می‌شود و از بخش Add/Remove Programs هم قابل حذف است.
-- **`ManufacturingERP-Windows-Portable.zip`** (~۲۵۱ مېگابایت): نسخهٔ قابل‌حمل بدون نصب. زیپ را استخراج کرده و فایل `ManufacturingERP.exe` را داخل پوشهٔ `win-unpacked` اجرا کنید.
+- **`ManufacturingERP-Setup.exe`** (~۱۶۱ مېگابایت): نصاب اصلی ویندوز. یک بار اجرا کنید، پوشه را انتخاب کنید و تمام. شورتکات در منوی استارت و دسکتاپ ساخته می‌شود و از بخش Add/Remove Programs هم قابل حذف است.
+- **`ManufacturingERP-Windows-Portable.zip`** (~۲۵۴ مېگابایت): نسخهٔ قابل‌حمل بدون نصب. زیپ را استخراج کرده و فایل `ManufacturingERP.exe` را داخل پوشهٔ `win-unpacked` اجرا کنید.
 
 ### نصب و اجرا
 ۱. اگر ویندوز پیام SmartScreen نشان داد (برنامه امضای دیجیتال ندارد)، روی **More info → Run anyway** کلیک کنید.
@@ -128,6 +128,10 @@ npx electron-builder --win nsis
 
 ### نیازمندی‌ها
 - ویندوز ۱۰ یا ۱۱ — ۶۴ بیت (x64)
+
+### ✨ تازه در نسخهٔ ۱.۰.۱۹ — نسخهٔ تستِ عمیق
+- کل سیستم (کد، منطق و ظاهر) عمیق تست شد و **بیش از ۳۷ باگ واقعی** رفع گردید — جزئیات کامل در فایل `RELEASE-NOTES-v1.0.19.md` همین ریلیز.
+- بانک اطلاعاتی نمونهٔ همراه، پاک و آمادهٔ کار واقعی است (فقط کاربر admin) — کارمندان و کاربران دیگر را از ماژول «کاربران» خودتان بسازید.
 
 ### ✨ تازه در نسخه ۱.۰.۷ — قطع/وصل خودکار اینترنت + همگام‌سازی دوسویه
 - وقتی اینترنت یا هاست قطع شود، برنامه **خودکار روی آخرین کپی دیتای سرور (روی همین دستگاه) کار می‌کند** — بج هدر زرد می‌شود: «آفلاین — دیتابیس محلی». هیچ خطایی نمی‌بینید و کار متوقف نمی‌شود.
