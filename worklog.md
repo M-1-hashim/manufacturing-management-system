@@ -1547,3 +1547,20 @@ Stage Summary:
 - ۳۷+ باگ واقعی یافت و رفع شد؛ سیستم روی هر دو بک‌اند (هاست/آفلاین) هم‌رفتار شد
 - فایل‌ها: ~۴۵ فایل (schemaها، ۱۷ route، موتور محلی، ۱۳ ماژول، libs، شِل)
 - نکته: tokenVersion هنگام بوت‌استرپ هاستِ نو از طریق SYNC_COLUMNS خودکار مهاجرت می‌شود؛ تجمیع cross-device نشست‌ها همچنان از مسیر نقش/فعال از DB کنترل می‌شود
+
+---
+Task ID: 14
+Agent: coordinator (main)
+Task: ریلیز v1.0.19 — bump نسخه، بیلد APK آفلاین و انتشار GitHub Release
+
+Work Log:
+- bump: package.json/app-version.ts → 1.0.19، installer.nsi → 1.0.19.0، AndroidManifest → versionCode 4 / versionName 1.0.19
+- محیط build دوباره ساخته شد (sandbox reset): Temurin JDK 21.0.12.1 → ~/jdk21؛ build-tools r36 (d8 8.10.9، aapt2 2.20، zipalign) → ~/android-sdk/android-16 (نکته: URL درست «build-tools_r36_linux.zip» با زیرخط است؛ فایل‌های ابزار به‌اشتباه داخل پوشهٔ platform رفتند و جدا شدند)؛ platform-34-ext7_r03 → ~/android-sdk/android-34
+- export استاتیک: android/build_web_export.sh → android/assets/app (2.6M)؛ بیلد APK: bash build.sh → 1,100,584 B (~1.05MB)، امضای همان keystore (SHA-256 c553eb67…)
+- راستی‌آزمایی: badging versionCode=4/1.0.19 ✓؛ رشتهٔ «مبلغ پرداختی در این مرحله» (رفع PayDialog) داخل باندل ✓؛ MD5 a335cc96…
+- GitHub Release v1.0.19 (id 389860268) با app.apk + RELEASE-NOTES-v1.0.19.md فارسی — state=uploaded؛ دانلود تست → MD5 یکسان ✓
+- dev.log پاک (فقط 200/304، بدون 500)
+
+Stage Summary:
+- ریلیز منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.19
+- دیتابیس dev پس از تست مرورگری به حالت پاک برگشت (فقط کاربر admin)
