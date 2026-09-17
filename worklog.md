@@ -1642,3 +1642,20 @@ Stage Summary:
 - v1.0.20 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.20
 - جریان جدید: اولین اجرا (موبایل و دسکتاپ) → هاست اجباری → ورود با دیتابیس سرور → ذخیرهٔ حساب → ورود آفلاین (scrypt-js / savedCreds)
 - نکته: برای موبایل «هاست» = آدرس نسخهٔ وب نصب‌شده (APK نمی‌تواند مستقیم MySQL را ببیند)؛ همگام‌سازی دوسویهٔ داده موبایل→هاست در نسخه‌های آینده
+
+---
+Task ID: 17
+Agent: coordinator (main)
+Task: ساخت فایل host.bat مستقل و تعاملی — دابل‌کلیک، وارد کردن آدرس هاست و رمز توسط کاربر، اتصال برنامه دسکتاپ به هاست
+
+Work Log:
+- بررسی زیرساخت موجود: electron/main.js → parseActiveOverride (فرمت db-connection.txt: خط mysql:// + ssh-mode/ssh-host/ssh-port/ssh-user/ssh-password) و ssh-tunnel.js (تونل روی 127.0.0.1:5522، پیش‌فرض SSH 21098) + host-setup-file.ts (باتِ قبلی که از داخل برنامه با مقادیر پرشده ساخته می‌شد)
+- طراحی فایل مستقل host.bat: بچ‌لانچر خالص ASCII + کد PowerShell جاسازی‌شده در انتهای همان فایل (بعد از مارکر #PSBEGIN#) که با regex «(?s)^.*?#PSBEGIN#» استخراج و با iex اجرا می‌شود — بدون فایل موقت، بدون certutil، کاملاً خوانا و قابل ویرایش
+- رفتار تعاملی: انتخاب نوع اتصال (1=تونل SSH هاست اشتراکی با پیش‌فرض پورت 21098، 2=MySQL مستقیم پیش‌فرض 3306) → آدرس هاست/پورت/نام دیتابیس/نام کاربری/رمز (رمزها با AsSecureString پنهان) → تست سریع دسترسی TCP (6s) → ساخت دقیق db-connection.txt (انکود URL کاربر/رمز با EscapeDataString، sanitize هاست مثل برنامه، CRLF، UTF-8 بدون BOM) → ذخیره در %APPDATA%\ManufacturingERP (کپی legacy برای nextjs_tailwind_shadcn_ts) → خلاصهٔ تنظیمات → پیشنهاد بستن و بازکردن ManufacturingERP.exe (جستجو در ProgramFiles/x86/LocalAppData)
+- اعتبارسنجی: تبدیل CRLF + بدون BOM + مارکر یکتا (grep)؛ تست Node: شبیه‌سازی استخراج regex + توازن براکت‌ها + رفت‌وبرگشت فرمت با تابع واقعی parseActiveOverride استخراج‌شده از main.js — رمز دشوار «p@ss w:rd#1/2&=3?x» و هاست آشفته «https://server300.web-hosting.com:21098/x» هر دو صحیح پارس شدند (حالت ssh و direct) — 4/4 PASS؛ فایل تست موقت حذف شد
+- مستندسازی: README-DESKTOP.md — ردیف host.bat در جدول تحویلی‌ها + بخش انگلیسی «Quick connect with host.bat» + بخش دری کامل (استفاده، امنیت کاراکترها، برگشت به حالت محلی، SmartScreen)
+
+Stage Summary:
+- download/host.bat ساخته شد: فایل واحد (~9KB) و خودکفا — دابل‌کلیک → سوال‌ها → ذخیرهٔ db-connection.txt در فرمت دقیق برنامه → ری‌استارت برنامه متصل به هاست؛ روی هر ویندوز ۷+ بدون پیش‌نیاز کار می‌کند (PowerShell داخلی ویندوز)
+- فرمت خروجی با parseActiveOverride واقعی برنامه تست‌شد؛ حتی اگر برنامه هنوز نصب نباشد فایل تنظیم ذخیره می‌شود و نصب بعدی خودکار از آن استفاده می‌کند
+- فایل در ریپو پوش شد (download/host.bat) — قابل دانلود از گیت‌هاب؛ اگر بخواهد می‌توان به عنوان asset به Release هم اضافه شد

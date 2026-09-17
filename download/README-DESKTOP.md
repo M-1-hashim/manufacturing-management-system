@@ -12,6 +12,7 @@
 |---|---|---|
 | `ManufacturingERP-Setup.exe` | ~164 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
 | `ManufacturingERP-Windows-Portable.zip` | ~258 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `host.bat` | ~9 KB | **Standalone interactive host-connect script** (v1.0.20+). Double-click, enter the host address & passwords when asked — it writes the connection config and restarts the app connected to the host. Works on any PC, even without the app installed yet. |
 | `README-DESKTOP.md` | — | This file. |
 
 Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and database clients for BOTH SQLite (offline local mode) and MySQL (shared-hosting mode). **No internet connection and no Node.js are required** — local mode works fully offline; host mode needs your hosting MySQL to be reachable.
@@ -72,6 +73,19 @@ Since v1.0.3 you do NOT need to find any config file by hand (and since v1.0.4 t
 - Notes: settings changes made while offline are not synced back (records without timestamps are only synced as new rows); every other add/edit/delete is covered.
 
 Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hosting-guide.md`.
+
+### Quick connect with `host.bat` (new in v1.0.20)
+
+A one-file helper so any user can connect the app to the host **without opening the app first**:
+
+1. Copy `host.bat` to the target PC and double-click it (fully offline, no admin rights needed).
+2. Answer the questions:
+   - **Connection type**: `1` = SSH tunnel (shared hosting / cPanel) — the typical case; `2` = direct MySQL (VPS / dedicated server).
+   - Host address, port (defaults: SSH `21098`, MySQL `3306`), database name, usernames and passwords — passwords are typed masked.
+3. The script checks that the host:port is reachable, writes the config to `%APPDATA%\ManufacturingERP\db-connection.txt` (same format the app uses in Settings), and offers to restart ManufacturingERP — the app then connects to the host automatically.
+4. Re-run it any time to change the host; to go back to the local database, comment out the `mysql://` line in that file (or use Settings → host card).
+
+Notes: it is a plain text file — open it in Notepad to review the code; every special character in passwords is safely URL-encoded; nothing is sent anywhere except to your own host.
 
 ## 4) How it works (for IT staff)
 
@@ -154,3 +168,20 @@ npx electron-builder --win nsis
 
 راهنمای کامل گام‌به‌گام (دری): فایل `hosting-guide.md` — از داخل برنامه قابل دانلود است.
 
+
+### ✨ وصل کردن سریع برنامه به هاست با فایل `host.bat` (جدید در نسخهٔ ۱.۰.۲۰)
+
+یک فایل مستقل و کوچک است؛ روی هر کمپیوتر که نسخهٔ دسکتاپ نصب باشد (یا حتی قبل از نصب) کار می‌کند و دیگر لازم نیست تنظیمات را از داخل برنامه انجام دهید:
+
+1. فایل `host.bat` را به کمپیوتر مقصد کپی کنید و روی آن **دابل‌کلیک** کنید (کاملاً آفلاین است، نیازی به انترنت یا دسترسی ادمین ندارد).
+2. به سوال‌ها جواب بدهید — همه‌چیز از خودتان پرسیده می‌شود:
+   - **نوع اتصال**: `1` = تونل SSH (هاست اشتراکی / cPanel) — حالت معمول؛ `2` = اتصال مستقیم MySQL (سرور مجازی/اختصاصی).
+   - آدرس هاست، پورت (پیش‌فرض: SSH `21098` و MySQL `3306`)، نام دیتابیس، نام کاربری‌ها و رمزها — رمزها هنگام تایپ پنهان (*** ) نمایش داده می‌شوند.
+3. اسکریپت اول دسترسی به هاست را چک می‌کند، بعد فایل تنظیم را در `%APPDATA%\ManufacturingERP\db-connection.txt` می‌نویسد (دقیقاً همان فرمتی که برنامه از کارت «اتصال به هاست» می‌نویسد) و در آخر پیشنهاد می‌دهد برنامه را دوباره باز کند — برنامه خودکار به هاست وصل می‌شود.
+4. هر وقت خواستید هاست را عوض کنید دوباره همین فایل را اجرا کنید؛ برای برگشت به دیتابیس محلی، خط `mysql://` را در همان فایل با `#` کامنت کنید (یا از تنظیمات → کارت اتصال به هاست).
+
+نکته‌ها:
+- `host.bat` یک فایل متنی ساده است — با راست‌کلیک → Edit می‌توانید کد آن را ببینید.
+- هر کاراکتر خاصی در رمز (`@ : # % & !` و…) امن است و به‌صورت استاندارد انکود می‌شود؛ پورت‌ها اگر اشتباه تایپ شوند به پیش‌فرض برمی‌گردند.
+- معلومات فقط در دستگاه خودتان ذخیره می‌شود و به هیچ‌جای دیگر فرستاده نمی‌شود.
+- اگر پیام «Windows protected your PC» دیدید، More info → Run anyway را بزنید (فایل امضای دیجیتال ندارد).
