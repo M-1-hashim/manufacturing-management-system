@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
+  getHostConfig,
   normalizeHostUrl,
   probeHost,
   saveHostConfig,
@@ -63,7 +64,16 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
     typeof window !== 'undefined' ? localStorage.getItem('mfg-color-theme') ?? 'emerald' : 'emerald'
   )
   const [step, setStep] = useState(1)
-  const [hostUrl, setHostUrl] = useState('')
+  // اگر آدرسی از قبل ذخیره شده، همان پیش‌پر می‌شود — کاربر هرگز فرم خالیِ تکراری نمی‌بیند
+  const [hostUrl, setHostUrl] = useState(() =>
+    typeof window !== 'undefined' ? getHostConfig()?.url ?? '' : ''
+  )
+  /** آدرس ذخیره‌شده بدون تست موفق (verifiedAt ندارد) — دوباره باید تست/اصلاح شود */
+  const [reopenedUnverified, setReopenedUnverified] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const cfg = getHostConfig()
+    return !!cfg && !cfg.verifiedAt
+  })
   const [probe, setProbe] = useState<HostProbe | null>(null)
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -173,6 +183,7 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
           ? { verifiedAt: new Date().toISOString(), serverVersion: result.version }
           : {}),
       })
+      setReopenedUnverified(false)
       localStorage.setItem(SETUP_FLAG, '1')
       setStep(3)
     } catch (e) {
@@ -288,6 +299,18 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
           {/* ================= گام 2: اطلاعات هاست ================= */}
           {step === 2 && (
             <div className="space-y-5">
+              {reopenedUnverified && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 p-3 text-[13px] leading-6">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p>
+                    {t(
+                      'آدرس ذخیره‌شده هرگز با موفقیت تست نشده — لطفاً دوباره «تست» را بزنید یا آدرس را اصلاح کنید',
+                      'پتهٔ خوندي شوي هيڅکله بریالي نه شوه ازمویل — بیا «ازمویښنه» وګورئ یا پته سمې کړئ',
+                      'The saved address has never passed a test — please test it again or fix the address'
+                    )}
+                  </p>
+                </div>
+              )}
               <div>
                 <h2 className="font-semibold text-lg flex items-center gap-2">
                   <Globe className="h-5 w-5 text-primary" />

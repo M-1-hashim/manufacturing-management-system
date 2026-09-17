@@ -9,6 +9,7 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const { spawn } = require('child_process');
 const http = require('http');
+const net = require('net');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -322,13 +323,53 @@ async function startEmbeddedServer(dbPath, dbUrlOverride) {
 /* ------------------------------------------------- IPC: db-connection.txt */
 
 // مدیریت اتصال به هاست از داخل برنامه — کاربر نیازی به جستجوی فایل ندارد
-ipcMain.handle('db-connection:info', () => {
+/*
+ * پروب TCP سریع (بدون احراز هویت) — «این اتصال اصلاً می‌شود وصل شد؟»
+ *   - حالت ssh  → دسترسی به sshHost:sshPort سنجیده می‌شود (تونل از همان‌جا می‌گذرد)
+ *   - حالت direct → دسترسی به host:port (خود MySQL)
+ * پاسخ سه‌حالته: true وصل شد / false قطعاً وصل نمی‌شود / null نامعلوم
+ * فقط false باعث بازشدن دوبارهٔ صفحهٔ اطلاعات هاست می‌شود — تا پروبِ مشکوک
+ * باعث حلقهٔ ویزارد نشود.
+ */
+const REACHABLE_PROBE_TIMEOUT_MS = 3000;
+
+function probeReachable(cfg) {
+  return new Promise((resolve) => {
+    if (!cfg || !cfg.active) return resolve(null);
+    const host = cfg.sshMode ? cfg.sshHost : cfg.host;
+    const port = parseInt(String(cfg.sshMode ? cfg.sshPort : cfg.port) || '', 10);
+    if (!host || !port || port < 1 || port > 65535) return resolve(null);
+    // در حالت ssh، host همیشه 127.0.0.1 (تونل محلی) است — نباید پروب شود؛
+    // اما اگر خودِ sshHost لوکال باشد هم پروب معنادار نیست → null
+    if (cfg.sshMode && /^(127\.0\.0\.1|localhost|::1)$/i.test(String(host))) return resolve(null);
+    const socket = new net.Socket();
+    let settled = false;
+    const done = (v) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { socket.destroy(); } catch (_e) { /* ignore */ }
+      resolve(v);
+    };
+    const timer = setTimeout(() => done(false), REACHABLE_PROBE_TIMEOUT_MS);
+    socket.once('connect', () => done(true));
+    socket.once('error', () => done(false));
+    try {
+      socket.connect(port, host);
+    } catch (_e) {
+      done(false);
+    }
+  });
+}
+
+ipcMain.handle('db-connection:info', async () => {
   try {
     if (!fs.existsSync(connectionConfigPath())) writeConnectionFile(null);
   } catch (_e) {
     /* ignore */
   }
   const parsed = parseActiveOverride();
+  const reachable = await probeReachable(parsed);
   return {
     ok: true,
     path: connectionConfigPath(),
@@ -337,10 +378,15 @@ ipcMain.handle('db-connection:info', () => {
     port: parsed.port,
     database: parsed.database,
     user: parsed.user,
+    // پسوردها برای پیش‌پرکردن فرم ویزارد — روی دیسک هم plaintext هستند و
+    // همین فقط به رندرر خود برنامه برمی‌گردد (همان مرز اعتماد فایل)
+    password: parsed.password,
     sshMode: parsed.sshMode,
     sshHost: parsed.sshHost,
     sshPort: parsed.sshPort,
     sshUser: parsed.sshUser,
+    sshPassword: parsed.sshPassword,
+    reachable,
     tunnelStatus: sshTunnelInstance ? sshTunnelInstance.status : null,
     tunnelLocalPort: sshTunnelInstance ? sshTunnelInstance.localPort : null,
   };

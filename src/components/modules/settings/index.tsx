@@ -42,10 +42,15 @@ interface DbConnInfoT {
   port: string
   database: string | null
   user: string | null
+  /** برای پیش‌پرکردن فرم — روی دیسک هم plaintext است و فقط به رندرر خود برنامه می‌آید */
+  password?: string | null
   sshMode: boolean
   sshHost: string | null
   sshPort: string
   sshUser: string | null
+  sshPassword?: string | null
+  /** پروب TCP: true وصل شد / false قطعاً وصل نمی‌شود / null نامعلوم */
+  reachable?: boolean | null
   tunnelStatus: string | null
   tunnelLocalPort: number | null
 }

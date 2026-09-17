@@ -1723,3 +1723,26 @@ Stage Summary:
 - MD5: apk a3e17bbfebbf70d71705d622a4d78b7a · Setup.exe 151d47316d6315a97eb45234773b3ba0 · Portable.zip 28a1309dc1fd07d32949fee6dc006a3c
 - sha256 (لوکال، برای تطبیق با گیت‌هاب): apk 1ca7ef129a3db9ba… · Setup fdb79904f931301a… · Portable dd32cfce9225eb53…
 - پیام کلیدی به کاربر: گوشی بدون نسخهٔ وبِ نصب‌شده روی سرور نمی‌تواند وصل شود — یا نسخهٔ وب روی سرور نصب شود یا از نسخهٔ ویندوز (اتصال مستقیم MySQL با صفحهٔ اول) استفاده شود؛ حالا هر دو سناریو داخل برنامه توضیح داده می‌شود
+---
+Task ID: 21
+Agent: coordinator (main)
+Task: «صفحه‌ای که اطلاعات هاست را وارد کنیم در اول نمایش داده نمی‌شود — بررسی کن» — ریشه‌یابی نمایش‌نشدن صفحهٔ هاست در شروع + رفع کامل → ریلیز v1.0.23 (هر سه باینری)
+
+Work Log:
+- ریشه‌یابی چهار حاله‌ای: (۱) دسکتاپ: info.active فقط یعنی «خط mysql:// در فایل هست» — فایلِ نوشته‌شده با host.bat (که کاربر قبلاً اجرا کرده بود) باعث می‌شد ویزارد هرگز باز نشود حتی وقتی اتصال عملاً خراب است؛ (۲) دسکتاپ: بعد از ذخیرهٔ مشخصات خراب، هیچ مسیر خودکاری به ویزارد نبود؛ (۳) اندروید: چک «کاربر ذخیره‌شده» قبل از چک hostConfig بود → ارتقا از نسخهٔ قدیمی ویزارد هاست را رد می‌کرد؛ (۴) اندروید: آدرسِ ذخیره‌شدهٔ بدون verifiedAt (ذخیره بدون تست) دیگر هیچ‌وقت به صفحهٔ هاست برنمی‌گشت
+- electron/main.js: پروب TCP سه‌حالته probeReachable (ssh → sshHost:sshPort، direct → host:port، timeout 3s → false، loopback ssh → null) + پاسخ db-connection:info حالا reachable و password/sshPassword را برمی‌گرداند (برای پیش‌پرکردن؛ همان مرز اعتماد فایل plaintext)؛ loopback-guard اول روی host بود — به sshHost منتقل شد (باگ واقعی، با تست زندهٔ TCP کشف شد)
+- src/lib/first-run.ts (جدید): منطق محض decideFirstRun — ۱۷ حالت با bun assert تأیید (وب/دسکتاپ/APK × فلگ‌ها × reachable × unverified)؛ قاعدهٔ کلیدی: دسکتاپ active&&reachable!==false → برنامه، وگرنه ویزارد (مگر localOnly)؛ APK: !hasHostConfig||unverified → ویزارد حتی با user ذخیره‌شده
+- src/app/page.tsx: FirstRunGate بازنویسی روی decideFirstRun؛ SetupWizard: پیش‌پرکردن همهٔ ۹ فیلد از info() (شامل پسوردها) + reachable===false → پرش به گام هاست + بنر زرد «اتصال قبلی ذخیره شده ولی وصل نمی‌شود»؛ ApkHostWizard: پیش‌پرکردن URL از hostConfig + بنر «آدرس ذخیره‌شده هرگز با موفقیت تست نشده» + پاک‌شدن فلگ پس از ذخیرهٔ موفق؛ settings DbConnInfoT با فیلدهای جدید هماهنگ شد
+- تست مرورگری (agent-browser، export استاتیک :3400): APK تازه → ویزارد ✓؛ SETUP_FLAG+user قدیمی+بدون hostConfig → ویزارد ✓ (همان باگ ارتقا)؛ بدون فلگ+user قدیمی → ویزارد ✓؛ hostConfig بدون verifiedAt → ویزارد + URL پیش‌پر + بنر زرد (اسکرین‌شات 390px) ✓؛ hostConfig verified → مستقیم صفحهٔ ورود ✓؛ دسکتاپ شبیه‌سازی ?setup=1&desktop=1 روی :3000: هر ۴ گام و ۷ فیلد SSH/MySQL رندر ✓؛ دسکتاپ/دستگاه: بومی وب بدون ویزارد ✓؛ یک کرش محیطی کشف و رفع شد: user.fullName بدون گارد در sidebar (TypeError charAt) → (fullName||username||'?')
+- ابزارها: probeReachable با سرور TCP واقعی ۸ حالت PASS (open/refused/timeout 3001ms/loopback/ssh-open/ssh-refused/inactive/bad-port)؛ lint سبز
+- بیلد: bump 1.0.23 (package.json/app-version/NSIS/AndroidManifest versionCode 8) → export دوباره → APK aapt2 badging: com.setab.erp versionCode=8 versionName=1.0.23 ✓ (1,108,776B، همان keystore c553eb67…)؛ دسکتاپ win-unpacked 598MB (app/package.json=1.0.23، ssh2، موتورهای ویندوز پرایسما)؛ رشتهٔ UTF-16 «1.0.23.0» داخل Setup.exe ✓
+- حوادث: build-desktop.sh گام ۴ demo-db را از db/custom.db کپی می‌کند — فایل desktop-assets/demo-db بعد از هر بیلد dirty می‌شود؛ با git checkout بازگردانده شد (رفتار تاریخیِ ریلیزها: دموباندل کپی db توسعه است — بررسی شد: ۱۹ جدول + فقط کاربر admin و جدول‌های کسب‌وکار خالی)؛ smoke لینوکس: server.js + demo-db → GET / 200 + login admin/admin123 موفق
+- آرتیفکت‌ها: Setup.exe 171,987,528B · Portable.zip 270,856,113B (2934 فایل) · app.apk 1,108,776B
+- ریلیز v1.0.23 (id 391097278): چهار asset آپلود شد؛ sha256 گیت‌هاب == لوکال (apk 340d4632… / Setup 42fd5df1… / Portable 8cb40d62…)؛ CDN عمومی 206
+- RELEASE-NOTES-v1.0.23.md (فارسی، جدول ریشه‌ها) + README-DESKTOP.md هدر ۱.۰.۲۳ به‌روز شد
+
+Stage Summary:
+- v1.0.23 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.23
+- تضمین رفتار: هیچ سناریویی باقی نمانده که برنامه بدون صفحهٔ اطلاعات هاست باز شود (مگر «فقط این دستگاه» یا اتصال سالم) — دسکتاپ: فایل فعال ولی خراب → ویزارد پیش‌پر؛ اندروید: ارتقا/آدرس بی‌تست → ویزارد پیش‌پر
+- sha256 نهایی: apk 340d46322055531b62df47d9bee1d0fe7845169c678f784bdd4391dde8faed5d · Setup 42fd5df18fc9afb8e2d022f58e964c8c907e9dcc47274601c1dc4aad2dee58c0 · Portable 8cb40d62df697610b638234b9922e0ba7000fc94d068fe3e51c959cc582d01e0
+- MD5: apk 2d5285252c0bc687e46c3911224bfecf · Setup 423012afe75153823b4992faef5e6808 · Portable c781f2080da8d6a5685ff8eee4142701

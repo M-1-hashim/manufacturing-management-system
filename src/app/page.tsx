@@ -13,6 +13,7 @@ import { apiGet, apiPost } from '@/lib/api'
 import { installAuthInterceptor } from '@/lib/auth-client'
 import { installOfflineInterceptor, trySync, refreshPendingCount, clearOfflineCache } from '@/lib/offline-client'
 import { LOCAL_MODE, installLocalApi } from '@/lib/local-api'
+import { decideFirstRun } from '@/lib/first-run'
 import { canAccess, roleLabel, departmentLabel } from '@/lib/rbac'
 import { getHostConfig, getSavedCreds, saveCreds, probeHost } from '@/lib/host-link'
 import { cn } from '@/lib/utils'
@@ -723,10 +724,10 @@ function Shell() {
           <div className="p-2.5 border-t shrink-0">
             <div className="flex items-center gap-2.5 px-2 py-1.5">
               <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[14px] font-bold shrink-0">
-                {user.fullName.charAt(0)}
+                {(user.fullName || user.username || '?').charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[14.5px] font-semibold truncate">{user.fullName}</p>
+                <p className="text-[14.5px] font-semibold truncate">{user.fullName || user.username}</p>
                 <p className="text-[12.5px] text-muted-foreground truncate">
                   {roleLabel(user.role, lang)}
                   {user.department && user.department !== 'general' ? ` · ${departmentLabel(user.department, lang)}` : ''}
@@ -851,14 +852,16 @@ function Shell() {
 // ---------------- دروازهٔ راه‌اندازی اولیه ----------------
 /*
  * اولین باز شدن برنامه بعد از نصب → ویزارد تنظیمات (زبان/تم + هاست).
- * تشخیص «بار اول»:
- *   - نسخهٔ دسکتاپ (ویندوز): صفحهٔ اطلاعات هاست **تا وقتی اتصال هاست فعال
- *     نشده** در هر اجرا نشان داده می‌شود — حتی برای ارتقا از نسخه‌های قبلی
- *     با نشست ذخیره‌شده. اگر کاربر «فقط این دستگاه» را انتخاب کند
- *     (فلگ mfg-setup-local-mode) دیگر تکرار نمی‌شود.
+ * منطق تصمیم در src/lib/first-run.ts است (محض و قابل تست) — خلاصه:
+ *   - نسخهٔ دسکتاپ (ویندوز): صفحهٔ اطلاعات هاست تا وقتی اتصال هاست **واقعاً**
+ *     وصل نشده در هر اجرا نشان داده می‌شود — حتی اگر فایل db-connection.txt
+ *     از قبل خط اتصال داشته باشد ولی عملاً وصل نمی‌شود (پروب TCP خرابی را
+ *     می‌فهمد) ویزارد با مقادیر فعلی پیش‌پر و باز می‌شود. اگر کاربر «فقط این
+ *     دستگاه» را انتخاب کند (فلگ mfg-setup-local-mode) دیگر تکرار نمی‌شود.
  *   - نسخهٔ اندروید (LOCAL_MODE): بدون ذخیرهٔ «اطلاعات هاست» (آدرس سرور مرکزی)
- *     ویزارد ادامه نمی‌کند — ورود اول باید با کاربرِ موجود در دیتابیس همان سرور
- *     انجام شود؛ بعد از آن حساب روی دستگاه ذخیره می‌شود و آفلاین هم ورود ممکن است.
+ *     — یا آدرسِ ذخیره‌شدهٔ بدون تست موفق — ویزارد ادامه می‌کند، حتی اگر
+ *     کاربرِ قدیمی ذخیره شده باشد. بعد از نخستین ورود موفق، حساب روی دستگاه
+ *     ذخیره می‌شود و آفلاین هم ورود ممکن است.
  *   - نسخهٔ وب (مرورگر): ویزارد نمایش داده نمی‌شود — اتصال هاست از env هاست می‌آید.
  * درگاه اضطراری ?setup=1 ویزارد را همیشه و در همه‌جا باز می‌کند.
  */
@@ -873,65 +876,49 @@ function FirstRunGate() {
     async function decide() {
       // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
       const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
-      if (!forceSetup) {
-        // ---- نسخهٔ دسکتاپ (ویندوز): اول وضعیت اتصال هاست بررسی می‌شود ----
-        if (window.dbConnection) {
-          let hostActive = false
-          try {
-            const info = await window.dbConnection.info()
-            hostActive = !!info.active
-          } catch { /* IPC در دسترس نیست — ویزارد نشان بده */ }
-          if (hostActive) {
-            // اتصال هاست از قبل فعال — نصب‌های قدیمی‌تر مستقیم وارد برنامه می‌شوند
-            localStorage.setItem(SETUP_FLAG, '1')
-            if (alive) setState('app')
-            return
-          }
-          if (localStorage.getItem(LOCAL_ONLY_FLAG) === '1') {
-            // کاربر قبلاً «فقط این دستگاه» را انتخاب کرده — دیگر ویزارد لازم نیست
-            if (alive) setState('app')
-            return
-          }
-          // هاست هنوز تنظیم نشده — صفحهٔ اطلاعات هاست نشان داده می‌شود
-          // (بار اول واقعی و همچنین ارتقا از نسخه‌های قبلی)
-          if (alive) setState('wizard')
-          return
-        }
-        if (localStorage.getItem(SETUP_FLAG) === '1') {
-          // حالت محلی: اگر اتصال هاست حذف/خراب شده باشد ویزارد دوباره باز می‌شود
-          if (LOCAL_MODE && !getHostConfig()) {
-            if (alive) setState('wizard')
-            return
-          }
-          if (alive) setState('app')
-          return
-        }
-        // کاربر ذخیره‌شده (نسخهٔ وب) → نصب قبلی است؛ ویزارد لازم نیست
-        if (useAppStore.getState().user) {
+      const localOnly = localStorage.getItem(LOCAL_ONLY_FLAG) === '1'
+      const setupFlag = localStorage.getItem(SETUP_FLAG) === '1'
+      const hasSavedUser = !!useAppStore.getState().user
+      const hostCfg = getHostConfig()
+      const base = {
+        forceSetup,
+        localOnly,
+        setupFlag,
+        hasSavedUser,
+        localMode: LOCAL_MODE,
+        hasHostConfig: !!hostCfg,
+        hostConfigUnverified: !!hostCfg && !hostCfg.verifiedAt,
+      }
+
+      // ---- نسخهٔ دسکتاپ (ویندوز): وضعیت واقعی اتصال هاست بررسی می‌شود ----
+      if (window.dbConnection) {
+        let infoActive = false
+        let infoReachable: boolean | null = null
+        try {
+          const info = await window.dbConnection.info()
+          infoActive = !!info.active
+          infoReachable = typeof info.reachable === 'boolean' ? info.reachable : null
+        } catch { /* IPC در دسترس نیست — ویزارد نشان بده */ }
+        const d = decideFirstRun({ ...base, desktop: true, infoActive, infoReachable })
+        if (!alive) return
+        if (d === 'app') {
           localStorage.setItem(SETUP_FLAG, '1')
-          if (alive) setState('app')
-          return
+          setState('app')
+        } else {
+          setState('wizard')
         }
-      }
-      if (LOCAL_MODE) {
-        // بار اول نسخهٔ اندروید — بدون تنظیم سرور، ورود ممکن نیست
-        // (?setup=1 برای تغییر سرور، ویزارد را همیشه باز می‌کند)
-        if (forceSetup || !getHostConfig()) {
-          if (alive) setState('wizard')
-          return
-        }
-        localStorage.setItem(SETUP_FLAG, '1')
-        if (alive) setState('app')
         return
       }
-      if (forceSetup) {
-        // درگاه اضطراری در مرورگر هم ویزارد را نشان می‌دهد
-        if (alive) setState('wizard')
+
+      const d = decideFirstRun({ ...base, desktop: false, infoActive: false, infoReachable: null })
+      if (!alive) return
+      if (d === 'wizard') {
+        setState('wizard')
         return
       }
-      // نسخهٔ وب/مرورگر — بدون ویزارد
+      // نصب قبلی (فلگ یا نشست ذخیره‌شده) — فلگ ثبت می‌شود و برنامه باز می‌شود
       localStorage.setItem(SETUP_FLAG, '1')
-      if (alive) setState('app')
+      setState('app')
     }
     void decide()
     return () => { alive = false }

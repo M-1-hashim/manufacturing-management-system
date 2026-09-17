@@ -14,7 +14,7 @@
  * در مرورگر (نسخهٔ وب) گام هاست غیرفعال است — اتصال هاست مخصوص نسخهٔ ویندوز.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Factory, HardDrive, Cloud, Globe, Server, KeyRound, Database,
-  ArrowLeft, ArrowRight, Check, RefreshCw, ShieldCheck, Info, MonitorSmartphone,
+  ArrowLeft, ArrowRight, Check, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
 } from 'lucide-react'
 
 const COLOR_THEMES = [
@@ -71,6 +71,8 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [formError, setFormError] = useState<string | null>(null)
   /** نتیجهٔ آخرین تست ناموفق — برای پیام دقیق + چک‌لیست رفع مشکل */
   const [testFail, setTestFail] = useState<{ kind?: string; error?: string } | null>(null)
+  /** اتصال ذخیره‌شده ولی وصل نمی‌شود — ویزارد با مقادیر فعلی دوباره باز شده */
+  const [reopenedBroken, setReopenedBroken] = useState(false)
 
   // فیلدهای هاست
   const [sshHost, setSshHost] = useState('')
@@ -82,6 +84,36 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [dbName, setDbName] = useState('')
   const [dbUser, setDbUser] = useState('')
   const [dbPassword, setDbPassword] = useState('')
+
+  // پیش‌پرکردن از اتصال ذخیره‌شده — ویزارد هرگز فیلدهای خالیِ تکراری نشان نمی‌دهد
+  // اگر اتصال ذخیره‌شده عملاً وصل نمی‌شود (reachable=false)، مستقیم گام هاست با
+  // مقادیر فعلی باز می‌شود تا کاربر فقط ایراد را اصلاح کند
+  useEffect(() => {
+    let alive = true
+    async function prefill() {
+      if (!conn) return
+      try {
+        const inf = await conn.info()
+        if (!inf || !inf.active || !alive) return
+        setMode(inf.sshMode ? 'ssh' : 'direct')
+        setSshHost(inf.sshHost || '')
+        setSshPort(String(inf.sshPort || '21098'))
+        setSshUser(inf.sshUser || '')
+        setSshPassword(inf.sshPassword || '')
+        setDbHost(inf.host || '')
+        setDbPort(String(inf.port || '3306'))
+        setDbName(inf.database || '')
+        setDbUser(inf.user || '')
+        setDbPassword(inf.password || '')
+        if (inf.reachable === false) {
+          setReopenedBroken(true)
+          setStep(3)
+        }
+      } catch { /* IPC در دسترس نیست — فرم خالی می‌ماند */ }
+    }
+    void prefill()
+    return () => { alive = false }
+  }, [])
 
   function finish(localOnly = false) {
     localStorage.setItem(SETUP_FLAG, '1')
@@ -365,6 +397,27 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
           {/* ================= گام 3: اتصال به هاست ================= */}
           {step === 3 && (
             <div className="space-y-4">
+              {reopenedBroken && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 p-3.5 text-[13px] leading-6">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-amber-800 dark:text-amber-300">
+                      {t(
+                        'اتصال قبلی ذخیره شده بود ولی وصل نمی‌شود',
+                        'نښلون پخوانی خوندي شوی و خو نه نښلي',
+                        'A connection was saved before but it does not work'
+                      )}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {t(
+                        'مقادیر فعلی همان چیزی است که ذخیره شده — ایراد را پیدا و اصلاح کنید، بعد دوباره ذخیره کنید.',
+                        'ارزښتونه همغه دي چې خوندي شوي — ستونزه پیدا او اصلاح کړئ، بیا یې خوندي کړئ.',
+                        'The values below are what was saved — find and fix the problem, then save again.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div>
                 <h2 className="font-semibold text-base">{t('اتصال به هاست', 'هوسټ ته نښلول', 'Connect to your host')}</h2>
                 <p className="text-xs text-muted-foreground mt-1">

@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.22** — 🔍 **CLEAR CONNECTION-FAILURE MESSAGES + HTTP FALLBACK**: every failed connection test now explains the real reason in plain language (address not found / timeout / refused / *web version not installed at this address*), with a troubleshooting checklist on desktop and a help section on mobile; if you type an address without a protocol, `https` **and** `http` are both tried and the one that actually works is saved (hosts without SSL certificates used to always fail). Plus 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (v1.0.21)**, 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**.
+**Version 1.0.23** — 🚪 **THE HOST PAGE NOW ALWAYS APPEARS ON FIRST LAUNCH (fixed for real)**: even if a connection file was written before (e.g. by host.bat) or a saved connection is actually broken, the app runs a quick 3-second reachability check at startup and re-opens the host page **with every field pre-filled** plus a yellow explanation banner — you just fix the wrong value and save; on Android, upgrades from older versions and unverified saved addresses now also return to the host page instead of being skipped. Plus 🔍 **CLEAR CONNECTION-FAILURE MESSAGES + HTTP FALLBACK (v1.0.22)**, 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (v1.0.21)**, 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**.
 
 ---
 
