@@ -1586,3 +1586,59 @@ Stage Summary:
 - https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.19
 - MD5: Setup.exe 5a0e3e113801581b13d179ef745120bf · Portable.zip a10c904b29bc9c0dbe7c341bc20cf99f
 - نکتهٔ محیطی: makensis این بار در ~/nsis-works (پایدار) است نه /tmp؛ اسکریپت‌ها و README همان مسیر را مستند می‌کنند
+
+---
+Task ID: 16-c
+Agent: coordinator (main)
+Task: طراحی «راه‌اندازی اول با هاست + ورود با کاربران دیتابیس + ذخیرهٔ پسورد + ورود آفلاین» برای موبایل و کامپیوتر
+
+Design Summary:
+- کشف: FirstRunGate موجود است (دسکتاپ → ویزارد SetupWizard با IPC؛ APK → رد می‌شد). ورود محلی = مقایسهٔ سادهٔ پسورد (هش scrypt هاست قابل تأیید نبود). پل اندروید فقط saveFile/toast داشت. snapshotServerToLocal دسکتاپ هش‌های scrypt کاربران را کپی می‌کند → ورود آفلاین دسکتاپ با پسوردهای هاست از قبل کار می‌کند.
+- APK: FirstRunGate در LOCAL_MODE اگر setab-local.hostConfig نبود → ApkHostWizard جدید (زبان/تم + آدرس سرور نسخهٔ وب + تست اتصال با GET /api/download/setup?info=1 + ذخیره). ورود: remote-first — POST {host}/api/auth/login از طریق پل بومی AndroidBridge.httpRequest (بدون CORS) یا fetch مرورگر + CORS جدید middleware؛ موفق → ذخیرهٔ پسورد (setab-local.savedCreds، base64) + ذخیرهٔ کوکی هاست + mint نشست محلی + دریافت خودکار snapshot دیتا از endpoint جدید /api/system/device-snapshot و restoreAll (پسوردهای scrypt حفظ می‌شوند). ناموفقِ شبکه → سقوط به ورود محلی: هندلر auth حالا scrypt-js می‌فهمد + fallback به savedCreds (ورود آفلاین). قفل ۵/۱۵دقیقه در همهٔ مسیرها.
+- دسکتاپ: حذف لینک «رد کردن» ویزارد + ذخیره/پیش‌پرکردن پسورد در LoginView (هر دو پلتفرم).
+- فایل‌های جدید: host-link.ts، local-api/scrypt-verify.ts، local-api/host-client.ts، apk-host-wizard.tsx، api/system/device-snapshot/route.ts
+
+---
+Task ID: 16-e
+Agent: android-bridge
+Task: Native HTTP bridge (AndroidBridge.httpRequest) in MainActivity
+
+Work Log:
+- محیط کامپایل بعد از reset سندباکس دوباره ساخته شد: Temurin JDK 21.0.12.1 → ~/jdk21 و platform-34-ext7_r03 (dl.google.com) → ~/android-sdk/android-34/android.jar — همان مسیرهایی که build.sh انتظار دارد
+- MainActivity.java فقط با خواندن کامل + قرارداد src/lib/host-link.ts (دست‌نخورده) تطبیق داده شد؛ Bridge قبلی saveFile/toast را داشت
+- داخل Bridge متد @JavascriptInterface httpRequest(tag, url, method, headersJson, body, timeoutMs) اضافه شد: اجرای کامل روی ترد پس‌زمینهٔ «setab-http» (بدون NetworkOnMainThreadException)؛ HttpURLConnection با connect/read timeout = timeoutMs (گارد ≤0 → 10000)؛ متد uppercase (پیش‌فرض GET)؛ هدرها از headersJson با org.json.JSONObject و فقط مقادیر String واقعی (JSON خالی/نامعتبر به‌آرامی رد می‌شود)؛ بدنهٔ غیرخالی برای متدهای غیر GET/HEAD به‌صورت UTF-8 با setDoOutput نوشته می‌شود
+- پاسخ: status از getResponseCode؛ بدنه 2xx از getInputStream و بقیه از getErrorStream (gzip شفاف)؛ خواندن با سقف HTTP_MAX_BYTES = 12MB و قطع بی‌صدا؛ هدرهای پاسخ — set-cookie چندگانه با join با «\n» از getHeaderFields (جست‌وجوی بی‌حساس به بزرگی حروف) + content-type؛ فقط مقادیر غیرتهی داخل headers
+- callback: payload با JSONObject ساخته می‌شود ({status, headers{set-cookie?,content-type?}, text} یا {error}) → Base64.encodeToString(NO_WRAP) → resolveHttp روی UI thread با web.post + evaluateJavascript و JSONObject.quote برای tag/b64 — دقیقاً یک‌بار برای هر tag؛ مسیر خطا SocketTimeoutException → همان پیام JS («پاسخی از سرور دریافت نشد (تایم‌اوت)») و بقیه «اتصال به سرور ناموفق بود: <جزئیات>»؛ گارد web==null (بعد از onDestroy)
+- فیلد جدید اضافه نشد (web موجود استفاده شد)؛ رفتارهای قبلی (saveFile، toast، shouldInterceptRequest، DownloadManager و...) دست‌نخورده؛ کامنت‌ها به سبک فارسیِ فایل
+- تست دود اجرایی روی JVM (خارج از ریپو، در /home/z/httptest و سپس حذف شد): منطق درخواست کپی‌وار با کلاس واقعی org.json + HttpServer داخلی JDK — ۱۷ چک همگی PASS: کوکی دوتایی join با \n، 404 از getErrorStream، POST با بدنه + هدرهای Content-Type/Cookie، JSON هدر نامعتبر → بی‌خیال، تایم‌اوت → {error:تایم‌اوت}، اتصال ردشده → {error}، HEAD بدون بدنه؛ کامپایل با android.jar هم سبز (org.json/Base64/evaluateJavascript همه در API 24+ موجودند)
+- javac چک اجباری: EXIT=0 با فقط ۴ هشدار مجاز (bootstrap classpath + obsolete source/target 8) و Noteِ deprecation پیشینِ کد موجود (getExternalStoragePublicDirectory) — بدون خطا
+- فایل‌ها: android/src/com/setab/erp/MainActivity.java + worklog.md (بدون تغییر host-link.ts)
+
+Stage Summary:
+- پل بومی HTTP کامل شد: AndroidBridge.httpRequest(tag, url, method, headersJson, body, timeoutMs) روی ترد پس‌زمینه با HttpURLConnection و پاسخ ناهمگام base64(JSON) از طریق window.__setabHttpResolve(tag, b64) — دقیقاً مطابق قرارداد host-link.ts (بدون CORS، بدون تغییر در آن فایل)
+- قرارداد پیاده‌شده: موفق → {"status":int,"headers":{"set-cookie"?, "content-type"?},"text":...} (کوکی‌های چندگانه با \n، سقف 12MB، NO_WRAP)؛ هر خطا/تایم‌اوت → {"error": پیام خوانا}؛ callback همیشه و فقط یک‌بار برای هر tag
+- کامپایل چک: javac -source/-target 8 -cp ~/android-sdk/android-34/android.jar → موفق، بدون خطا (فقط هشدارهای مجاز)؛ تست دود رفتاری ۱۷/۱۷ PASS
+- نکته: کامپایل JVM نشان نمی‌دهد رفتار WebView (evaluateJavascript) — آن بخش با گارد null/try-catch ایمن شده و مسیر callback از الگوی تعیین‌شدهٔ تسک پیروی می‌کند؛ APK rebuild در بیلد بعدی انجام می‌شود
+
+---
+Task ID: 16-f/16-g
+Agent: coordinator (main)
+Task: پیاده‌سازی و انتشار v1.0.20 — راه‌اندازی اول با هاست + ورود با کاربران دیتابیس + ورود آفلاین
+
+Work Log:
+- TS: host-link.ts (hostConfig/savedCreds/bridgeHttp/probeHost) + scrypt-verify.ts (scrypt-js — همان پارامترهای Node: N=16384,r=8,p=1,64) + host-client.ts (remoteLogin/pullSnapshot/upsertLocalUserFromHost)
+- engine.ts: هوک ورود remote-first (POST /api/auth/login → هاست → در موفقیت: ذخیرهٔ اعتبارنامه + نشست محلی + رکورد کاربر؛ در قطعی: سقوط به هندلر محلی) +暴露 __setabOriginalFetch + استثنای ناظر برای host-sync
+- auth.ts: تأیید scrypt محلی + fallback ورود آفلاین با savedCreds + me با برگرداندن نسخهٔ نشست در نبود رکورد
+- system.ts: POST /api/system/host-sync (test/pull) + hostLink در connection-status؛ backup.ts: حذف ریست admin123 (هش scrypt حفظ می‌شود) + export restoreAll
+- host: GET /api/system/device-snapshot (نشست الزامی، همهٔ نقش‌ها) + CORS در middleware (echo Origin + credentials؛ SameSite=Lax کوکی از CSRF محافظت می‌کند)
+- UI: ApkHostWizard (زبان/تم + آدرس سرور + تست + ذخیره بدون تستِ اختیاری) + FirstRunGate (LOCAL_MODE بدون hostConfig → ویزارد؛ ?setup=1 همیشه ویزارد) + LoginView (prefill/saveCreds + pull خودکار پس از ورود + نشان وضعیت سرور) + کارت «اتصال به سرور مرکزی» در تنظیمات + حذف لینک رد کردن دسکتاپ
+- Java (16-e): AndroidBridge.httpRequest با کال‌بک __setabHttpResolve (base64) — javac OK + ۱۷ تست رفتاری
+- باگ‌های کشف‌شده در تست مرورگری و رفع‌شده: (۱) bridgeHttp از fetch رهگیری‌شدهٔ موتور استفاده می‌کرد → ورود «راه دور» بی‌صدا محلی می‌شد و pull 404 می‌داد (و تست ویزارد همیشه سبز بود!) → __setabOriginalFetch؛ (۲) ?setup=1 در LOCAL_MODE با هاست تنظیم‌شده ویزارد را باز نمی‌کرد
+- تست end-to-end (static export :3400 + هاست :3000، موبایل 390px + دسکتاپ 1280px، تیره/روشن): ویزارد → تست سبز با نسخهٔ سرور → ورود remote (session uid = شناسهٔ ادمین هاست) → pull خودکار (کاربران با هش scrypt) → خروج → قطع‌سازی هاست (پورت 9) → ورود آفلاین موفق با scrypt-js → پسورد غلط → 401 + شمارندهٔ قفل → کارت تنظیمات (تغییر آدرس + تست + pull دستی) → مسیر منفی ویزارد → رگرسیون :3000 (ویزارد بدون skip، ورود سالم، CORS 204/echo) — صفر خطای کنسول
+- ریلیز v1.0.20 (id 390480689): versionCode 5؛ APK 1,104,680B (MD5 6074532f) + Setup.exe 172,052,320B (ad15f274) + Portable.zip 270,914,505B (4cd19fc2) + notes — sha256 گیت‌هاب == لوکال برای هر سه باینری
+- محیط دوباره‌ساخته‌شده در این تسک: build-tools r36 (~/android-sdk/android-16) + NSIS 3.08 (~/nsis-works)
+
+Stage Summary:
+- v1.0.20 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.20
+- جریان جدید: اولین اجرا (موبایل و دسکتاپ) → هاست اجباری → ورود با دیتابیس سرور → ذخیرهٔ حساب → ورود آفلاین (scrypt-js / savedCreds)
+- نکته: برای موبایل «هاست» = آدرس نسخهٔ وب نصب‌شده (APK نمی‌تواند مستقیم MySQL را ببیند)؛ همگام‌سازی دوسویهٔ داده موبایل→هاست در نسخه‌های آینده

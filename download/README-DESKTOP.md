@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.19** — 🧪 **DEEP-TESTED RELEASE**: the whole system (code, logic and UI) was deep-tested and **37+ real bugs fixed** across both backends — safe JSON-backup restore (no more host-wipe), session invalidation on password/role change, currency-aware customer debts, cumulative payment dialog, stock-overwrite fix, offline-engine RBAC and more. Plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7): when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
+**Version 1.0.20** — 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN**: the first launch asks for the server (host) address and sign-in uses the users stored in that server's database; the account is saved on the device afterwards so offline sign-in works too. Plus 🧪 **DEEP-TESTED v1.0.19**: the whole system (code, logic and UI) was deep-tested and **37+ real bugs fixed** across both backends — safe JSON-backup restore (no more host-wipe), session invalidation on password/role change, currency-aware customer debts, cumulative payment dialog, stock-overwrite fix, offline-engine RBAC and more. Plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7): when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | File | Size | What it is |
 |---|---|---|
-| `ManufacturingERP-Setup.exe` | ~161 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~254 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `ManufacturingERP-Setup.exe` | ~164 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
+| `ManufacturingERP-Windows-Portable.zip` | ~258 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
 | `README-DESKTOP.md` | — | This file. |
 
 Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and database clients for BOTH SQLite (offline local mode) and MySQL (shared-hosting mode). **No internet connection and no Node.js are required** — local mode works fully offline; host mode needs your hosting MySQL to be reachable.

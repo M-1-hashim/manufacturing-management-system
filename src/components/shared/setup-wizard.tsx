@@ -507,13 +507,6 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
             </div>
           )}
         </div>
-
-        {/* رد کردن ویزارد */}
-        <div className="text-center mt-4">
-          <button onClick={finish} className="text-[12px] text-muted-foreground/80 underline underline-offset-4 hover:text-foreground transition-colors">
-            {t('رد کردن راه‌اندازی و داخل شدن به برنامه', 'لغوه کول او پروګرام ته ننوتل', 'Skip setup and enter the app')}
-          </button>
-        </div>
       </div>
     </div>
   )

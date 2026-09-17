@@ -31,6 +31,7 @@ import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { LOCAL_MODE } from '@/lib/local-api'
 import { saveFileLocal } from '@/lib/local-api/bridge'
+import { getHostConfig, saveHostConfig, clearHostConfig, normalizeHostUrl, probeHost, type HostConfig } from '@/lib/host-link'
 
 // ---------- اتصال برنامه دسکتاپ به هاست (Electron IPC — نسخهٔ 1.0.3 به بعد) ----------
 interface DbConnInfoT {
@@ -1005,6 +1006,9 @@ export default function SettingsModule() {
         </CardContent>
       </Card>
 
+      {/* پیوند هاست (سرور مرکزی) — فقط نسخهٔ اندروید مستقل */}
+      {LOCAL_MODE && <ApkHostLinkCard />}
+
       {/* نسخه اندروید — فقط روی سرور (در حالت محلی APK مستقل، دانلود APK بی‌معناست) */}
       {!LOCAL_MODE && (
         <Card>
@@ -1862,5 +1866,181 @@ export default function SettingsModule() {
         </Card>
       )}
     </div>
+  )
+}
+
+// ---------------- پیوند هاست (سرور مرکزی) — فقط نسخهٔ اندروید مستقل ----------------
+/*
+ * در APK، «هاست» = آدرس نسخهٔ وب نصب‌شده (همان سروری که دیتابیس MySQL را سرو می‌کند).
+ * ورود اول باید با کاربرانِ دیتابیس همان سرور انجام شود؛ بعد از هر ورود موفق،
+ * کپی آفلاین دستگاه با دیتای سرور بروز می‌شود تا در حالت آفلاین هم کار کند.
+ */
+function ApkHostLinkCard() {
+  const { t } = useI18n()
+  const [cfg, setCfg] = useState<HostConfig | null>(() => getHostConfig())
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState<'test' | 'pull' | 'save' | null>(null)
+  const [probeOk, setProbeOk] = useState<boolean | null>(null)
+
+  async function runTest() {
+    setBusy('test')
+    try {
+      const r = await apiPost<{ ok?: boolean; version?: string | null; error?: string }>('/api/system/host-sync', { action: 'test' })
+      setProbeOk(!!r?.ok)
+      if (r?.ok) {
+        toast.success(t(`اتصال برقرار است${r.version ? ` — نسخهٔ ${r.version}` : ''}`, `نښلون برقرار دی${r.version ? ` — نسخه ${r.version}` : ''}`, `Connection OK${r.version ? ` (v${r.version})` : ''}`))
+      } else {
+        toast.error(r?.error || t('سرور در دسترس نیست', 'سرور نه لرېږي', 'Server unreachable'))
+      }
+    } catch (e) {
+      toast.error(String((e as Error)?.message || e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function runPull() {
+    setBusy('pull')
+    try {
+      const r = await apiPost<{ ok?: boolean; rows?: number | null; error?: string }>('/api/system/host-sync', { action: 'pull' })
+      if (r?.ok) {
+        setCfg(getHostConfig())
+        setProbeOk(true)
+        toast.success(t(`کپی آفلاین بروز شد — ${r.rows ?? 0} رکورد`, `افلاین کاپی تازه شوه — ${r.rows ?? 0} ریکارډ`, `Offline copy updated — ${r.rows ?? 0} rows`))
+      } else {
+        toast.error(r?.error || t('کپی گرفتن ناموفق بود', 'کاپی اخیستنه ناکامه شوه', 'Copy failed'))
+      }
+    } catch (e) {
+      toast.error(String((e as Error)?.message || e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function saveEdit() {
+    const url = normalizeHostUrl(draft)
+    if (!url) {
+      toast.error(t('آدرس سرور را وارد کنید', 'پتهٔ سرور ولیکئ', 'Enter the server address'))
+      return
+    }
+    setBusy('save')
+    try {
+      const p = await probeHost(url)
+      const next: HostConfig = { ...(cfg ?? { url: '' }), url }
+      if (p.ok) {
+        next.verifiedAt = new Date().toISOString()
+        next.serverVersion = p.version
+        next.lastPullError = null
+      }
+      saveHostConfig(next)
+      setCfg(getHostConfig())
+      setEditing(false)
+      setProbeOk(p.ok ? true : false)
+      toast.success(
+        p.ok
+          ? t('آدرس سرور ذخیره و تأیید شد ✓', 'پته خوندي او تایید شوه ✓', 'Server address saved & verified ✓')
+          : t('ذخیره شد — اما تست اتصال ناموفق بود', 'خوندي شو — خو ازمویښته ناکامه شوه', 'Saved — but the test failed')
+      )
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  function removeHost() {
+    clearHostConfig()
+    toast.success(t('اتصال سرور حذف شد — برای تنظیم مجدد، راه‌اندازی اولیه باز می‌شود', 'د سرور نښلون ړنګ شو — د بیا تنظیم لپاره لومړنۍ راه‌اندازې پرانیستل کیږي', 'Server connection removed — first-run setup will reopen'))
+    setTimeout(() => { window.location.href = '/' }, 900)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Server className="h-4 w-4 text-primary" />
+          {t('اتصال به سرور مرکزی (هاست)', 'مرکزي سرور (هوسټ) ته نښلول', 'Central server (host) connection')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!editing ? (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2 min-w-0 flex-1 rounded-lg border bg-muted/40 px-3 py-2">
+                {probeOk === false ? <WifiOff className="h-4 w-4 shrink-0 text-amber-600" /> : <Wifi className="h-4 w-4 shrink-0 text-emerald-600" />}
+                <span dir="ltr" className="text-sm truncate">{cfg?.url}</span>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={runTest} disabled={busy !== null}>
+                  <RefreshCw className={busy === 'test' ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+                  {t('تست', 'ازمویښته', 'Test')}
+                </Button>
+                <Button size="sm" className="h-9 gap-1.5" onClick={runPull} disabled={busy !== null}>
+                  <RefreshCw className={busy === 'pull' ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+                  {t('بروزرسانی کپی آفلاین', 'افلاین کاپی تازه کول', 'Update offline copy')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => { setDraft(cfg?.url ?? ''); setEditing(true) }}
+                >
+                  {t('تغییر آدرس', 'پته بدلول', 'Change address')}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-9 text-destructive hover:text-destructive" onClick={removeHost}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {t('حذف', 'ړنګول', 'Remove')}
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground leading-5">
+              {t(
+                'ورود با کاربرانِ دیتابیس همین سرور انجام می‌شود؛ بعد از هر ورود موفق، کپی آفلاین دستگاه خودکار بروز می‌شود تا بدون انترنت هم برنامه کار کند.',
+                'ننوتل د همدې سرور ډېټابیس کارنانو سره کیږي؛ د هر بریالي ننوتلو وروسته افلاین کاپی اتومات تازه کیږي چې له انټرنېټ پرته هم پروګرام کار وکړي.',
+                'Sign-in uses the users of this server\u2019s database; after each successful sign-in the offline copy refreshes so the app works without internet too.'
+              )}
+            </p>
+            {(cfg?.lastPullAt || cfg?.lastPullError) && (
+              <div className="text-xs space-y-1">
+                {cfg?.lastPullAt && (
+                  <p className="text-muted-foreground">
+                    {t('آخرین کپی موفق:', 'وروستنی بریالی کاپی:', 'Last successful copy:')}{' '}
+                    <span dir="ltr">{new Date(cfg.lastPullAt).toLocaleString()}</span>
+                  </p>
+                )}
+                {cfg?.lastPullError && (
+                  <p className="text-destructive">
+                    {t('آخرین خطای کپی:', 'وروستنیه کاپي ستونزه:', 'Last copy error:')}{' '}
+                    <span dir="ltr">{cfg.lastPullError}</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-3">
+            <Label htmlFor="host-url-edit">{t('آدرس جدید سرور', 'د سرور نوی پته', 'New server address')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="host-url-edit"
+                dir="ltr"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="https://erp.example.com"
+                inputMode="url"
+              />
+              <Button className="h-10 shrink-0" onClick={saveEdit} disabled={busy !== null}>
+                {busy === 'save' ? '...' : t('ذخیره', 'خوندي', 'Save')}
+              </Button>
+              <Button variant="ghost" className="h-10 shrink-0" onClick={() => setEditing(false)} disabled={busy !== null}>
+                {t('انصراف', 'لغوه', 'Cancel')}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('آدرس تست و سپس ذخیره می‌شود؛ اگر سرور در دسترس نباشد باز هم ذخیره می‌شود ولی با هشدار.', 'پته ازمویښتې او بیا خوندي کیږي؛ که سرور نه لرېږي هم خوندي کیږي خو د خبرداري سره.', 'The address is tested then saved; if unreachable it is still saved with a warning.')}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

@@ -14,6 +14,7 @@ import { installAuthInterceptor } from '@/lib/auth-client'
 import { installOfflineInterceptor, trySync, refreshPendingCount, clearOfflineCache } from '@/lib/offline-client'
 import { LOCAL_MODE, installLocalApi } from '@/lib/local-api'
 import { canAccess, roleLabel, departmentLabel } from '@/lib/rbac'
+import { getHostConfig, getSavedCreds, saveCreds, probeHost } from '@/lib/host-link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,7 @@ import {
 import DashboardModule from '@/components/modules/dashboard'
 import BackupMenu from '@/components/shared/backup-menu'
 import SetupWizard from '@/components/shared/setup-wizard'
+import ApkHostWizard from '@/components/shared/apk-host-wizard'
 import ProductsModule from '@/components/modules/products'
 import MaterialsModule from '@/components/modules/materials'
 import FormulasModule from '@/components/modules/formulas'
@@ -204,6 +206,38 @@ function LoginView() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [hostCfg] = useState(() => (LOCAL_MODE ? getHostConfig() : null))
+  const [hostProbe, setHostProbe] = useState<{ ok: boolean; error?: string } | null>(null)
+  const [probing, setProbing] = useState(false)
+
+  // پیش‌پرکردن فرم با حساب ذخیره‌شدهٔ موفق قبلی — ورود سریع و امکان ورود آفلاین
+  useEffect(() => {
+    const saved = getSavedCreds()
+    if (saved) {
+      setUsername(saved.username)
+      setPassword(saved.password)
+    }
+  }, [])
+
+  // نشان وضعیت سرور (فقط حالت محلی/APK که «هاست» آدرس نسخهٔ وب است)
+  const reprobeHost = () => {
+    if (!hostCfg) return
+    setProbing(true)
+    probeHost(hostCfg.url)
+      .then((p) => setHostProbe({ ok: p.ok, error: p.error }))
+      .catch(() => setHostProbe({ ok: false, error: 'unknown' }))
+      .finally(() => setProbing(false))
+  }
+  useEffect(() => {
+    if (!hostCfg) return
+    setProbing(true)
+    let alive = true
+    probeHost(hostCfg.url)
+      .then((p) => { if (alive) setHostProbe({ ok: p.ok, error: p.error }) })
+      .catch(() => { if (alive) setHostProbe({ ok: false, error: 'unknown' }) })
+      .finally(() => { if (alive) setProbing(false) })
+    return () => { alive = false }
+  }, [hostCfg])
 
   // دانلود عمومی سِتب — حتی بدون داخل شدن (هر فردی که لینک صفحه را باز کند)
   const [dlInfo, setDlInfo] = useState<SetupDlInfoT | null>(null)
@@ -225,9 +259,25 @@ function LoginView() {
     try {
       const user = await apiPost<SessionUser>('/api/auth/login', { username, password })
       setUser(user)
+      // ذخیرهٔ حساب موفق روی دستگاه — پیش‌پرکردن و ورود آفلاین بعدی
+      // (نسخهٔ اندروید همین کار را در موتور هم می‌کند — دوباره‌نویسی بی‌ضرر است)
+      saveCreds(username.trim(), password)
       toast.success(`${t('خوش آمدید', 'ښه راغلاست', 'Welcome')}, ${user.fullName}`)
       // اگر اجراؤات آفلاین در صف باشد، بلافاصله همگام‌سازی می‌شود
       void trySync()
+      // نسخهٔ اندروید: بعد از ورود موفق، کپی آفلاین دستگاه با دیتای هاست بروز می‌شود
+      if (LOCAL_MODE && getHostConfig()) {
+        void (async () => {
+          try {
+            const r = await apiPost<{ ok?: boolean; rows?: number | null; error?: string }>('/api/system/host-sync', { action: 'pull' })
+            if (r?.ok) {
+              toast.success(t('کپی آفلاین با دیتای سرور بروز شد', 'افلاین کاپی د سرور له ډېټا سره تازه شوه', 'Offline copy updated from server'))
+            } else if (r?.error) {
+              toast.error(r.error)
+            }
+          } catch { /* در قطعی هاست بی‌اهمیت — ورود محلی سالم ماند */ }
+        })()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('خطا در داخل شدن', 'د ننوتلو ستونزه', 'Login failed'))
     } finally {
@@ -285,13 +335,38 @@ function LoginView() {
             <h1 className="text-lg font-bold tracking-tight">{t('سیستم مدیریتی تولید', 'د تولید مدیریت سیسټم', 'Manufacturing ERP')}</h1>
           </div>
 
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-base">{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</h2>
             <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => setLang(lang === 'fa' ? 'ps' : lang === 'ps' ? 'en' : 'fa')} title={t('تغییر زبان', 'ژبه بدلول', 'Change language')}>
               <Languages className="h-4 w-4" />
               <span className="text-sm">{langLabel}</span>
             </Button>
           </div>
+
+          {/* وضعیت سرور مرکزی — فقط نسخهٔ اندروید (هاست = آدرس نسخهٔ وب) */}
+          {LOCAL_MODE && hostCfg && (
+            <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-[12.5px]">
+              <span className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
+                <Database className="h-3.5 w-3.5 shrink-0" />
+                <span dir="ltr" className="truncate">{hostCfg.url}</span>
+              </span>
+              <button
+                type="button"
+                onClick={reprobeHost}
+                disabled={probing}
+                className={cn(
+                  'flex items-center gap-1 shrink-0 font-medium',
+                  hostProbe?.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                )}
+                title={hostProbe?.ok ? t('سرور در دسترس است', 'سرور لرې دی', 'Server reachable') : hostProbe?.error || ''}
+              >
+                {probing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : hostProbe?.ok ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+                {hostProbe?.ok
+                  ? t('در دسترس', 'لرې', 'Online')
+                  : t('قطع — ورود آفلاین', 'قطع — افلاین ننوتل', 'Offline sign-in')}
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
@@ -780,6 +855,9 @@ function Shell() {
  *   - فلگ localStorage (mfg-setup-completed) نباشد
  *   - و کاربر ذخیره‌شده‌ای از قبل نباشد (نصب‌های قبلی ویزارد نمی‌بینند)
  *   - و در نسخهٔ دسکتاپ، اتصال هاست از قبل فعال نباشد
+ * نسخهٔ اندروید (LOCAL_MODE): بدون ذخیرهٔ «اطلاعات هاست» (آدرس سرور مرکزی)
+ * ویزارد ادامه نمی‌کند — ورود اول باید با کاربرِ موجود در دیتابیس همان سرور
+ * انجام شود؛ بعد از آن حساب روی دستگاه ذخیره می‌شود و آفلاین هم ورود ممکن است.
  * در نسخهٔ وب (مرورگر) ویزارد نمایش داده نمی‌شود — اتصال هاست از env هاست می‌آید.
  */
 const SETUP_FLAG = 'mfg-setup-completed'
@@ -790,14 +868,32 @@ function FirstRunGate() {
   useEffect(() => {
     let alive = true
     async function decide() {
-      // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد (غیر از حالت محلی)
-      const forceSetup = !LOCAL_MODE && new URLSearchParams(window.location.search).get('setup') === '1'
-      if (!forceSetup && localStorage.getItem(SETUP_FLAG) === '1') {
-        if (alive) setState('app')
-        return
+      // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
+      const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
+      if (!forceSetup) {
+        if (localStorage.getItem(SETUP_FLAG) === '1') {
+          // حالت محلی: اگر اتصال هاست حذف/خراب شده باشد ویزارد دوباره باز می‌شود
+          if (LOCAL_MODE && !getHostConfig()) {
+            if (alive) setState('wizard')
+            return
+          }
+          if (alive) setState('app')
+          return
+        }
+        // کاربر ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست (ارتقا از نسخه‌های پیشین)
+        if (useAppStore.getState().user) {
+          localStorage.setItem(SETUP_FLAG, '1')
+          if (alive) setState('app')
+          return
+        }
       }
-      // کاربر ذخیره‌شده → نصب قبلی است؛ ویزارد لازم نیست
-      if (useAppStore.getState().user) {
+      if (LOCAL_MODE) {
+        // بار اول نسخهٔ اندروید — بدون تنظیم سرور، ورود ممکن نیست
+        // (?setup=1 برای تغییر سرور، ویزارد را همیشه باز می‌کند)
+        if (forceSetup || !getHostConfig()) {
+          if (alive) setState('wizard')
+          return
+        }
         localStorage.setItem(SETUP_FLAG, '1')
         if (alive) setState('app')
         return
@@ -829,7 +925,9 @@ function FirstRunGate() {
   }, [])
 
   if (state === 'loading') return <div className="min-h-screen bg-background" aria-busy="true" />
-  if (state === 'wizard') return <SetupWizard onDone={() => setState('app')} />
+  if (state === 'wizard') {
+    return LOCAL_MODE ? <ApkHostWizard onDone={() => setState('app')} /> : <SetupWizard onDone={() => setState('app')} />
+  }
   return <Shell />
 }
 

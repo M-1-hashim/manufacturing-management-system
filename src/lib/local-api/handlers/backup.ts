@@ -20,7 +20,7 @@ import {
   uid, writeCol, type Row,
 } from '../db'
 
-interface FullExport {
+export interface FullExport {
   app: string
   version: number
   dbType: string
@@ -112,39 +112,25 @@ function normalizeRow(r: Record<string, unknown>): Row {
   return out as Row
 }
 
-/** تعویض کامل دیتا با خروجی کاپی احتیاطی — تعداد سطرهای بازیابی‌شده */
-function restoreAll(data: FullExport, actor: { uid: string; username: string }): number {
+/**
+ * تعویض کامل دیتا با خروجی کاپی احتیاطی — تعداد سطرهای بازیابی‌شده
+ * (برای «کپی بروز از هاست» در تنظیمات هم صادر شده است)
+ *
+ * نکتهٔ پسوردها: هش‌های scrypt هاست عیناً حفظ می‌شوند — هندلر ورود محلی حالا
+ * scrypt را (با scrypt-js) تأیید می‌کند؛ پسورد ریست نمی‌شود و ورود آفلاین با
+ * پسورد واقعی همان کاربر هاست کار می‌کند.
+ */
+export function restoreAll(data: FullExport, actor: { uid: string; username: string }): number {
   let totalRows = 0
-  let pwResets = 0
   // حذف همه — فرزندان اول (ترتیب معکوس)
   for (const t of [...TABLES].reverse()) writeCol(t.local, [])
   // درج — والدین اول
   for (const t of TABLES) {
-    let rows = (data.tables[t.name] ?? []).map(normalizeRow)
-    // پسوردهای هش‌شدهٔ هاست (scrypt:...) در حالت محلی با مقایسهٔ ساده match نمی‌شوند
-    // و همهٔ کاربران از جمله ادمین از دسترس خارج می‌شدند — ریست به admin123
-    if (t.name === 'User') {
-      rows = rows.map((r) => {
-        if (String(r.password ?? '').startsWith('scrypt:')) {
-          pwResets++
-          return { ...r, password: 'admin123' }
-        }
-        return r
-      })
-    }
+    const rows = (data.tables[t.name] ?? []).map(normalizeRow)
     totalRows += rows.length
     writeCol(t.local, rows)
   }
-  // یک رخداد برای کل ریست — بازیگر همان ادمین بازیابی‌کننده است
-  if (pwResets > 0) {
-    logAudit(
-      actor,
-      'backup_restore',
-      'users',
-      undefined,
-      'پسورد کاربران واردشده از کاپی احتیاطی به admin123 ریست شد'
-    )
-  }
+  logAudit(actor, 'backup_restore', 'system', undefined, `بازیابی کامل کاپی احتیاطی — ${totalRows} رکورد`)
   return totalRows
 }
 

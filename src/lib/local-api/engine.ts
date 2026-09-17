@@ -10,8 +10,10 @@
 
 import { allRoutes } from './handlers'
 import { ensureSeeded } from './seed'
-import { getSession, type LocalSession } from './db'
+import { getSession, logAudit, setSession, type LocalSession } from './db'
 import { ApiError, type Ctx } from './types'
+import { getHostConfig, saveCreds } from '@/lib/host-link'
+import { remoteLogin, upsertLocalUserFromHost } from './host-client'
 
 /** حالت محلی فعال است؟ — فقط در بیلد APK اندروید (NEXT_PUBLIC_LOCAL_MODE=1) */
 export const LOCAL_MODE: boolean = process.env.NEXT_PUBLIC_LOCAL_MODE === '1'
@@ -54,8 +56,9 @@ function rbacResponse(pathname: string, method: string, session: LocalSession | 
   }
 
   // تغییر وضعیت (نوشتن) فقط برای غیرناظر — ناظر فقط خواندن
+  // (host-sync استثناست: «کپی بروز از هاست» برای همهٔ نقش‌ها مجاز است)
   const isWrite = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
-  if (isWrite && session.role === 'viewer' && !pathname.startsWith('/api/auth/')) {
+  if (isWrite && session.role === 'viewer' && !pathname.startsWith('/api/auth/') && pathname !== '/api/system/host-sync') {
     return jsonResponse({ error: 'حساب شما فقط دسترسی خواندن دارد' }, 403)
   }
 
@@ -69,6 +72,8 @@ export function installLocalApi(): void {
   ensureSeeded()
 
   const originalFetch = window.fetch.bind(window)
+  // برای لایه‌های دیگر (پل هاست) — fetch دست‌نخورده قبل از رهگیری
+  ;(window as unknown as { __setabOriginalFetch?: typeof fetch }).__setabOriginalFetch = originalFetch
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // --- تشخیص آدرس درخواست ---
@@ -111,6 +116,39 @@ export function installLocalApi(): void {
 
       const session: LocalSession | null = getSession()
       const ctx: Ctx = { url, method, body, session }
+
+      // --- ورود با کاربران دیتابیس هاست (اگر هاست تنظیم شده باشد) ---
+      // اول تلاش از راه دور (اعتبارسنجی با دیتابیس هاست)؛ در موفقیت: ذخیرهٔ
+      // اعتبارنامه‌ها + ساخت نشست محلی + ثبت رکورد کاربر؛ در قطعیِ هاست، مسیر
+      // عادی هندلر محلی ادامه می‌یابد (ورود آفلاین با هش scrypt یا حساب ذخیره‌شده).
+      if (method === 'POST' && url.pathname === '/api/auth/login') {
+        const hostCfg = getHostConfig()
+        const loginBody = (body && typeof body === 'object' ? body : {}) as {
+          username?: string
+          password?: string
+        }
+        if (hostCfg && loginBody.username && loginBody.password) {
+          const uname = String(loginBody.username).trim()
+          const remote = await remoteLogin(hostCfg, uname, String(loginBody.password))
+          if (remote.kind === 'ok') {
+            upsertLocalUserFromHost(remote.user, String(loginBody.password))
+            setSession(remote.user)
+            saveCreds(uname, String(loginBody.password))
+            logAudit(
+              { uid: remote.user.id, username: remote.user.username },
+              'login_host',
+              'auth',
+              undefined,
+              'ورود با حساب دیتابیس هاست'
+            )
+            return jsonResponse(remote.user)
+          }
+          if (remote.kind !== 'unreachable') {
+            return jsonResponse({ error: remote.message }, remote.status)
+          }
+          // هاست در دسترس نیست → ورود آفلاین (ادامه به هندلر محلی)
+        }
+      }
 
       // --- گارد دسترسی — قبل از هر هندلر، مثل middleware هاست ---
       const blocked = rbacResponse(url.pathname, method, session)

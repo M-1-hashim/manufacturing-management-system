@@ -9,6 +9,9 @@
 import { ApiError, bodyAs, route, type Ctx, type RouteDef } from '../types'
 import { getSession } from '../db'
 import { APP_VERSION } from '@/lib/app-version'
+import { getHostConfig } from '@/lib/host-link'
+import { probeHost } from '@/lib/host-link'
+import { pullSnapshot } from '../host-client'
 
 // 19 کولکشن محلی — معادل 19 جدول EXPECTED_TABLES در route هاست (به همان ترتیب)
 const COLLECTIONS = [
@@ -52,8 +55,10 @@ function requireAdmin(ctx: Ctx): void {
 }
 
 export const routes: RouteDef[] = [
-  // GET /api/system/connection-status — همیشه وصل به دیتابیس محلی (بدون هاست)
-  route('GET', '/api/system/connection-status', () => ({
+  // GET /api/system/connection-status — دیتابیس محلی + (اگر تنظیم شده باشد) وضعیت پیوند هاست
+  route('GET', '/api/system/connection-status', () => {
+    const cfg = getHostConfig()
+    return {
     ok: true,
     configured: true,
     mode: 'local',
@@ -69,12 +74,24 @@ export const routes: RouteDef[] = [
     syncing: false,
     snapshotting: false,
     lastSyncAt: null,
-    lastSnapshotAt: null,
+    lastSnapshotAt: cfg?.lastPullAt ?? null,
     lastSnapshotRows: null,
-    lastSyncError: null,
+    lastSyncError: cfg?.lastPullError ?? null,
     pendingPush: 0,
     lastTick: null,
-  })),
+    // پیوند هاست (سرور مرکزی) — مخصوص نسخهٔ اندروید با هاست تنظیم‌شده
+    hostLink: cfg
+      ? {
+          configured: true,
+          url: cfg.url,
+          serverVersion: cfg.serverVersion ?? null,
+          verifiedAt: cfg.verifiedAt ?? null,
+          lastPullAt: cfg.lastPullAt ?? null,
+          lastPullError: cfg.lastPullError ?? null,
+        }
+      : { configured: false },
+  }
+  }),
 
   // GET /api/system/db-info — وضعیت دیتابیس فعال (localStorage) با همان ساختار هاست
   route('GET', '/api/system/db-info', () => {
@@ -124,7 +141,7 @@ export const routes: RouteDef[] = [
     }
   }),
 
-  // POST /api/system/sync-actions — همگام‌سازی در حالت محلی لازم نیست
+  // POST /api/system/sync-actions — همگام‌سازی دوسویه هنوز مخصوص نسخهٔ دسکتاپ است
   route('POST', '/api/system/sync-actions', (ctx) => {
     const body = bodyAs<{ action?: string }>(ctx.body)
     if (!body?.action) throw new ApiError(400, 'UNKNOWN_ACTION')
@@ -132,5 +149,24 @@ export const routes: RouteDef[] = [
       ok: true,
       result: 'در حالت محلی همگام‌سازی لازم نیست',
     }
+  }),
+
+  // POST /api/system/host-sync — پیوند هاست: تست اتصال / کپی بروز دیتا از سرور
+  // (برای همهٔ نقش‌ها مجاز است — گارد ناظر در engine برای این مسیر مستثنا شده)
+  route('POST', '/api/system/host-sync', async (ctx) => {
+    const s = ctx.session ?? getSession()
+    if (!s) throw new ApiError(401, 'ابتدا وارد سیستم شوید')
+    const body = bodyAs<{ action?: string }>(ctx.body)
+    if (body?.action === 'test') {
+      const cfg = getHostConfig()
+      if (!cfg) return { ok: false, error: 'هاست تنظیم نشده است' }
+      const p = await probeHost(cfg.url)
+      return p.ok ? { ok: true, version: p.version ?? null } : { ok: false, error: p.error ?? 'هاست در دسترس نیست' }
+    }
+    if (body?.action === 'pull') {
+      const r = await pullSnapshot({ uid: s.uid, username: s.username })
+      return r.ok ? { ok: true, rows: r.rows ?? null } : { ok: false, error: r.error ?? 'کپی گرفتن ناموفق بود' }
+    }
+    throw new ApiError(400, 'UNKNOWN_ACTION')
   }),
 ]

@@ -14,11 +14,37 @@ const ROLE_RULES: { prefix: string; roles: string[]; methods?: string[] }[] = [
   { prefix: '/api/admin', roles: ['admin'] },
 ]
 
+/**
+ * CORS برای کلاینت‌های مرورگری خارج‌ازمبدأ (نسخهٔ اندروید در مرورگر/تست، ابزارها)
+ * مبدأ درخواست عیناً echo می‌شود؛ کوکی mfg_session از نوع SameSite=Lax است و
+ * مرورگرها آن را در درخواست‌های کراس-سایت ضمیمه نمی‌کنند، پس این بازشدگی
+ * برای نشست‌های کوکی‌دار خطر CSRF ندارد — کلاینت واقعی APK از پل بومی می‌رود.
+ */
+function corsHeaders(req: NextRequest): Record<string, string> {
+  const origin = req.headers.get('origin')
+  if (!origin) return {}
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Vary': 'Origin',
+  }
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const cors = corsHeaders(req)
+
+  // preflight — بدون ورود به منطق نشست
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: cors })
+  }
 
   if (PUBLIC_PATHS.some((p) => pathname === p)) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+    return res
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value
@@ -26,7 +52,7 @@ export async function middleware(req: NextRequest) {
   if (!session) {
     return NextResponse.json(
       { error: 'دسترسی غیرمجاز — ابتدا وارد سیستم شوید' },
-      { status: 401 }
+      { status: 401, headers: cors }
     )
   }
 
@@ -34,22 +60,24 @@ export async function middleware(req: NextRequest) {
   if (rule && !rule.roles.includes(session.role)) {
     return NextResponse.json(
       { error: 'شما به این بخش دسترسی ندارید' },
-      { status: 403 }
+      { status: 403, headers: cors }
     )
   }
 
   // PUT تنظیمات فقط ادمین/مدیر (GET برای همه کاربران سیستم واردشده آزاد است)
   if (pathname === '/api/settings' && req.method === 'PUT' && !['admin', 'manager'].includes(session.role)) {
-    return NextResponse.json({ error: 'تغییر تنظیمات فقط توسط مدیر مجاز است' }, { status: 403 })
+    return NextResponse.json({ error: 'تغییر تنظیمات فقط توسط مدیر مجاز است' }, { status: 403, headers: cors })
   }
 
   // تغییر وضعیت (نوشتن) فقط برای غیرناظر — ناظر فقط خواندن (به‌جز مسیرهای auth مانند تغییر پسورد خود)
   const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)
   if (isWrite && session.role === 'viewer' && !pathname.startsWith('/api/auth/')) {
-    return NextResponse.json({ error: 'حساب شما فقط دسترسی خواندن دارد' }, { status: 403 })
+    return NextResponse.json({ error: 'حساب شما فقط دسترسی خواندن دارد' }, { status: 403, headers: cors })
   }
 
-  return NextResponse.next()
+  const res = NextResponse.next()
+  for (const [k, v] of Object.entries(cors)) res.headers.set(k, v)
+  return res
 }
 
 export const config = {

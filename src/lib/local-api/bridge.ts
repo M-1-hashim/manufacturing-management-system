@@ -13,6 +13,18 @@ declare global {
     AndroidBridge?: {
       saveFile: (name: string, base64: string) => boolean
       toast: (message: string) => void
+      /**
+       * درخواست HTTP بومی — پاسخ ناهمگام با window.__setabHttpResolve(tag, base64)
+       * (قرارداد کامل در src/lib/host-link.ts)
+       */
+      httpRequest: (
+        tag: string,
+        url: string,
+        method: string,
+        headersJson: string,
+        body: string,
+        timeoutMs: number
+      ) => void
     }
   }
 }

@@ -28,13 +28,21 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+
+import org.json.JSONObject;
 
 /**
  * سِتب — نسخهٔ اندروید «کاملاً مستقل» (آفلاین)
@@ -51,6 +59,11 @@ import java.util.Map;
  *
  * ذخیرهٔ فایل (کاپی احتیاطی JSON): پل AndroidBridge.saveFile(name, base64)
  * فایل را در پوشهٔ Downloads دستگاه می‌نویسد.
+ *
+ * درخواست HTTP به هاست (نسخهٔ متصل به سرور): پل AndroidBridge.httpRequest(tag,
+ * url, method, headersJson, body, timeoutMs) — بدون محدودیت CORS؛ پاسخ ناهمگام
+ * با window.__setabHttpResolve(tag, base64(JSON)) به صفحه برمی‌گردد
+ * (قرارداد: src/lib/host-link.ts).
  */
 public class MainActivity extends Activity {
 
@@ -106,7 +119,7 @@ public class MainActivity extends Activity {
         s.setUserAgentString(s.getUserAgentString() + " SetabAndroid/1.0");
         CookieManager.getInstance().setAcceptCookie(true);
 
-        // پل Java ↔ JS — ذخیرهٔ کاپی احتیاطی در Downloads
+        // پل Java ↔ JS — ذخیرهٔ کاپی احتیاطی در Downloads + درخواست HTTP به هاست
         w.addJavascriptInterface(new Bridge(), "AndroidBridge");
 
         w.setWebViewClient(new WebViewClient() {
@@ -281,7 +294,71 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** پل Java ↔ JS — از src/lib/local-api/bridge.ts صدا زده می‌شود */
+    // ---------------- درخواست HTTP بومی (بدون CORS) ----------------
+
+    /** سقف حجم پاسخ HTTP — جلوگیری از OOM؛ بیش از آن بی‌صدا کوتاه می‌شود */
+    private static final int HTTP_MAX_BYTES = 12 * 1024 * 1024;
+
+    /** ارسال نتیجهٔ HTTP به صفحه — دقیقاً یک‌بار برای هر tag (هم موفقیت، هم خطا) */
+    private void resolveHttp(final String tag, final String payloadJson) {
+        try {
+            final String b64 = Base64.encodeToString(payloadJson.getBytes("UTF-8"), Base64.NO_WRAP);
+            WebView w = web;
+            if (w == null) return; // WebView بسته شده — جای ارسال نیست
+            w.post(() -> {
+                try {
+                    if (web != null) web.evaluateJavascript(
+                            "window.__setabHttpResolve && window.__setabHttpResolve("
+                                    + JSONObject.quote(tag) + "," + JSONObject.quote(b64) + ")", null);
+                } catch (Exception ignored) {
+                    // تزریق JS ناموفق (مثلاً WebView نابود شده) — کاری نمی‌توانیم بکنیم
+                }
+            });
+        } catch (Exception ignored) {
+            // رمزگذاری ناموفق — کاری از دست ما برنمی‌آید
+        }
+    }
+
+    /** خواندن جریان تا سقف بایت — برای پاسخ‌های بزرگ‌تر، مابقی بی‌صدا حذف می‌شود */
+    private static String readStreamCapped(InputStream is, int cap) throws IOException {
+        if (is == null) return "";
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        try {
+            byte[] chunk = new byte[8192];
+            int total = 0, n;
+            while ((n = is.read(chunk)) != -1) {
+                if (total < cap) {
+                    int keep = Math.min(n, cap - total);
+                    buf.write(chunk, 0, keep);
+                    total += keep;
+                }
+                // بیش از سقف — خواندن ادامه می‌یابد ولی ذخیره نمی‌شود (قطع بی‌صدا)
+            }
+        } finally {
+            try { is.close(); } catch (IOException ignored) {}
+        }
+        return buf.toString("UTF-8");
+    }
+
+    /** جمع همهٔ مقادیر یک هدر (جست‌وجوی بی‌حساس به بزرگی حروف) با \n — برای set-cookie چندگانه */
+    private static String joinHeaderValues(Map<String, List<String>> fields, String name) {
+        if (fields == null) return null;
+        StringBuilder sb = null;
+        for (Map.Entry<String, List<String>> en : fields.entrySet()) {
+            String k = en.getKey();
+            if (k == null || !name.equalsIgnoreCase(k.trim())) continue;
+            List<String> vals = en.getValue();
+            if (vals == null) continue;
+            for (String v : vals) {
+                if (v == null) continue;
+                sb = (sb == null) ? new StringBuilder() : sb.append("\n");
+                sb.append(v);
+            }
+        }
+        return sb == null ? null : sb.toString();
+    }
+
+    /** پل Java ↔ JS — از src/lib/local-api/bridge.ts و src/lib/host-link.ts صدا زده می‌شود */
     private class Bridge {
         @JavascriptInterface
         public boolean saveFile(String name, String base64) {
@@ -298,6 +375,89 @@ public class MainActivity extends Activity {
         public void toast(String msg) {
             if (msg == null) return;
             runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show());
+        }
+
+        /**
+         * درخواست HTTP بومی به سرور هاست — بدون محدودیت CORS (قرارداد: src/lib/host-link.ts)
+         * پاسخ ناهمگام: window.__setabHttpResolve(tag, base64(JSON{status, headers, text}))
+         * و در هر خطا/تایم‌اوت: base64(JSON{error}) — همیشه دقیقاً یک‌بار برای هر tag.
+         */
+        @JavascriptInterface
+        public void httpRequest(final String tag, final String url, final String method,
+                                final String headersJson, final String body, final int timeoutMs) {
+            // شبکه هرگز روی ترد اصلی نمی‌رود (NetworkOnMainThreadException)
+            new Thread(() -> {
+                HttpURLConnection conn = null;
+                try {
+                    int timeout = timeoutMs > 0 ? timeoutMs : 10000;
+                    conn = (HttpURLConnection) new URL(url).openConnection();
+                    conn.setConnectTimeout(timeout);
+                    conn.setReadTimeout(timeout);
+                    String m = (method == null || method.trim().isEmpty())
+                            ? "GET" : method.trim().toUpperCase();
+                    conn.setRequestMethod(m);
+
+                    // هدرهای درخواست — JSON خالی/نامعتبر به‌آرامی نادیده گرفته می‌شود
+                    if (headersJson != null && !headersJson.trim().isEmpty()) {
+                        try {
+                            JSONObject hs = new JSONObject(headersJson);
+                            Iterator<String> keys = hs.keys();
+                            while (keys.hasNext()) {
+                                String k = keys.next();
+                                Object v = hs.opt(k);
+                                if (k != null && !k.trim().isEmpty() && v instanceof String) {
+                                    conn.setRequestProperty(k, (String) v);
+                                }
+                            }
+                        } catch (Exception ignored) {
+                            // JSON هدرها نامعتبر است — بدون هدرهای اضافه ادامه می‌دهیم
+                        }
+                    }
+
+                    // نوشتن بدنه (UTF-8) — برای GET/HEAD بدنه‌ای وجود ندارد
+                    if (body != null && !body.isEmpty() && !"GET".equals(m) && !"HEAD".equals(m)) {
+                        conn.setDoOutput(true);
+                        OutputStream os = conn.getOutputStream();
+                        try {
+                            os.write(body.getBytes("UTF-8"));
+                            os.flush();
+                        } finally {
+                            os.close();
+                        }
+                    }
+
+                    int status = conn.getResponseCode();
+                    // بدنهٔ پاسخ: 2xx از getInputStream، بقیه از getErrorStream (gzip خودکار)
+                    InputStream is = (status >= 200 && status < 300)
+                            ? conn.getInputStream() : conn.getErrorStream();
+                    String text = readStreamCapped(is, HTTP_MAX_BYTES);
+
+                    // هدرهای پاسخ — کوکی‌های چندگانه با \n؛ فقط مقادیر غیرتهی
+                    String setCookie = joinHeaderValues(conn.getHeaderFields(), "set-cookie");
+                    String contentType = conn.getHeaderField("content-type");
+
+                    JSONObject payload = new JSONObject();
+                    payload.put("status", status);
+                    JSONObject headers = new JSONObject();
+                    if (setCookie != null) headers.put("set-cookie", setCookie);
+                    if (contentType != null) headers.put("content-type", contentType);
+                    payload.put("headers", headers);
+                    payload.put("text", text);
+                    resolveHttp(tag, payload.toString());
+                } catch (Exception e) {
+                    String msg = (e instanceof SocketTimeoutException)
+                            ? "پاسخی از سرور دریافت نشد (تایم‌اوت)"
+                            : "اتصال به سرور ناموفق بود: "
+                              + (e.getMessage() != null ? e.getMessage() : e.toString());
+                    try {
+                        resolveHttp(tag, new JSONObject().put("error", msg).toString());
+                    } catch (Exception ignored) {
+                        // ساخت پیام خطا هم ناموفق — کاری نمی‌توانیم بکنیم
+                    }
+                } finally {
+                    if (conn != null) conn.disconnect();
+                }
+            }, "setab-http").start();
         }
     }
 
