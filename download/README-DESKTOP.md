@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.21** — 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (desktop)**: the first-run host setup page now appears on every launch until the MySQL host connection is actually configured — even when upgrading from an older install with a saved session (previously the wizard was silently skipped for those users). Plus 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**: 37+ real bugs fixed, plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7).
+**Version 1.0.22** — 🔍 **CLEAR CONNECTION-FAILURE MESSAGES + HTTP FALLBACK**: every failed connection test now explains the real reason in plain language (address not found / timeout / refused / *web version not installed at this address*), with a troubleshooting checklist on desktop and a help section on mobile; if you type an address without a protocol, `https` **and** `http` are both tried and the one that actually works is saved (hosts without SSL certificates used to always fail). Plus 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (v1.0.21)**, 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**.
 
 ---
 

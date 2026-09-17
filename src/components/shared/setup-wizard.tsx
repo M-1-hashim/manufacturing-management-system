@@ -69,6 +69,8 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [testing, setTesting] = useState(false)
   const [saved, setSaved] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  /** نتیجهٔ آخرین تست ناموفق — برای پیام دقیق + چک‌لیست رفع مشکل */
+  const [testFail, setTestFail] = useState<{ kind?: string; error?: string } | null>(null)
 
   // فیلدهای هاست
   const [sshHost, setSshHost] = useState('')
@@ -95,8 +97,45 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
     return code || ''
   }
 
+  /** پیام دقیق شکست تست SSH بر اساس نوع خطا + جزئیات خام */
+  function sshFailText(kind: string | undefined, error: string | undefined): string {
+    if (kind === 'AUTH')
+      return t(
+        'نام کاربری یا پسورد SSH اشتباه است — این‌ها همان نام کاربری/پسورد cPanel هستند (نه MySQL)',
+        'د SSH کارن نوم یا پټ نوم غلط دی — دا همغه cPanel معلومات دي (نه MySQL)',
+        'SSH username or password is wrong — these are your cPanel credentials (not MySQL)'
+      )
+    if (kind === 'TIMEOUT')
+      return t(
+        'سرور پاسخ نداد — معمولاً یعنی SSH روی هاست روشن نیست یا پورت اشتباه است (هاست‌های اشتراکی معمولاً 21098)',
+        'سرور ځواب نه واکړ — معمولاً SSH پر هوسټ نه دی روشن یا پورټ غلط دی (شریک هوسټونه معمولاً ۲۱۰۹۸)',
+        'Server did not respond — SSH is likely disabled on the host or the port is wrong (shared hosts usually use 21098)'
+      )
+    const e = String(error || '')
+    if (/ENOTFOUND|getaddrinfo|EAI_AGAIN/i.test(e))
+      return t(
+        'آدرس هاست پیدا نشد — املای آدرس را بررسی کنید (بدون https:// و بدون مسیر)',
+        'د هوسټ پته پیدا نشوه — ليکدود وګورئ (بې له https://)',
+        'Host address not found — check the spelling (without https:// or paths)'
+      )
+    if (/ECONNREFUSED/i.test(e))
+      return t(
+        'اتصال رد شد — پورت SSH بسته است یا اشتباه وارد شده',
+        'نښلون رد شو — د SSH پورټ بند یا غلط دی',
+        'Connection refused — the SSH port is closed or wrong'
+      )
+    if (/EHOSTUNREACH|ENETUNREACH|ETIMEDOUT/i.test(e))
+      return t(
+        'راه به سرور پیدا نشد — انترنت یا فایروال را بررسی کنید',
+        'لار سرور ته پیدا نشوه — انټرنټ یا فایروال وګورئ',
+        'No route to the server — check internet or firewall'
+      )
+    return t('اتصال SSH برقرار نشد', 'د SSH نښلون برقرار نشو', 'SSH connection failed') + (e ? ' — ' + e : '')
+  }
+
   async function handleTest() {
     setFormError(null)
+    setTestFail(null)
     if (!conn) return
     if (!sshHost.trim() || !sshUser.trim()) {
       setFormError(t('آدرس هاست و نام کاربری SSH الزامی است', 'د هوسټ پته او د SSH کارن نوم لازم دي', 'SSH server and username are required'))
@@ -107,10 +146,10 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
       const r = await conn.test({ sshHost, sshPort, sshUser, sshPassword })
       if (r.ok) {
         toast.success(t('اتصال SSH وصل شد ✓', 'د SSH نښلون برقرار دی ✓', 'SSH connection OK ✓'))
-      } else if (r.kind === 'AUTH') {
-        toast.error(t('نام کاربری یا پسورد SSH اشتباه است', 'د SSH کارن نوم یا پټ نوم غلط دی', 'SSH username or password is wrong'))
       } else {
-        toast.error(t('هاست SSH در دسترس نیست — آدرس/پورت یا انترنت را بررسی کنید', 'د SSH هاست نه لرېږي — پته/پورت یا انترنت وګورئ', 'SSH server unreachable — check address/port or internet'))
+        setTestFail({ kind: r.kind, error: r.error })
+        setFormError(sshFailText(r.kind, r.error))
+        toast.error(t('تست اتصال ناموفق بود — پیام کامل در صفحه', 'ازمویښته ناکامه شوه — بشپړ پیام په پاڼه کې', 'Connection test failed — full message on screen'))
       }
     } catch (e) {
       setFormError(String((e as Error)?.message || e))
@@ -417,6 +456,51 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                     {testing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                     {testing ? t('در حال تست…', 'ازموینه روانه ده…', 'Testing…') : t('تست اتصال SSH', 'د SSH نښلون ازمویل', 'Test SSH connection')}
                   </Button>
+
+                  {/* پیام دقیق شکست + چک‌لیست رفع مشکل */}
+                  {testFail && (
+                    <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 p-3.5 text-[12.5px] leading-6">
+                      <p className="font-semibold flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                        <Info className="h-4 w-4 shrink-0" />
+                        {t('تست ناموفق بود — چک‌لیست رفع مشکل:', 'ازمویښته ناکامه شوه — د حل لیست:', 'Test failed — troubleshooting checklist:')}
+                      </p>
+                      <ol className="list-decimal ms-5 mt-1.5 space-y-0.5 text-muted-foreground">
+                        <li>
+                          {t(
+                            'در cPanel بخش «Manage Shell Access» دسترسی SSH را روشن کنید (روی برخی هاست‌ها پیش‌فرض خاموش است)',
+                            'په cPanel کې «Manage Shell Access» فعال کړئ (په ځینو هوسټونو کې لومړي کې تړلی وی)',
+                            'Enable SSH under cPanel \u2192 Manage Shell Access (off by default on some hosts)'
+                          )}
+                        </li>
+                        <li>
+                          {t(
+                            'پورت را بررسی کنید: Namecheap معمولاً 21098 — بقیهٔ هاست‌ها معمولاً 22 (در ایمیل خوش‌آمد هاست هست)',
+                            'پورټ وګورئ: Namecheap معمولاً ۲۱۰۹۸ — نور معمولاً ۲۲ (په خوش راغلاست بریښنا کې)',
+                            'Check the port: Namecheap usually 21098 — others usually 22 (see the welcome email)'
+                          )}
+                        </li>
+                        <li>
+                          {t(
+                            'نام کاربری/پسورد همان cPanel است — نه پسورد MySQL و نه پسورد ایمیل',
+                            'کارن نوم/پټ نوم همغه cPanel دی — نه د MySQL پټ نوم',
+                            'Username/password are the cPanel ones — not MySQL or email passwords'
+                          )}
+                        </li>
+                        <li>
+                          {t(
+                            'آدرس را بدون https:// و بدون مسیر وارد کنید (مثل server370.web-hosting.com)',
+                            'پته بې له https:// ولیکئ (لکه server370.web-hosting.com)',
+                            'Enter the address without https:// or paths (e.g. server370.web-hosting.com)'
+                          )}
+                        </li>
+                      </ol>
+                      {testFail.error && (
+                        <p className="mt-2 text-[11px] text-muted-foreground break-all" dir="ltr">
+                          {t('جزئیات فنی', 'ټېکنیکي جزئیات', 'Technical details')}: {testFail.error}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="rounded-lg border bg-muted/40 p-3 text-[12px] text-muted-foreground flex items-start gap-2">
                     <Database className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                     <span>

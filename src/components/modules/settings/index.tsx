@@ -1926,8 +1926,11 @@ function ApkHostLinkCard() {
     }
     setBusy('save')
     try {
-      const p = await probeHost(url)
-      const next: HostConfig = { ...(cfg ?? { url: '' }), url }
+      // ورودی خام داده می‌شود تا اگر پروتکل ننوشته بود، https و http هر دو امتحان شوند
+      const p = await probeHost(draft)
+      // مهم: آدرسی ذخیره می‌شود که واقعاً جواب داده (ممکن است http باشد)
+      const savedUrl = p.ok && p.triedUrl ? p.triedUrl : url
+      const next: HostConfig = { ...(cfg ?? { url: '' }), url: savedUrl }
       if (p.ok) {
         next.verifiedAt = new Date().toISOString()
         next.serverVersion = p.version

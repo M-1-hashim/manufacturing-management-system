@@ -289,20 +289,83 @@ export function parseJsonResult(r: BridgeHttpResult): { status: number; headers:
 export interface HostProbe {
   ok: boolean
   version?: string
+  /** جزئیات فنی خام خطا — برای نمایش کوچک زیر پیام اصلی */
   error?: string
+  /** علت دسته‌بندی‌شدهٔ شکست — برای پیام کاربردی و راهنما */
+  reason?: ProbeReason
+  /** آدرسی که واقعاً پاسخ داد (ممکن است http باشد اگر https جواب نداد) */
+  triedUrl?: string
+  /** تعداد کاندیداهای تست‌شده */
+  attempts?: number
 }
 
-/** تست دسترسی: GET {url}/api/download/setup?info=1 — عمومی و بی‌اثر */
+export type ProbeReason = 'DNS' | 'TIMEOUT' | 'CONN' | 'NOT_APP' | 'HTTP' | 'SERVER_ERROR' | 'UNKNOWN'
+
+/** دسته‌بندی خطای سطح حمل‌ونقل (پل اندروید/فچ مرورگر) */
+function classifyTransportError(msg: string): ProbeReason {
+  const m = msg.replace(/\s+/g, ' ')
+  if (/تایم‌اوت|timeout|timed?\s*out/i.test(m)) return 'TIMEOUT'
+  if (/ENOTFOUND|getaddrinfo|EAI_AGAIN|Unable to resolve|unknown\s*host|not\s*known/i.test(m)) return 'DNS'
+  if (
+    /ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|ECONNRESET|ERR_CONNECTION|ERR_NAME|ERR_ADDRESS|ERR_SSL|ERR_TLS|socket|SSL|certificate|TLS|handshake|ناموفق بود/i.test(
+      m
+    )
+  )
+    return 'CONN'
+  return 'UNKNOWN'
+}
+
+/**
+ * تست دسترسی: GET {url}/api/download/setup?info=1 — عمومی و بی‌اثر.
+ *
+ * اگر کاربر پروتکل را ننوشته باشد (فقط مثلاً «erp.example.com»)، اول https و
+ * در شکستِ سطح اتصال، http هم امتحان می‌شود — خیلی از هاست‌ها بدون گواهی SSL
+ * هستند و قبلاً https اجباری باعث «وصل نمی‌شود» می‌شد.
+ * در موفقیت triedUrl همان آدرسی است که واقعاً جواب داد (برای ذخیره).
+ */
 export async function probeHost(baseUrl: string, timeoutMs = 8000): Promise<HostProbe> {
-  try {
-    const r = await bridgeHttp(`${baseUrl}/api/download/setup?info=1`, { method: 'GET', timeoutMs })
-    const { status, json } = parseJsonResult(r)
-    if (status >= 200 && status < 400 && json && typeof json === 'object') {
-      const version = (json as { version?: string }).version
-      return { ok: true, version }
+  const raw = String(baseUrl || '').trim()
+  const base = normalizeHostUrl(raw)
+  if (!base) return { ok: false, error: 'آدرس خالی است', reason: 'UNKNOWN' }
+
+  const explicit = /^https?:\/\//i.test(raw)
+  const candidates = explicit ? [base] : [base, base.replace(/^https:\/\//i, 'http://')]
+
+  let lastError = ''
+  let lastReason: ProbeReason = 'UNKNOWN'
+
+  for (let i = 0; i < candidates.length; i++) {
+    const c = candidates[i]
+    try {
+      const r = await bridgeHttp(`${c}/api/download/setup?info=1`, { method: 'GET', timeoutMs })
+      let json: unknown = null
+      let isJson = true
+      try {
+        json = r.text ? JSON.parse(r.text) : null
+      } catch {
+        isJson = false
+      }
+      if (r.status >= 200 && r.status < 400 && isJson && json && typeof json === 'object') {
+        const version = (json as { version?: string }).version
+        return { ok: true, version, triedUrl: c, attempts: i + 1 }
+      }
+      if (r.status >= 500) {
+        lastError = `کد ${r.status} از سرور`; lastReason = 'SERVER_ERROR'
+      } else if (r.status === 404) {
+        lastError = `کد 404 — مسیر /api/download/setup پیدا نشد`; lastReason = 'NOT_APP'
+      } else if (!isJson) {
+        lastError = `پاسخ HTML بود (کد ${r.status}) — نسخهٔ وب برنامه روی این آدرس اجرا نمی‌شود`
+        lastReason = 'NOT_APP'
+      } else {
+        lastError = `کد ${r.status}`; lastReason = 'HTTP'
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      lastError = msg
+      lastReason = classifyTransportError(msg)
     }
-    return { ok: false, error: `پاسخ غیرمنتظرهٔ سرور (کد ${status})` }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    // کاندیدای بعدی فقط وقتی پروتکل را کاربر مشخص نکرده باشد وجود دارد
   }
+
+  return { ok: false, error: lastError, reason: lastReason, attempts: candidates.length }
 }

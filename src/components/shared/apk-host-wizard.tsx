@@ -27,9 +27,11 @@ import {
   probeHost,
   saveHostConfig,
   type HostProbe,
+  type ProbeReason,
 } from '@/lib/host-link'
 import {
   Factory, Globe, Check, RefreshCw, ArrowLeft, ArrowRight, AlertTriangle, Server, Wifi, WifiOff,
+  HelpCircle, Info, MonitorSmartphone, Database,
 } from 'lucide-react'
 
 const SETUP_FLAG = 'mfg-setup-completed'
@@ -66,6 +68,50 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [techError, setTechError] = useState<string | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
+
+  /** پیام کاربردی بر اساس علت شکست — به‌جای خطای خام فنی */
+  function reasonText(p: HostProbe): string {
+    const r: ProbeReason | undefined = p.reason
+    if (r === 'DNS')
+      return t(
+        'آدرس پیدا نشد — املای آدرس یا اتصال انترنت را بررسی کنید',
+        'پته پیدا نشده — ليکدود پته یا نښلون انټرنټ وګورئ',
+        'Address not found — check the spelling or your internet connection'
+      )
+    if (r === 'TIMEOUT')
+      return t(
+        'سرور در زمان مجاز پاسخ نداد — انترنت یا فایروال سرور را بررسی کنید',
+        'سرور په ټاکلي وخت ځواب نه واکړ — انټرنټ یا فایروال وګورئ',
+        'Server did not respond in time — check internet or server firewall'
+      )
+    if (r === 'CONN')
+      return t(
+        'اتصال به سرور رد شد — سرور در دسترس نیست یا پورت/پروتکل اشتباه است',
+        'نښلولو سره سره رد شو — سرور نه لرېږي یا پورټ/پروټوکول غلط دی',
+        'Connection refused — server unreachable or wrong port/protocol'
+      )
+    if (r === 'NOT_APP')
+      return t(
+        'روی این آدرس نسخهٔ وب برنامه اجرا نمی‌شود — آدرس باید آدرسِ نصب نسخهٔ وب باشد (مثل https://erp.example.com). اگر برنامه در زیرپوشه نصب است، مسیر را هم وارد کنید (مثل example.com/erp)',
+        'په دې پته ویب نسخه نه چلېږي — پته باید د ویب نسخې د نصب پته وي. که په فرعي پوښۍ نصب دی، مسیار هم ولیکئ (لکه example.com/erp)',
+        'The web version is not running at this address — enter the address where the web version is installed (e.g. https://erp.example.com). If it is installed in a subfolder, include the path (e.g. example.com/erp)'
+      )
+    if (r === 'SERVER_ERROR')
+      return t(
+        'سرور پاسخ داد ولی خطای داخلی داشت — کمی بعد دوباره امتحان کنید',
+        'سرور ځواب واکړ خو دننی خطا یې درلود — لږ وروسته بیا هڅه وکړئ',
+        'Server responded but returned an internal error — try again shortly'
+      )
+    if (r === 'HTTP')
+      return t(
+        'سرور پاسخ غیرمنتظره داد — این آدرس نسخهٔ وب برنامه نیست',
+        'سرور ناپېژانده ځواب ورکړ — دا پته د ویب نسخه نه ده',
+        'Unexpected server response — this address is not the web version'
+      )
+    return p.error || t('سرور در دسترس نیست', 'سرور نه لرېږي', 'Server unreachable')
+  }
 
   function finish() {
     localStorage.setItem(SETUP_FLAG, '1')
@@ -74,6 +120,7 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
 
   async function handleTest(): Promise<HostProbe | null> {
     setFormError(null)
+    setTechError(null)
     const url = normalizeHostUrl(hostUrl)
     if (!url) {
       setFormError(t('آدرس سرور را وارد کنید', 'پتهٔ سرور ولیکئ', 'Enter the server address'))
@@ -82,7 +129,8 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
     setTesting(true)
     setProbe(null)
     try {
-      const result = await probeHost(url)
+      // ورودی خام داده می‌شود تا اگر پروتکل ننوشته بود، https و http هر دو امتحان شوند
+      const result = await probeHost(hostUrl)
       setProbe(result)
       if (result.ok) {
         toast.success(
@@ -90,7 +138,8 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
             (result.version ? ` (v${result.version})` : '')
         )
       } else {
-        setFormError(result.error ?? t('سرور در دسترس نیست', 'سرور نه لرېږي', 'Server unreachable'))
+        setFormError(reasonText(result))
+        if (result.error && result.reason !== 'UNKNOWN') setTechError(result.error)
       }
       return result
     } finally {
@@ -100,6 +149,7 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
 
   async function handleSave(force = false) {
     setFormError(null)
+    setTechError(null)
     const url = normalizeHostUrl(hostUrl)
     if (!url) {
       setFormError(t('آدرس سرور را وارد کنید', 'پتهٔ سرور ولیکئ', 'Enter the server address'))
@@ -116,8 +166,9 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
           return
         }
       }
+      // مهم: آدرسی ذخیره می‌شود که واقعاً جواب داده (ممکن است http باشد)
       saveHostConfig({
-        url,
+        url: result?.ok && result.triedUrl ? result.triedUrl : url,
         ...(result?.ok
           ? { verifiedAt: new Date().toISOString(), serverVersion: result.version }
           : {}),
@@ -244,9 +295,9 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
                 </h2>
                 <p className="text-[13px] text-muted-foreground mt-1.5 leading-6">
                   {t(
-                    'آدرس همان سیستمی را وارد کنید که نسخهٔ وب روی آن نصب است. بعد از این‌مرحله، با نام کاربری و رمزی که در دیتابیس همان سرور ذخیره است داخل می‌شوید.',
-                    'همغه پته ولیکئ چې ویب نسخه پرې نصب دی. وروسته به د هغه سرور ډېټابیس کې ثبت کارن نوم او پټ نوم ته ننوځئ.',
-                    'Enter the address where the web version is installed. You will then sign in with the username and password stored in that server\u2019s database.'
+                    '«آدرس سرور» یعنی آدرسی که نسخهٔ وب این برنامه روی آن نصب است — همهٔ اطلاعات هاست (دیتابیس و کاربرها) همان‌جا هست و فقط همین آدرس لازم است. بعد از این‌مرحله با نام کاربری و رمزِ همان سرور وارد می‌شوید.',
+                    '«د سرور پته» یعنې هغه پته چې دې پروګرام ویب نسخه پرې نصب ده — ټول هوسټ معلومات هلته دي او یوازې همدا پته کافي ده.',
+                    '"Server address" means the address where the web version of this app is installed — all host data lives there, so this one address is enough. You will then sign in with that server\u2019s username and password.'
                   )}
                 </p>
               </div>
@@ -273,14 +324,22 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
                   </Button>
                 </div>
                 {probe?.ok && (
-                  <p className="text-[13px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                    <Check className="h-4 w-4" />
-                    {t(
-                      `سرور در دسترس است${probe.version ? ` — نسخهٔ ${probe.version}` : ''}`,
-                      `سرور لرې دی${probe.version ? ` — نسخه ${probe.version}` : ''}`,
-                      `Server reachable${probe.version ? ` — version ${probe.version}` : ''}`
+                  <div className="text-[13px] text-emerald-600 dark:text-emerald-400 space-y-1">
+                    <p className="flex items-center gap-1.5">
+                      <Check className="h-4 w-4" />
+                      {t(
+                        `سرور در دسترس است${probe.version ? ` — نسخهٔ ${probe.version}` : ''}`,
+                        `سرور لرې دی${probe.version ? ` — نسخه ${probe.version}` : ''}`,
+                        `Server reachable${probe.version ? ` — version ${probe.version}` : ''}`
+                      )}
+                    </p>
+                    {probe.triedUrl && probe.triedUrl.startsWith('http://') && (
+                      <p className="text-[12px] text-muted-foreground flex items-center gap-1.5" dir="ltr">
+                        <Info className="h-3.5 w-3.5" />
+                        Connected via {probe.triedUrl} (http)
+                      </p>
                     )}
-                  </p>
+                  </div>
                 )}
               </div>
 
@@ -289,6 +348,11 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="min-w-0 flex-1">
                     <p>{formError}</p>
+                    {techError && (
+                      <p className="text-[11px] text-muted-foreground mt-1 break-all" dir="ltr">
+                        {techError}
+                      </p>
+                    )}
                     {probe && !probe.ok && (
                       <button
                         type="button"
@@ -306,6 +370,81 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
                   </div>
                 </div>
               )}
+
+              {/* راهنمای اتصال — مخصوصاً برای کسی که نسخهٔ وب روی سرورش نصب نیست */}
+              <div className="rounded-xl border border-primary/25 bg-primary/5">
+                <button
+                  type="button"
+                  onClick={() => setShowHelp((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 p-3 text-[13px] font-medium"
+                  aria-expanded={showHelp}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <HelpCircle className="h-4 w-4 text-primary" />
+                    {t('تست وصل نشد؟ یا آدرس سرور را ندارید؟ — راهنما', 'ازمویښته بریالي نه شوه؟ — لارښود', 'Test failed or no server address? — Help')}
+                  </span>
+                  <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', showHelp && 'rotate-180')} />
+                </button>
+                {showHelp && (
+                  <div className="px-3.5 pb-3.5 text-[12.5px] leading-6 space-y-2.5 text-muted-foreground">
+                    <div>
+                      <p className="font-semibold text-foreground flex items-center gap-1.5">
+                        <Server className="h-3.5 w-3.5 text-primary" />
+                        {t('آدرس سرور چیست؟', 'د سرور پته څه ده؟', 'What is the server address?')}
+                      </p>
+                      <p>
+                        {t(
+                          'آدرسی که نسخهٔ وب (مرورگری) همین برنامه روی آن نصب شده است — مثل https://erp.example.com یا http://192.168.1.10:3000. وارد کردن آدرس هاستِ خالی (بدون نسخهٔ وب) جواب نمی‌دهد.',
+                          'هغه پته چې ویب نسخه پرې نصب ده — لکه https://erp.example.com. د خالي هوسټ پته بې له ویب نسخې کار نه کوي.',
+                          'The address where the browser version of this app is installed — e.g. https://erp.example.com or http://192.168.1.10:3000. A bare hosting address without the web version will not work.'
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground flex items-center gap-1.5">
+                        <Database className="h-3.5 w-3.5 text-primary" />
+                        {t('چرا گوشی مستقیم به دیتابیس وصل نمی‌شود؟', 'ولې موبایل مستقیم ډېټابیس ته نه نښلي؟', 'Why can\u2019t the phone connect to the database directly?')}
+                      </p>
+                      <p>
+                        {t(
+                          'گوشی نمی‌تواند مستقیم به MySQL وصل شود؛ فقط از راه نسخهٔ وب می‌تواند به دیتای هاست برسد. اگر روی هاست شما نسخهٔ وب نصب نیست، دو راه دارید:',
+                          'موبایل مستقیم MySQL ته نه نښلي؛ یوازې د ویب نسخې له لارې هوسټ ډېټا ته رسيږي. که ویب نسخه نه لرئ، دوه لارې دي:',
+                          'The phone cannot reach MySQL directly; it reaches host data only through the web version. If your hosting has no web version installed, you have two options:'
+                        )}
+                      </p>
+                      <ul className="list-disc ms-5 mt-1 space-y-1">
+                        <li>
+                          {t(
+                            'نسخهٔ ویندوز را نصب کنید — آن مستقیم به دیتابیس هاست (MySQL) وصل می‌شود و در اولین اجرا همهٔ مشخصات هاست را از شما می‌پرسد (SSH + دیتابیس).',
+                            'د ویندوز نسخه نصب کړئ — هغه مستقیم MySQL ته نښلي او په لومړي پرانیستلو کې ټول هوسټ معلومات پوښتي.',
+                            'Install the Windows version — it connects straight to the host database (MySQL) and asks for all host details on first run (SSH + database).'
+                          )}
+                        </li>
+                        <li>
+                          {t(
+                            'نسخهٔ وب را روی یک سرور (هاست با Node.js یا VPS) نصب کنید تا گوشی هم به همان دیتا وصل شود.',
+                            'ویب نسخه پر یو سرور (Node.js هوسټ یا VPS) نصب کړئ چې موبایل هم ورته ډېټا ونښلي.',
+                            'Install the web version on a server (Node.js hosting or VPS) so the phone connects to the same data too.'
+                          )}
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground flex items-center gap-1.5">
+                        <MonitorSmartphone className="h-3.5 w-3.5 text-primary" />
+                        {t('بدون سرور', 'بې له سرور', 'Without a server')}
+                      </p>
+                      <p>
+                        {t(
+                          'تا وقتی سرور تنظیم نشود، نمی‌توان وارد شد — اما می‌توانید آدرس را بعداً از «تنظیمات ← اتصال به سرور مرکزی» هم وارد کنید.',
+                          'تر سرور تنظیمېدو ننوتل نه کېږي — خو پته وروسته له «امستنې ← د مرکزي سرور نښلول» هم واردولی شئ.',
+                          'Until a server is configured you cannot sign in — but you can set the address later via Settings \u2190 Central server connection.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center justify-between pt-2">
                 <Button variant="ghost" onClick={() => setStep(1)} className="gap-1.5">

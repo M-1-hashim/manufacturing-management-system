@@ -1700,3 +1700,26 @@ Stage Summary:
 - رفتار جدید دسکتاپ: صفحهٔ اطلاعات هاست در هر اجرا تا وقتی هاست وصل نشده — راهِ «رد شدن بی‌صدا» برای نصب‌های قدیمی حذف شد
 - MD5: apk 49f470325c9eacd5dc8422179d2acd2b · Setup.exe 02011d60335b250f82ab98f23ea25806 · Portable.zip 2f8a4defb5e80c16982f47aff1f7ac7f
 - host.bat در مخزن به‌عنوان ابزار اختیاری باقی است؛ پیام اصلی به کاربر: دیگر لازم نیست
+
+---
+Task ID: 20
+Agent: coordinator (main)
+Task: «فقط آدرس سرور را میخواهد و اینکه وصل هم نمیشود» — پیام‌های علت شکست اتصال + fallback http + راهنما → ریلیز v1.0.22 (هر سه باینری)
+
+Work Log:
+- ریشه‌یابی: «فقط آدرس سرور» = ویزارد اندروید (ApkHostWizard) که فقط یک فیلد دارد؛ «وصل نمیشود» = ترکیبی از (۱) نبود نسخهٔ وب روی هاست کاربر — گوشی ذاتاً نمی‌تواند مستقیم MySQL را ببیند — (۲) باگ واقعی normalizeHostUrl که همیشه https:// می‌چسباند و هاست‌های بدون SSL همیشه شکست می‌خوردند
+- host-link.ts: probeHost بازنویسی شد — نوع جدید ProbeReason (DNS/TIMEOUT/CONN/NOT_APP/HTTP/SERVER_ERROR/UNKNOWN)، classifyTransportError برای خطاهای پل/fetch، اگر کاربر پروتکل ننوشته بود https سپس http امتحان می‌شود، موفقیت → triedUrl (آدرسی که واقعاً جواب داد)، خطای HTML/404 → NOT_APP با پیام «نسخهٔ وب روی این آدرس نصب نیست»
+- apk-host-wizard.tsx: ورودی خام به probe (برای fallback)، reasonText برای پیام کاربردی سه‌زبانه، جزئیات فنی زیر پیام اصلی، یادداشت «Connected via http…» برای موفقیت با http، ذخیرهٔ triedUrl (باگ https اجباری رفع شد)، بخش راهنمای تاشو: «آدرس سرور چیست؟ / چرا گوشی مستقیم به دیتابیس وصل نمیشود؟ (دو راه: نسخهٔ ویندوز یا نصب نسخهٔ وب) / بدون سرور»
+- setup-wizard.tsx (دسکتاپ): sshFailText — نقشهٔ دقیق خطا (AUTH→cPanel creds، TIMEOUT→SSH خاموش/پورت، ENOTFOUND/ECONNREFUSED/EHOSTUNREACH→پیام مربوط) + چک‌لیست ۴ ردیفهٔ رفع مشکل (Manage Shell Access، پورت 21098/22، creds cPanel نه MySQL، آدرس بدون https://) با جزئیات فنی — پیام خطا حالا داخل صفحه می‌ماند
+- settings/index.tsx: کارت اتصال سرور هم ورودی خام می‌دهد و triedUrl را ذخیره می‌کند
+- تست: ۹/۹ تست منطق probe (fallback/DNS/HTML/404/500/timeout/صریح http/401) با fetch قلابی + agent-browser روی export استاتیک :3400 (موبایل 390px): help باز/بسته، خطای NOT_APP با جزئیات «کد 404»، آدرس «localhost:3000» بدون پروتکل → https شکست → http سبز + Connected via http، ذخیره → hostConfig.url = http://localhost:3000 (triedUrl) ✓، گام ۳ → صفحهٔ ورود؛ دسکتاپ ?setup=1&desktop=1 1280px: هر ۷ فیلد + چک‌لیست پنهان تا شکست تست IPC (در مرورگر بدون IPC قابل تحریک نیست — شرط ساده بررسی شد)؛ صفر خطای کنسول؛ lint سبز
+- حوادث محیط: dev server هنگام build export (جابه‌جایی src/app/api) خراب شد — APIها بدنهٔ خالی برمی‌گرداندند؛ ری‌استارت dev server حل کرد. سندباکس دوباره reset شده بود: JDK 21.0.12.1 → ~/jdk21، build-tools r36 → ~/android-sdk/android-16، platform-34-ext7_r03 → ~/android-sdk/android-34، NSIS 3.06.1 (deb) → ~/nsis-works/nsis-root (NSISDIR لازم است — makensis مسیر /usr/share/nsis هاردکد دارد)
+- بیلد: export دوباره بعد از bump (نسخه داخل باندل 1.0.22) → APK versionCode 7/versionName 1.0.22 (SHA-256 همان keystore c553eb67…)؛ دسکتاپ win-unpacked 598MB (app/package.json=1.0.22، هر دو موتور ویندوز پرایسما، ssh2، رشتهٔ mfg-setup-local-mode در chunks)؛ smoke لینوکس: GET / 200 + login admin/admin123 + «19 tables ensured» + info=1 → 1.0.22؛ demo-db پس از smoke از گیت بازگردانده شد
+- آرتیفکت‌ها: app.apk 1,108,776B · Setup.exe 171,981,586B (رشتهٔ 1.0.22.0 به‌صورت UTF-16 داخل باینری — grep اسکی پیدا نمی‌کند!) · Portable.zip 270,849,030B (2934 فایل، طبق دستور README)
+- ریلیز v1.0.22 با GitHub API (توکن از remote URL): RELEASE-NOTES-v1.0.22.md + README-DESKTOP.md هدر ۱.۰.۲۲
+
+Stage Summary:
+- v1.0.22 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.22
+- MD5: apk a3e17bbfebbf70d71705d622a4d78b7a · Setup.exe 151d47316d6315a97eb45234773b3ba0 · Portable.zip 28a1309dc1fd07d32949fee6dc006a3c
+- sha256 (لوکال، برای تطبیق با گیت‌هاب): apk 1ca7ef129a3db9ba… · Setup fdb79904f931301a… · Portable dd32cfce9225eb53…
+- پیام کلیدی به کاربر: گوشی بدون نسخهٔ وبِ نصب‌شده روی سرور نمی‌تواند وصل شود — یا نسخهٔ وب روی سرور نصب شود یا از نسخهٔ ویندوز (اتصال مستقیم MySQL با صفحهٔ اول) استفاده شود؛ حالا هر دو سناریو داخل برنامه توضیح داده می‌شود
