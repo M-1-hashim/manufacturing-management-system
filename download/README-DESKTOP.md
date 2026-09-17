@@ -76,14 +76,21 @@ Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hostin
 
 ### Quick connect with `host.bat` (new in v1.0.20)
 
-A one-file helper so any user can connect the app to the host **without opening the app first**:
+A one-file helper so any user can connect the app to the host **without opening the app first**. Two ways — both work:
 
-1. Copy `host.bat` to the target PC and double-click it (fully offline, no admin rights needed).
-2. Answer the questions:
-   - **Connection type**: `1` = SSH tunnel (shared hosting / cPanel) — the typical case; `2` = direct MySQL (VPS / dedicated server).
-   - Host address, port (defaults: SSH `21098`, MySQL `3306`), database name, usernames and passwords — passwords are typed masked.
-3. The script checks that the host:port is reachable, writes the config to `%APPDATA%\ManufacturingERP\db-connection.txt` (same format the app uses in Settings), and offers to restart ManufacturingERP — the app then connects to the host automatically.
-4. Re-run it any time to change the host; to go back to the local database, comment out the `mysql://` line in that file (or use Settings → host card).
+**Way 1 — fill the file first (recommended, no questions asked at run time):**
+1. Right-click `host.bat` → **Edit** (or open in Notepad).
+2. Find the block **`*** ENTER YOUR HOST INFO HERE ***`** (right after the `#PSBEGIN#` line, near the top-third of the file).
+3. Fill your values between the `' '` quotes — e.g. `$CFG_MODE = 'ssh'`, `$CFG_SSH_HOST = 'server300.web-hosting.com'`, `$CFG_DB_NAME = 'setab_erp'`, … — and save.
+4. Double-click `host.bat`: it uses exactly those values, checks the host is reachable, writes the config and restarts the app connected. **Any field left empty is asked at run time**, so you can pre-fill only part of it.
+5. Password rule: type it between `' '`; if the password itself contains a `'`, write it twice (`'ab''123'` means `ab'123`). All other special characters (`@ : # % & !` …) need no escaping.
+
+**Way 2 — no editing at all:** just double-click and answer the questions (connection type, host, port, database, users, masked passwords).
+
+Then (both ways):
+- The script checks that host:port is reachable, writes `%APPDATA%\ManufacturingERP\db-connection.txt` (same format the app uses in Settings), and offers to restart ManufacturingERP — the app then connects to the host automatically.
+- Re-run it any time to change the host; to go back to the local database, comment out the `mysql://` line in that file (or use Settings → host card).
+- Defaults if you press Enter: SSH port `21098`, MySQL port `3306`.
 
 Notes: it is a plain text file — open it in Notepad to review the code; every special character in passwords is safely URL-encoded; nothing is sent anywhere except to your own host.
 
@@ -171,17 +178,38 @@ npx electron-builder --win nsis
 
 ### ✨ وصل کردن سریع برنامه به هاست با فایل `host.bat` (جدید در نسخهٔ ۱.۰.۲۰)
 
-یک فایل مستقل و کوچک است؛ روی هر کمپیوتر که نسخهٔ دسکتاپ نصب باشد (یا حتی قبل از نصب) کار می‌کند و دیگر لازم نیست تنظیمات را از داخل برنامه انجام دهید:
+یک فایل مستقل و کوچک است؛ روی هر کمپیوتر که نسخهٔ دسکتاپ نصب باشد (یا حتی قبل از نصب) کار می‌کند. **دو راه** دارد — هر دو یک نتیجه می‌دهند:
 
-1. فایل `host.bat` را به کمپیوتر مقصد کپی کنید و روی آن **دابل‌کلیک** کنید (کاملاً آفلاین است، نیازی به انترنت یا دسترسی ادمین ندارد).
-2. به سوال‌ها جواب بدهید — همه‌چیز از خودتان پرسیده می‌شود:
-   - **نوع اتصال**: `1` = تونل SSH (هاست اشتراکی / cPanel) — حالت معمول؛ `2` = اتصال مستقیم MySQL (سرور مجازی/اختصاصی).
-   - آدرس هاست، پورت (پیش‌فرض: SSH `21098` و MySQL `3306`)، نام دیتابیس، نام کاربری‌ها و رمزها — رمزها هنگام تایپ پنهان (*** ) نمایش داده می‌شوند.
-3. اسکریپت اول دسترسی به هاست را چک می‌کند، بعد فایل تنظیم را در `%APPDATA%\ManufacturingERP\db-connection.txt` می‌نویسد (دقیقاً همان فرمتی که برنامه از کارت «اتصال به هاست» می‌نویسد) و در آخر پیشنهاد می‌دهد برنامه را دوباره باز کند — برنامه خودکار به هاست وصل می‌شود.
-4. هر وقت خواستید هاست را عوض کنید دوباره همین فایل را اجرا کنید؛ برای برگشت به دیتابیس محلی، خط `mysql://` را در همان فایل با `#` کامنت کنید (یا از تنظیمات → کارت اتصال به هاست).
+#### راه ۱ — اول فایل را پر کنید (پیشنهاد می‌شود؛ هنگام اجرا هیچ سوالی نمی‌پرسد)
+1. روی `host.bat` **راست‌کلیک → Edit** (یا باز کردن در Notepad).
+2. بلاک **`*** مشخصات هاست را اینجا وارد کنید / ENTER YOUR HOST INFO HERE ***`** را پیدا کنید (کمی پایین‌تر، بعد از خط `#PSBEGIN#`).
+3. مقدار هر خط را بین دو علامت `' '` بنویسید و فایل را ذخیره کنید. مثال واقعی:
+
+```bat
+$CFG_MODE = 'ssh'
+$CFG_SSH_HOST = 'server300.web-hosting.com'
+$CFG_SSH_PORT = ''
+$CFG_SSH_USER = 'myname'
+$CFG_SSH_PASS = 'MySshPass123'
+$CFG_DB_NAME = 'setab_erp'
+$CFG_DB_USER = 'setab_user'
+$CFG_DB_PASS = 'MyDbPass123'
+```
+
+   (برای سرور مجازی به‌جای آن: `$CFG_MODE = 'direct'` و `$CFG_DB_HOST = '192.0.2.10'`)
+4. فایل را ذخیره و دابل‌کلیک کنید — برنامه وصل می‌شود. **هر خطی را که خالی بگذارید هنگام اجرا از شما پرسیده می‌شود**، پس می‌توانید فقط بعضی خط‌ها را پر کنید.
+5. قانون رمز: اگر خود رمز علامت `'` داشت، آن را دو بار پشت‌سرهم بنویسید (`'ab''123'` یعنی `ab'123`). بقیهٔ کاراکترها (`@ : # % & !` و…) نیازی به تغییر ندارند.
+
+#### راه ۲ — بدون ویرایش
+همان دابل‌کلیک کنید؛ خودش نوع اتصال، آدرس، پورت، دیتابیس، کاربر و رمزها را یکی‌یکی می‌پرسد (رمزها هنگام تایپ پنهان *** نمایش داده می‌شوند).
+
+#### بعد از هر دو راه
+- اسکریپت اول دسترسی هاست را چک می‌کند، بعد فایل تنظیم را در `%APPDATA%\ManufacturingERP\db-connection.txt` می‌نویسد (دقیقاً همان فرمتی که برنامه از کارت «اتصال به هاست» می‌نویسد) و در آخر پیشنهاد می‌دهد برنامه را دوباره باز کند — برنامه خودکار به هاست وصل می‌شود.
+- هر وقت خواستید هاست را عوض کنید دوباره همین فایل را (راه ۱ یا ۲) اجرا کنید؛ برای برگشت به دیتابیس محلی، خط `mysql://` را در همان فایل با `#` کامنت کنید (یا از تنظیمات → کارت اتصال به هاست).
+- اگر جایی فقط Enter بزنید، پیش‌فرض‌ها اعمال می‌شوند: پورت SSH `21098` و پورت MySQL `3306`.
 
 نکته‌ها:
-- `host.bat` یک فایل متنی ساده است — با راست‌کلیک → Edit می‌توانید کد آن را ببینید.
-- هر کاراکتر خاصی در رمز (`@ : # % & !` و…) امن است و به‌صورت استاندارد انکود می‌شود؛ پورت‌ها اگر اشتباه تایپ شوند به پیش‌فرض برمی‌گردند.
+- `host.bat` یک فایل متنی ساده است — کد آن کاملاً خواناست و می‌توانید آن را ببینید.
+- اگر متن فارسیِ توضیحات داخل فایل به‌هم‌ریخته دیده شد، اشکالی ندارد؛ فقط مقادیر بین دو علامت `'` را عوض کنید و ذخیره کنید.
 - معلومات فقط در دستگاه خودتان ذخیره می‌شود و به هیچ‌جای دیگر فرستاده نمی‌شود.
 - اگر پیام «Windows protected your PC» دیدید، More info → Run anyway را بزنید (فایل امضای دیجیتال ندارد).

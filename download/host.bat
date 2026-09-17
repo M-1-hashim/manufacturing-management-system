@@ -2,11 +2,17 @@
 rem ============================================================
 rem  ManufacturingERP - host.bat  (Host Connection Setup)
 rem
-rem  Double-click this file, answer the questions (host address,
-rem  username, passwords) and the app will connect to your
-rem  hosting MySQL database. Fully offline - no internet needed
-rem  to run this setup itself.
+rem  HOW TO USE:
+rem  1) Right-click this file - Edit  (or open it in Notepad)
+rem  2) Go to the "ENTER YOUR HOST INFO HERE" block (a bit below,
+rem     right after the PSBEGIN marker line)
+rem  3) Fill your values between the ' ' quotes, save the file,
+rem     then double-click it - the app connects to the host.
 rem
+rem  Or simply double-click WITHOUT editing: it will ask you
+rem  everything step by step (both ways work).
+rem
+rem  Fully offline - no internet needed to run this setup itself.
 rem  The PowerShell code is embedded at the bottom of this same
 rem  file (after the marker line) - nothing else is required.
 rem ============================================================
@@ -24,9 +30,42 @@ endlocal & exit /b %EC%
 #PSBEGIN#
 # =====================================================================
 #  ManufacturingERP - Host Connection Setup (host.bat)
-#  دابل‌کلیک کنید، مشخصات هاست را وارد کنید — برنامه به هاست وصل می‌شود
+#  دابل‌کلیک کنید — برنامه به هاست وصل می‌شود
 #  این اسکریپت فایل db-connection.txt را در پوشهٔ دیتای برنامه می‌نویسد
 #  و برنامه را دوباره باز می‌کند. کاملاً آفلاین و بدون نیاز به اینترنت.
+# =====================================================================
+
+# =====================================================================
+#    ***  مشخصات هاست را اینجا وارد کنید  —  ENTER YOUR HOST INFO HERE  ***
+#
+#   راهنما: مقدار هر خط را فقط بین دو علامت  '  بنویسید و فایل را ذخیره کنید.
+#   مثال:   $CFG_DB_NAME = 'setab_erp'
+#   - هر خطی که پر نشود، هنگام اجرای فایل از شما پرسیده می‌شود.
+#   - اگر رمز عبور خودش علامت  '  داشت، آن را دو بار پشت‌سرهم بنویسید:
+#       مثال:  $CFG_DB_PASS = 'ab''123'
+#   - اگر متن فارسیِ این توضیحات به‌هم‌ریخته دیده شد اشکالی ندارد؛
+#     فقط مقادیر را بین دو علامت ' عوض کنید و ذخیره کنید.
+# =====================================================================
+
+# نوع اتصال:  'ssh' برای هاست اشتراکی (cPanel)   یا   'direct' برای سرور مجازی/اختصاصی
+$CFG_MODE = ''
+
+# --- فقط برای حالت ssh (هاست اشتراکی) ---
+$CFG_SSH_HOST = ''      # آدرس هاست SSH — مثل: server300.web-hosting.com
+$CFG_SSH_PORT = ''      # پورت SSH — خالی بگذارید = 21098
+$CFG_SSH_USER = ''      # نام کاربری SSH (همان کاربر cPanel)
+$CFG_SSH_PASS = ''      # رمز SSH
+
+# --- فقط برای حالت direct (سرور مجازی/اختصاصی) ---
+$CFG_DB_HOST = ''       # آدرس هاست MySQL
+$CFG_DB_PORT = ''       # پورت MySQL — خالی بگذارید = 3306
+
+# --- دیتابیس MySQL (در هر دو حالت لازم است) ---
+$CFG_DB_NAME = ''       # نام دیتابیس
+$CFG_DB_USER = ''       # نام کاربری MySQL
+$CFG_DB_PASS = ''       # رمز MySQL
+
+#    ***  تا اینجا پر کنید — از این پایین را تغییر ندهید  ***
 # =====================================================================
 
 $ErrorActionPreference = 'Stop'
@@ -58,6 +97,13 @@ function Read-Pass([string]$Prompt, [switch]$AllowEmpty) {
     if ($AllowEmpty) { return '' }
     Write-Host '    * This field is required (این فیلد الزامی است)' -ForegroundColor Yellow
   }
+}
+
+# اگر مقدار در فایل پر شده باشد همان استفاده می‌شود، وگرنه پرسیده می‌شود
+function Pick([string]$manual, [string]$prompt, [string]$default) {
+  $v = ('' + $manual).Trim()
+  if ($v) { return $v }
+  return (Read-Req $prompt $default)
 }
 
 function Sanitize-Host([string]$s) {
@@ -94,13 +140,22 @@ function Main {
   Write-Host '    اتصال برنامه به هاست' -ForegroundColor Cyan
   Write-Host '  ====================================================' -ForegroundColor Cyan
   Write-Host ''
-  Write-Host '  Connection type (نوع اتصال را انتخاب کنید):'
-  Write-Host '    [1] SSH tunnel - shared hosting / cPanel (تونل SSH - هاست اشتراکی)'
-  Write-Host '    [2] Direct MySQL - VPS / dedicated host (اتصال مستقیم - سرور اختصاصی)'
-  Write-Host ''
-  $m = Read-Host '  Choose (انتخاب) [1]'
+
   $mode = 'ssh'
-  if ($m -eq '2') { $mode = 'direct' }
+  if (('' + $CFG_MODE).Trim()) {
+    $m = ('' + $CFG_MODE).Trim().ToLower()
+    if ($m -eq 'direct' -or $m -eq '2') { $mode = 'direct' } else { $mode = 'ssh' }
+    $modeFa = 'SSH tunnel (تونل SSH)'
+    if ($mode -eq 'direct') { $modeFa = 'Direct MySQL (اتصال مستقیم)' }
+    Write-Host ('  Connection type from the file (نوع اتصال از داخل فایل): ' + $modeFa) -ForegroundColor Cyan
+  } else {
+    Write-Host '  Connection type (نوع اتصال را انتخاب کنید):'
+    Write-Host '    [1] SSH tunnel - shared hosting / cPanel (تونل SSH - هاست اشتراکی)'
+    Write-Host '    [2] Direct MySQL - VPS / dedicated host (اتصال مستقیم - سرور اختصاصی)'
+    Write-Host ''
+    $m = Read-Host '  Choose (انتخاب) [1]'
+    if ($m -eq '2') { $mode = 'direct' } else { $mode = 'ssh' }
+  }
 
   $sshHost = ''
   $sshPort = '21098'
@@ -113,23 +168,25 @@ function Main {
     Write-Host ''
     Write-Host '  --- SSH tunnel settings (تنظیمات تونل SSH) ---' -ForegroundColor Cyan
     Write-Host '      (same username/password you use for cPanel or SSH login)' -ForegroundColor DarkGray
-    $sshHost = Sanitize-Host (Read-Req 'SSH host - e.g. serverXXX.web-hosting.com (آدرس هاست SSH)' '')
-    $sshPort = Normalize-Port (Read-Req 'SSH port (پورت SSH)' '21098') '21098'
-    $sshUser = Read-Req 'SSH username (نام کاربری SSH)' ''
-    $sshPass = Read-Pass 'SSH password (رمز SSH)'
+    $sshHost = Sanitize-Host (Pick $CFG_SSH_HOST 'SSH host - e.g. serverXXX.web-hosting.com (آدرس هاست SSH)' '')
+    $sshPort = Normalize-Port (Pick $CFG_SSH_PORT 'SSH port (پورت SSH)' '21098') '21098'
+    $sshUser = Pick $CFG_SSH_USER 'SSH username (نام کاربری SSH)' ''
+    $sshPass = ('' + $CFG_SSH_PASS).Trim()
+    if (-not $sshPass) { $sshPass = Read-Pass 'SSH password (رمز SSH)' }
   } else {
     Write-Host ''
     Write-Host '  --- Direct MySQL settings (تنظیمات اتصال مستقیم) ---' -ForegroundColor Cyan
-    $myHost = Sanitize-Host (Read-Req 'MySQL host (آدرس هاست)' '')
-    $myPort = Normalize-Port (Read-Req 'MySQL port (پورت MySQL)' '3306') '3306'
+    $myHost = Sanitize-Host (Pick $CFG_DB_HOST 'MySQL host (آدرس هاست)' '')
+    $myPort = Normalize-Port (Pick $CFG_DB_PORT 'MySQL port (پورت MySQL)' '3306') '3306'
   }
 
   Write-Host ''
   Write-Host '  --- MySQL database (دیتابیس MySQL) ---' -ForegroundColor Cyan
-  $db = Read-Req 'Database name (نام دیتابیس)' ''
+  $db = Pick $CFG_DB_NAME 'Database name (نام دیتابیس)' ''
   $db = ((('' + $db) -split '[/?#]')[0]).Trim()
-  $dbUser = Read-Req 'MySQL username (نام کاربری MySQL)' ''
-  $dbPass = Read-Pass 'MySQL password (رمز MySQL - اگر خالی است فقط Enter)' -AllowEmpty
+  $dbUser = Pick $CFG_DB_USER 'MySQL username (نام کاربری MySQL)' ''
+  $dbPass = ('' + $CFG_DB_PASS).Trim()
+  if (-not $dbPass) { $dbPass = Read-Pass 'MySQL password (رمز MySQL - اگر خالی است فقط Enter)' -AllowEmpty }
 
   # ---------- quick reachability check (بررسی سریع دسترسی) ----------
   Write-Host ''
