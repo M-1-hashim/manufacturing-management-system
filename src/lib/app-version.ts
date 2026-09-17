@@ -4,4 +4,4 @@
  * (خواندن از package.json در بستهٔ دسکتاپ قابل‌اتکا نیست — هاست و app
  * دو package.json جدا دارند.)
  */
-export const APP_VERSION = '1.0.20'
+export const APP_VERSION = '1.0.21'

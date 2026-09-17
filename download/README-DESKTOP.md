@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.20** — 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN**: the first launch asks for the server (host) address and sign-in uses the users stored in that server's database; the account is saved on the device afterwards so offline sign-in works too. Plus 🧪 **DEEP-TESTED v1.0.19**: the whole system (code, logic and UI) was deep-tested and **37+ real bugs fixed** across both backends — safe JSON-backup restore (no more host-wipe), session invalidation on password/role change, currency-aware customer debts, cumulative payment dialog, stock-overwrite fix, offline-engine RBAC and more. Plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7): when the internet (or the hosting MySQL) goes down, the app **automatically keeps working on a local copy of the server data** (amber badge «آفلاین — دیتابیس محلی»), and the moment the connection is back (checked every 15 s) it **reconnects by itself and syncs everything**. (v1.0.6 added the exact error code + fix hints; v1.0.5 fixed the host-saving bug by shipping BOTH database clients; v1.0.4 fixed the config folder to `%APPDATA%\ManufacturingERP`.)
+**Version 1.0.21** — 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (desktop)**: the first-run host setup page now appears on every launch until the MySQL host connection is actually configured — even when upgrading from an older install with a saved session (previously the wizard was silently skipped for those users). Plus 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**: 37+ real bugs fixed, plus 🌐 **AUTO ONLINE/OFFLINE + TWO-WAY SYNC** (since v1.0.7).
 
 ---
 
@@ -11,7 +11,7 @@
 | File | Size | What it is |
 |---|---|---|
 | `ManufacturingERP-Setup.exe` | ~164 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~258 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `ManufacturingERP-Windows-Portable.zip` | ~259 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
 | `host.bat` | ~9 KB | **Standalone interactive host-connect script** (v1.0.20+). Double-click, enter the host address & passwords when asked — it writes the connection config and restarts the app connected to the host. Works on any PC, even without the app installed yet. |
 | `README-DESKTOP.md` | — | This file. |
 

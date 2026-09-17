@@ -1676,3 +1676,27 @@ Work Log:
 Stage Summary:
 - host.bat نسخهٔ ۲: هم «پر کن و دابل‌کلیک کن» (بدون هیچ سوال) و هم «دابل‌کلیک و جواب بده» — هر دو مسیر به همان db-connection.txt رسمی برنامه ختم می‌شود
 - کاربر فقط باید بلاک مشخصات را در Notepad پر کند؛ فرمت خروجی دوباره با پارسر واقعی برنامه تأیید شد
+
+---
+Task ID: 19
+Agent: coordinator (main)
+Task: «اصلا نیاز به فایل bat نیست — صفحهٔ اطلاعات هاست باید در اولین اجرا نشان داده شود» → رفع رد شدن ویزارد برای نصب‌های قدیمی + ریلیز v1.0.21 (هر سه باینری)
+
+Work Log:
+- کشف ریشه: ویزارد هاست دسکتاپ (SetupWizard ۴ گامه با فیلدهای SSH/MySQL + تست + ذخیره) از قبل در v1.0.20 وجود داشت، اما FirstRunGate نشست ذخیره‌شدهٔ نسخه‌های قدیمی را **قبل از** چک هاست بررسی می‌کرد → کاربرِ ارتقایی هرگز صفحهٔ هاست نمی‌دید (به همین دلیل کاربر فکر می‌کرد چنین صفحه‌ای وجود ندارد)
+- FirstRunGate بازنویسی شد (src/app/page.tsx): در دسکتاپ اول db-connection:info → active → مستقیم برنامه؛ نبود فلگ mfg-setup-local-mode → ویزارد (حتی با نشست ذخیره‌شده)؛ LOCAL_MODE و وب بدون تغییر رفتاری
+- setup-wizard.tsx: finish(localOnly) — انتخاب «فقط این دستگاه» فلگ mfg-setup-local-mode را ثبت می‌کند تا ویزارد برای آن کاربر تکرار نشود؛ هوک تستی ?desktop=1 برای isDesktop (ذخیره بدون IPC همچنان غیرفعال)
+- تست مرورگری (agent-browser): وب بدون فلگ → مستقیم ورود (بدون ویزارد) ✓؛ ?setup=1 → ویزارد گام ۱→۲→۳ ✓؛ ?desktop=1 کارت هاست فعال و فیلدهای SSH/direct رندر می‌شوند ✓؛ «فقط این دستگاه» → هر دو فلگ ثبت و ورود به برنامه + ریلود بدون ویزارد ✓؛ موبایل ۳۹۰px تیره رندر سالم؛ صفر خطای کنسول؛ lint سبز
+- bump نسخه: package.json/app-version.ts → 1.0.21، installer.nsi → 1.0.21.0، AndroidManifest → versionCode 6 / versionName 1.0.21
+- محیط بیلد از نو (sandbox reset): Temurin 21.0.12.1 → ~/jdk21؛ build-tools r36 → ~/android-sdk/android-16 (chmod +x لازم بود)؛ platform-34-ext7_r03 → ~/android-sdk/android-34؛ NSIS 3.08 → ~/nsis-works/nsis-root (ترتیب درست: usr/bin + usr/share از deb اصلی + share/nsis از nsis-common)
+- بیلد APK: build_web_export.sh (بعد از bump APP_VERSION دوباره اجرا شد) + build.sh → 1,104,680B؛ badging versionCode=6/1.0.21 ✓؛ keystore همان (SHA-256 c553eb67…)
+- بیلد دسکتاپ: build-desktop.sh → win-unpacked 597MB؛ packaged app/package.json = 1.0.21/ManufacturingERP ✓؛ هر دو موتور ویندوز پرایسما ✓؛ ssh2 در resources/app/node_modules ✓؛ رشتهٔ «mfg-setup-local-mode» در chunks کلاینت ✓؛ smoke test لینوکس: node server.js + دیتای دمو → GET / 200 + login admin/admin123 موفق + «19 tables ensured»
+- آرتیفکت‌ها: Setup.exe 171,983,409B (NSIS، رشتهٔ 1.0.21.0 داخل باینری ✓) + Portable.zip 271,581,964B (2985 فایل)
+- Release v1.0.21 (id 390702243): هر سه باینری + RELEASE-NOTES-v1.0.21.md آپلود شد؛ sha256 لوکال == digest گیت‌هاب (apk 8a034c73… / setup bc5c68b0… / portable 0bd13351…)؛ URL عمومی 200 از CDN
+- RELEASE-NOTES-v1.0.21.md + README-DESKTOP.md (هدر ۱.۰.۲۱ + حجم‌ها) به‌روز شد
+
+Stage Summary:
+- v1.0.21 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.21
+- رفتار جدید دسکتاپ: صفحهٔ اطلاعات هاست در هر اجرا تا وقتی هاست وصل نشده — راهِ «رد شدن بی‌صدا» برای نصب‌های قدیمی حذف شد
+- MD5: apk 49f470325c9eacd5dc8422179d2acd2b · Setup.exe 02011d60335b250f82ab98f23ea25806 · Portable.zip 2f8a4defb5e80c16982f47aff1f7ac7f
+- host.bat در مخزن به‌عنوان ابزار اختیاری باقی است؛ پیام اصلی به کاربر: دیگر لازم نیست

@@ -42,6 +42,8 @@ const COLOR_THEMES = [
 ] as const
 
 const SETUP_FLAG = 'mfg-setup-completed'
+// اگر کاربر در ویزارد «فقط این دستگاه» را انتخاب کند، دیگر ویزارد تکرار نمی‌شود
+const LOCAL_ONLY_FLAG = 'mfg-setup-local-mode'
 
 function applyTheme(id: string) {
   if (id === 'emerald') document.documentElement.removeAttribute('data-theme')
@@ -52,7 +54,10 @@ function applyTheme(id: string) {
 export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const { t, lang } = useI18n()
   const setLang = useAppStore((s) => s.setLang)
-  const isDesktop = typeof window !== 'undefined' && !!window.dbConnection
+  // ?desktop=1 — برای نمایش/تست مرحلهٔ هاست در مرورگر (ذخیره فقط در نسخهٔ ویندوز کار می‌کند)
+  const isDesktop =
+    typeof window !== 'undefined' &&
+    (!!window.dbConnection || new URLSearchParams(window.location.search).has('desktop'))
   const conn = typeof window !== 'undefined' ? window.dbConnection : undefined
   const [activeTheme, setActiveTheme] = useState(() =>
     typeof window !== 'undefined' ? localStorage.getItem('mfg-color-theme') ?? 'emerald' : 'emerald'
@@ -76,8 +81,9 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [dbUser, setDbUser] = useState('')
   const [dbPassword, setDbPassword] = useState('')
 
-  function finish() {
+  function finish(localOnly = false) {
     localStorage.setItem(SETUP_FLAG, '1')
+    if (localOnly) localStorage.setItem(LOCAL_ONLY_FLAG, '1')
     onDone()
   }
 
@@ -293,7 +299,7 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
 
                 {/* محلی */}
                 <button
-                  onClick={finish}
+                  onClick={() => finish(true)}
                   className="rounded-xl border-2 border-border p-5 text-start transition-all hover:border-foreground/30 hover:-translate-y-0.5 cursor-pointer"
                 >
                   <div className="h-11 w-11 rounded-xl bg-muted text-foreground flex items-center justify-center mb-3">
