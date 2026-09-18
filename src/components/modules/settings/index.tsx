@@ -37,6 +37,8 @@ import { getHostConfig, saveHostConfig, clearHostConfig, normalizeHostUrl, probe
 interface DbConnInfoT {
   ok: boolean
   path: string
+  /** مسیر دوست‌داشتنی روی C:\Users\<کاربر>\ManufacturingERP\db-connection.txt (۱.۰.۲۴) */
+  friendlyPath?: string
   active: boolean
   host: string | null
   port: string
@@ -74,6 +76,7 @@ interface DbConnApiT {
   test: (payload: { sshHost: string; sshPort: string; sshUser: string; sshPassword: string }) => Promise<{ ok: boolean; kind?: string; error?: string }>
   reset: () => Promise<{ ok: boolean; path?: string; error?: string }>
   openFolder: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  showFile?: () => Promise<{ ok: boolean; path?: string; error?: string }>
   relaunch: () => Promise<{ ok: boolean }>
 }
 

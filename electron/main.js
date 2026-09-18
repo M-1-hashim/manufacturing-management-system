@@ -68,88 +68,176 @@ process.on('unhandledRejection', (reason) => {
 /* ------------------------------------------------------------- data layer */
 
 /*
- * اتصال سفارشی دیتابیس — فایل db-connection.txt در پوشه data کاربر
+ * اتصال سفارشی دیتابیس — فایل db-connection.txt
  * اگر اولین خط غیر کامنت با mysql:// شروع شود، دیتا در هاست اشتراکی ذخیره می‌شود
  * وگرنه حالت پیش‌فرض (SQLite محلی) استفاده می‌گردد
- * از نسخه ۱.۰.۳ به بعد، تنظیمات ماژول می‌تواند همین فایل را از داخل برنامه بنویسد (IPC)
+ *
+ * نسخهٔ ۱.۰.۲۴ — فایل در دو مسیر نگه‌داری می‌شود تا کاربر بدون جست‌وجوی
+ * پوشهٔ مخفی AppData بتواند مستقیم در Notepad ویرایشش کند:
+ *   ۱) مسیر پیدا‌کردنی روی C:\:  C:\Users\<کاربر>\ManufacturingERP\db-connection.txt
+ *      (پوشهٔ home کاربر — در Windows Explorer بدون نمایش فایل‌های مخفی دیده می‌شود)
+ *   ۲) مسیر استاندارد برنامه:    %APPDATA%\ManufacturingERP\db-connection.txt
+ *
+ * قاعدهٔ خواندن: اولین فایلی که «خط اتصال فعال» (mysql:// بدون #) داشته باشد
+ * برنده است؛ اگر هیچ‌کدام فعال نباشند، اولین فایل موجود برای پیش‌پرکردن فرم
+ * خوانده می‌شود. ذخیرهٔ برنامه همیشه در هر دو مسیر است تا فایل قدیمیِ فعال
+ * هیچ‌وقت فایل جدیدتر را باطل نکند.
  */
 function connectionConfigPath() {
   return path.join(app.getPath('userData'), 'db-connection.txt');
 }
 
+function friendlyConfigPath() {
+  let home = '';
+  try { home = app.getPath('home') || ''; } catch (_e) { /* ignore */ }
+  if (!home) {
+    try { home = app.getPath('appData'); } catch (_e2) { home = ''; }
+  }
+  return path.join(home || '.', 'ManufacturingERP', 'db-connection.txt');
+}
+
+function configCandidates() {
+  const list = [friendlyConfigPath(), connectionConfigPath()];
+  return list.filter((p, i, arr) => p && arr.indexOf(p) === i);
+}
+
 function templateLines(activeUrl) {
   const lines = [
-    '# فایل تنظیم اتصال دیتابیس — ManufacturingERP',
+    '# ======================================================================',
+    '#   ManufacturingERP — فایل تنظیم اتصال به هاست',
+    '#   این فایل را با Notepad ویرایش کنید، ذخیره کنید، بعد برنامه را ببندید',
+    '#   و دوباره باز کنید.',
+    '# ======================================================================',
     '#',
-    '# حالت پیش‌فرض: دیتابیس محلی (SQLite) — همین فایل را دست‌نخورده رها کنید',
+    '# ❶ خط اتصال MySQL — یک خط، مثل نمونه (در ابتدای خط # نگذارید):',
     '#',
-    '# برای ذخیره دیتا در هاست، از داخل برنامه (تنظیمات → اتصال به هاست) استفاده کنید.',
-    '# این فایل به‌صورت خودکار نوشته می‌شود؛ فرمت آن:',
-    '#   mysql://DBUSER:PASSWORD@HOST:PORT/DBNAME      ← خط اتصال',
-    '#   ssh-mode=ssh | direct                        ← نوع اتصال (پیش‌فرض: direct)',
-    '#   ssh-host= / ssh-port= / ssh-user= / ssh-password=   ← فقط در حالت ssh',
+    '#    mysql://DBUSER:DBPASSWORD@DBHOST:3306/DBNAME',
     '#',
-    '# حالت ssh (تونل SSH) برای هاست‌های اشتراکی (Namecheap/cPanel) است که اتصال',
-    '# مستقیم MySQL (پورت 3306) روی آن‌ها بسته است — برنامه خودش تونل می‌سازد.',
+    '#      DBUSER      = نام کاربری MySQL       (در cPanel: Manage My Databases)',
+    '#      DBPASSWORD  = رمز MySQL',
+    '#      DBHOST      = آدرس سرور (مثل server370.web-hosting.com یا 1.2.3.4)',
+    '#      DBNAME      = نام دیتابیس (در cPanel معمولاً با نام کاربری شروع می‌شود، مثل myuser_mfg)',
+    '#      اگر رمز شما کاراکتر خاص دارد اشکالی ندارد — همان را بنویسید.',
+    '#',
+    '# ❷ نوع اتصال — یکی از دو حالت (در ابتدای خط # نگذارید):',
+    '#',
+    '#    ssh-mode=direct    ← اتصال مستقیم به پورت 3306 (سرور مجازی/هاست اختصاصی)',
+    '#    ssh-mode=ssh       ← تونل SSH برای هاست اشتراکی (Namecheap/cPanel و…)',
+    '#                         که پورت MySQL بسته است؛ همراه آن ۴ خط زیر را پر کنید:',
+    '#',
+    '#      ssh-host=server370.web-hosting.com   ← همان آدرس سرور',
+    '#      ssh-port=21098                        ← پورت SSH (Namecheap: 21098، بقیه معمولاً 22)',
+    '#      ssh-user=mycpaneluser                 ← نام کاربری cPanel',
+    '#      ssh-password=cpanelpassword           ← رمز cPanel',
+    '#',
+    '# ❸ فایل را ذخیره کنید و برنامه را ببندید و دوباره باز کنید.',
+    '#',
+    '# نکته‌ها:',
+    '#   • خطوطی که با # شروع می‌شوند توضیح هستند و نادیده گرفته می‌شوند.',
+    '#   • اگر هیچ خط mysql:// فعالی در فایل نباشد، برنامه با دیتابیس محلی (SQLite) کار می‌کند.',
+    '#   • نام دیتابیس/کاربر/رمز MySQL است — نه cPanel (بجز ssh-user و ssh-password که cPanel هستند).',
     '#',
   ];
-  lines.push(activeUrl ? activeUrl : '# mysql://DBUSER:PASSWORD@HOST_ADDRESS:3306/DBNAME');
+  lines.push(activeUrl ? activeUrl : '# mysql://DBUSER:DBPASSWORD@DBHOST:3306/DBNAME');
+  lines.push('# ssh-mode=direct');
   lines.push('');
   return lines.join('\r\n');
 }
 
+/** محتوای داده‌شده را در همهٔ مسیرهای کاندید می‌نویسد — اولین مسیر برمی‌گردد */
+function writeConnectionContent(content) {
+  const candidates = configCandidates();
+  let firstOk = null;
+  let lastErr = null;
+  for (const p of candidates) {
+    try {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, content, 'utf8');
+      if (!firstOk) firstOk = p;
+    } catch (e) {
+      lastErr = e;
+      logLine(`db-connection write failed at ${p}: ${e && e.message ? e.message : e}`);
+    }
+  }
+  if (!firstOk && lastErr) throw lastErr;
+  return firstOk || candidates[0];
+}
+
 function writeConnectionFile(activeUrl) {
-  const cfgPath = connectionConfigPath();
-  fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
-  fs.writeFileSync(cfgPath, templateLines(activeUrl), 'utf8');
-  return cfgPath;
+  return writeConnectionContent(templateLines(activeUrl));
+}
+
+/**
+ * اگر هیچ فایل تنظیمی وجود نداشته باشد، همان اولِ اجرا قالب راهنما ساخته می‌شود
+ * تا کاربر همیشه یک فایل روی C:\ داشته باشد که بتواند در Notepad پرش کند.
+ */
+function ensureTemplateFile() {
+  try {
+    if (configCandidates().some((p) => fs.existsSync(p))) return;
+    const p = writeConnectionFile(null);
+    logLine(`db-connection template created at ${p}`);
+  } catch (e) {
+    logLine(`db-connection template create failed: ${e && e.message ? e.message : e}`);
+  }
 }
 
 function maskUrl(url) {
   return String(url).replace(/:(?:[^:@/]*)@/, ':***@');
 }
 
-function parseActiveOverride() {
+function parseFile(p) {
   const out = {
+    path: p, exists: false,
     active: false, url: null, host: null, port: '3306', database: null, user: null,
     password: null,
     sshMode: false, sshHost: null, sshPort: '21098', sshUser: null, sshPassword: null,
   };
+  let lines;
   try {
-    const lines = fs.readFileSync(connectionConfigPath(), 'utf8').split(/\r?\n/);
-    for (const raw of lines) {
-      const l = raw.trim();
-      if (!l || l.startsWith('#')) continue;
-      if (l.startsWith('mysql://')) {
-        if (!out.active) {
-          out.active = true;
-          out.url = l;
-          try {
-            const u = new URL(l);
-            out.host = u.hostname;
-            out.port = u.port || '3306';
-            out.database = u.pathname.replace(/^\//, '');
-            out.user = decodeURIComponent(u.username || '');
-            out.password = decodeURIComponent(u.password || '');
-          } catch (_e) { /* URL ناقص — فقط حالت فعال گزارش می‌شود */ }
-        }
-        continue;
-      }
-      const eq = l.indexOf('=');
-      if (eq > 0) {
-        const key = l.slice(0, eq).trim();
-        const val = l.slice(eq + 1).trim();
-        if (key === 'ssh-mode') out.sshMode = val === 'ssh';
-        else if (key === 'ssh-host') out.sshHost = val;
-        else if (key === 'ssh-port') out.sshPort = val || '21098';
-        else if (key === 'ssh-user') out.sshUser = val;
-        else if (key === 'ssh-password') out.sshPassword = val;
-      }
-    }
+    lines = fs.readFileSync(p, 'utf8').split(/\r?\n/);
+    out.exists = true;
   } catch (_e) {
-    /* فایل خوانده نشد — حالت محلی */
+    return out; /* فایل نیست — خالی */
+  }
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l || l.startsWith('#')) continue;
+    if (l.startsWith('mysql://')) {
+      if (!out.active) {
+        out.active = true;
+        out.url = l;
+        try {
+          const u = new URL(l);
+          out.host = u.hostname;
+          out.port = u.port || '3306';
+          out.database = u.pathname.replace(/^\//, '');
+          out.user = decodeURIComponent(u.username || '');
+          out.password = decodeURIComponent(u.password || '');
+        } catch (_e) { /* URL ناقص — فقط حالت فعال گزارش می‌شود */ }
+      }
+      continue;
+    }
+    const eq = l.indexOf('=');
+    if (eq > 0) {
+      const key = l.slice(0, eq).trim();
+      const val = l.slice(eq + 1).trim();
+      if (key === 'ssh-mode') out.sshMode = val === 'ssh';
+      else if (key === 'ssh-host') out.sshHost = val;
+      else if (key === 'ssh-port') out.sshPort = val || '21098';
+      else if (key === 'ssh-user') out.sshUser = val;
+      else if (key === 'ssh-password') out.sshPassword = val;
+    }
   }
   return out;
+}
+
+/*
+ * برنده: اولین فایلِ «فعال» (friendly اول، بعد AppData)؛ اگر هیچ‌کدام فعال نبود،
+ * اولین فایل موجود (برای پیش‌پرکردن فرم ویزارد)؛ اگر هیچ فایلی نبود، خالی با مسیر friendly.
+ */
+function parseActiveOverride() {
+  const parsed = configCandidates().map(parseFile);
+  return parsed.find((c) => c.active) || parsed.find((c) => c.exists) || parsed[0];
 }
 
 /*
@@ -364,7 +452,8 @@ function probeReachable(cfg) {
 
 ipcMain.handle('db-connection:info', async () => {
   try {
-    if (!fs.existsSync(connectionConfigPath())) writeConnectionFile(null);
+    const candidates = configCandidates();
+    if (!candidates.some((p) => fs.existsSync(p))) writeConnectionFile(null);
   } catch (_e) {
     /* ignore */
   }
@@ -372,7 +461,9 @@ ipcMain.handle('db-connection:info', async () => {
   const reachable = await probeReachable(parsed);
   return {
     ok: true,
-    path: connectionConfigPath(),
+    // مسیری که واقعاً از آن خوانده شد + مسیر دوست‌داشتنی برای نمایش به کاربر
+    path: parsed.path || friendlyConfigPath(),
+    friendlyPath: friendlyConfigPath(),
     active: parsed.active,
     host: parsed.host,
     port: parsed.port,
@@ -430,8 +521,6 @@ ipcMain.handle('db-connection:save', (_event, payload) => {
 
   const url = `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${mode === 'ssh' ? SSH_TUNNEL_PORT : port}/${database}`;
   try {
-    const cfgPath = connectionConfigPath();
-    fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
     const lines = [url, `ssh-mode=${mode}`];
     if (mode === 'ssh') {
       lines.push(
@@ -441,7 +530,10 @@ ipcMain.handle('db-connection:save', (_event, payload) => {
         `ssh-password=${sshPassword}`
       );
     }
-    fs.writeFileSync(cfgPath, templateLines(url) + lines.join('\r\n') + '\r\n', 'utf8');
+    // در هر دو مسیر (C:\Users\<کاربر>\ManufacturingERP و %APPDATA%) نوشته می‌شود
+    const cfgPath = writeConnectionContent(
+      templateLines(url) + lines.join('\r\n') + '\r\n'
+    );
     logLine(`db-connection.txt updated -> mode=${mode} ${mode === 'ssh' ? `ssh(${sshUser}@${sshHost}:${sshPort})` : `${host}:${port}`}/${database}`);
     return { ok: true, path: cfgPath, maskedUrl: maskUrl(url) };
   } catch (err) {
@@ -484,6 +576,23 @@ ipcMain.handle('db-connection:openFolder', async () => {
   try {
     const result = await shell.openPath(app.getPath('userData'));
     return result ? { ok: false, error: result } : { ok: true, path: app.getPath('userData') };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+/*
+ * «باز کردن فایل تنظیمات» — فایل db-connection.txt در Explorer نشان داده می‌شود
+ * (کاربر بدون جست‌وجوی پوشهٔ مخفی AppData مستقیم به فایل روی C:\ می‌رسد)
+ */
+ipcMain.handle('db-connection:showFile', async () => {
+  try {
+    const p = friendlyConfigPath();
+    try {
+      if (!fs.existsSync(p)) writeConnectionFile(null);
+    } catch (_e) { /* اگر ساخته نشد هم مسیر پوشه باز می‌شود */ }
+    shell.showItemInFolder(p);
+    return { ok: true, path: p };
   } catch (err) {
     return { ok: false, error: String(err && err.message ? err.message : err) };
   }
@@ -561,6 +670,7 @@ async function main() {
   setupMenu();
 
   migrateLegacyUserData();
+  ensureTemplateFile();
 
   const dbPath = ensureDatabase();
   const cfg = parseActiveOverride();

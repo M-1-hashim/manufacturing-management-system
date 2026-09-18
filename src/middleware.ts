@@ -5,7 +5,9 @@ import { verifySession, SESSION_COOKIE } from '@/lib/session'
 
 // مسیرهای عمومی (بدون نشست)
 // /api/download/setup → دانلود عمومی نصب‌کنندهٔ ویندوز — هر فردی با لینک می‌تواند دانلود کند
-const PUBLIC_PATHS = ['/api/auth/login', '/api/download/setup']
+// /api/system/host-ping → پینگ هاست برای گِیت شروعِ برنامهٔ دسکتاپ (قبل از ورود) —
+//   داخل خود route فقط Host لوکال (127.0.0.1/localhost) مجاز است و در استقرار وب 403 می‌دهد
+const PUBLIC_PATHS = ['/api/auth/login', '/api/download/setup', '/api/system/host-ping']
 
 // مسیرهای محدود به نقش خاص: [prefix, roles مجاز]
 const ROLE_RULES: { prefix: string; roles: string[]; methods?: string[] }[] = [

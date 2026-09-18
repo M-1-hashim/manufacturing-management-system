@@ -1746,3 +1746,33 @@ Stage Summary:
 - تضمین رفتار: هیچ سناریویی باقی نمانده که برنامه بدون صفحهٔ اطلاعات هاست باز شود (مگر «فقط این دستگاه» یا اتصال سالم) — دسکتاپ: فایل فعال ولی خراب → ویزارد پیش‌پر؛ اندروید: ارتقا/آدرس بی‌تست → ویزارد پیش‌پر
 - sha256 نهایی: apk 340d46322055531b62df47d9bee1d0fe7845169c678f784bdd4391dde8faed5d · Setup 42fd5df18fc9afb8e2d022f58e964c8c907e9dcc47274601c1dc4aad2dee58c0 · Portable 8cb40d62df697610b638234b9922e0ba7000fc94d068fe3e51c959cc582d01e0
 - MD5: apk 2d5285252c0bc687e46c3911224bfecf · Setup 423012afe75153823b4992faef5e6808 · Portable c781f2080da8d6a5685ff8eee4142701
+
+---
+Task ID: 22
+Agent: coordinator (main)
+Task: «برسی کن اصلا تغییر ایجاد نشده و میخوام از فایل های که در کامپیوتر در c:\ ذخیره میشود باید اطلاعات هاست را اون جا وارید کنم» — فایل تنظیمات روی C:\ + پینگ واقعی MySQL در گِیت شروع → ریلیز v1.0.24 (هر سه باینری)
+
+Work Log:
+- راستی‌آزمایی ریلیز قبلی: هر چهار asset ریلیز v1.0.23 روی گیت‌هاب state=uploaded و سالم‌اند → «تغییر نکرده» کاربر دو علت داشت: (۱) احتمالاً نصب قدیمی، (۲) حفرهٔ واقعی v1.0.23: فایلِ فعالِ host.bat + پروب TCP موفق (پورت SSH باز) → گِیت مستقیم «برنامه» را باز می‌کرد حتی وقتی MySQL عملاً خراب است (نام دیتابیس/رمز غلط) → کاربر هیچ‌وقت صفحهٔ هاست را نمی‌دید
+- electron/main.js: فایل تنظیم حالا در دو مسیر است — مسیر پیدا‌کردنی C:\Users\<user>\ManufacturingERP\db-connection.txt (home — بدون فایل‌های مخفی) + مسیر استاندارد %APPDATA%؛ قاعدهٔ خواندن: اولین فایلِ «فعال» برنده (friendly → AppData)، سپس اولین موجود برای پیش‌پرکردن؛ نوشتن همیشه در هر دو مسیر (writeConnectionContent)؛ parseActiveOverride به parseFile+انتخاب بازنویسی شد
+- قالب فایل کاملاً بازنویسی شد — فایل‌محور: راهنمای گام‌به‌گام فارسی داخل خود فایل (خط mysql://، ssh-mode direct/ssh، چهار خط SSH، نکته‌های # کامنت) + ensureTemplateFile در شروع برنامه فایل را قبل از باز شدن پنجره می‌سازد
+- IPC جدید db-connection:showFile (shell.showItemInFolder روی مسیر friendly) + info حالا friendlyPath و مسیر واقعی خوانده‌شده را برمی‌گرداند؛ preload.js متد showFile را expose کرد
+- endpoint جدید GET /api/system/host-ping: پینگ واقعی MySQL با SELECT 1 روی کلاینت Prisma (کل زنجیرهٔ تونل→MySQL→auth→db) با تایم‌اوت ۸ ثانیه؛ دسته‌بندی خطا AUTH/NO_DATABASE/UNREACHABLE/NOT_CONFIGURED/UNKNOWN؛ فقط برای Host لوکال (127.0.0.1/localhost/::1) — در استقرار وب 403؛ به PUBLIC_PATHS middleware اضافه شد (گِیت قبل از ورود صدا می‌زند)
+- first-run.ts: ورودی جدید infoDbOk (سه‌حالته) — دسکتاپ فقط با active && reachable≠false && dbOk≠false → برنامه؛ در غیر این صورت ویزارد؛ null هیچ‌وقت ویزارد نمی‌سازد (ضد حلقه)
+- page.tsx FirstRunGate: بعد از info اگر TCP سالم بود → fetch host-ping → در شکست، دلیل (kind/error) به SetupWizard پاس می‌شود؛ صفحهٔ لودینگ حالا اسپینر + «در حال بررسی اتصال به هاست…» دارد
+- setup-wizard.tsx: پراپ dbPing → بنر کهربایی با دلیل دقیق (dbFailText: AUTH → رمز/کاربر MySQL، NO_DATABASE → نام دیتابیس cPanel-پیشوندی، UNREACHABLE → تونل/پورت) + پرش مستقیم به گام ۳؛ کارت «راه دوم — وارد کردن مشخصات در فایل تنظیمات» با مسیر واقعی (code LTR) + دکمه‌های «باز کردن فایل در ویندوز» و «بازخوانی از فایل» (handleReread → applyInfo)؛ فوتر نسخهٔ «ManufacturingERP v1.0.24» برای تأیید نصب
+- settings/index.tsx: DbConnApiT.showFile? + DbConnInfoT.friendlyPath هماهنگ شد
+- تست‌ها: ۳۰/۳۰ PASS — رفت‌وبرگشت parseActiveOverride واقعی (استخراج از main.js با fs/app فیک): هیچ‌فایل/فقط-legacy/قالب-غیرفعال+legacy-فعال/دو-فعال (friendly برنده)/رمز دشوار ssh round-trip/نوشتن هر دو مسیر/ensureTemplateFile — + decideFirstRun با dbOk (حفرهٔ کاربر: dbOk=false → wizard)؛ lint سبز؛ agent-browser: وب بدون ویزارد ✓، ?setup=1&desktop=1 گام ۳ با کارت فایل + مسیر generic + فوتر v1.0.24 ✓، موبایل ۳۹۰px رندر سالم، صفر خطای کنسول
+- endpoint روی dev: loopback → NOT_CONFIGURED (درست — بدون MySQL)، Host فیک → 403 FORBIDDEN ✓
+- محیط بیلد از نو (sandbox reset): JDK 21.0.12.1 → ~/jdk21؛ build-tools r36 (build-tools_r36_linux.zip — r36-linux.zip قدیمی 404 می‌داد) → ~/android-sdk/android-16 (chmod +x)؛ platform-34-ext7_r03 → ~/android-sdk/android-34/android.jar (ساختار تو در تو دستی صاف شد)؛ NSIS 3.08 → ~/nsis-works/nsis-root/usr/{bin,share} (NSISDIR لازم)
+- بیلد: export استاتیک + APK → versionCode 9 / versionName 1.0.24، keystore همان (SHA-256 c553eb67…)، 1,108,776B؛ دسکتاپ win-unpacked 598MB — app/package.json=1.0.24، روت host-ping در server bundle، رشتهٔ «db-connection.txt» در chunks کلاینت، smoke لینوکس: GET / 200 + login admin/admin123 موفق + «19 tables ensured»
+- آرتیفکت‌ها: Setup.exe 172,026,319B (رشتهٔ UTF-16 «1.0.24.0» داخل باینری ✓) + Portable.zip 270,885,461B (2948 فایل)
+- ریلیز v1.0.24 (id 391485724): چهار asset آپلود شد؛ sha256 گیت‌هاب == لوکال (apk b7ff7baf… / Setup fd027e31… / Portable 3856f23e…)؛ RELEASE-NOTES-v1.0.24.md + README-DESKTOP.md (هدر ۱.۰.۲۴ + بخش «فایل تنظیمات روی C:\» دو‌زبانه + host.bat به بخش legacy اختیاری تنزل یافت) به‌روز شد
+- db/custom.db و desktop-assets/demo-db پس از بیلد با git checkout بازگردانده شدند
+
+Stage Summary:
+- v1.0.24 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.24
+- جریان تازهٔ کاربر: فایل روی C:\Users\<user>\ManufacturingERP\db-connection.txt همیشه وجود دارد (راهنمای فارسی داخلش) → کاربر در Notepad پرش می‌کند → ری‌استارت برنامه → وصل؛ یا از فرم ویزارد با دکمه‌های «باز کردن فایل» / «بازخوانی از فایل»
+- تضمین تازه: اتصالِ «فعال ولی خراب» (پورت باز، MySQL/auth/db خراب) دیگر برنامه را بدون صفحهٔ هاست باز نمی‌کند — گِیت با SELECT 1 می‌سنجد و دلیل دقیق را نشان می‌دهد
+- MD5: apk 4ad255cc9beb9f438bf001f09502f99e · Setup 7adae3400689210154f1718d9973c486 · Portable 27ad570dc5135d29b9be4b2d8bcedc95
+- sha256: apk b7ff7baf8e61036a9cb4c3d490ad7af965585735f6a6e25bec637248f45c6a96 · Setup fd027e3169d578ea01e83d79eed9aae74acd79e7076cc14a228befd690cb247a · Portable 3856f23ef9b920104e23df1b89a35f658a173f5548e1a84b47927e99ff9b43bb

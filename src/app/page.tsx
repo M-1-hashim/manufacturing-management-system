@@ -868,8 +868,16 @@ function Shell() {
 const SETUP_FLAG = 'mfg-setup-completed'
 const LOCAL_ONLY_FLAG = 'mfg-setup-local-mode'
 
+/** نتیجهٔ پینگ ناموفق هاست — برای بنر دلیل داخل ویزارد */
+export interface DbPingFail {
+  kind?: string | null
+  error?: string | null
+}
+
 function FirstRunGate() {
+  const { t } = useI18n()
   const [state, setState] = useState<'loading' | 'wizard' | 'app'>('loading')
+  const [pingFail, setPingFail] = useState<DbPingFail | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -894,12 +902,28 @@ function FirstRunGate() {
       if (window.dbConnection) {
         let infoActive = false
         let infoReachable: boolean | null = null
+        let infoDbOk: boolean | null = null
         try {
           const info = await window.dbConnection.info()
           infoActive = !!info.active
           infoReachable = typeof info.reachable === 'boolean' ? info.reachable : null
+          // پروب TCP فقط «پورت باز» را می‌گوید — پینگ واقعی MySQL هم لازم است:
+          // با فایل فعال و پورت باز، نام دیتابیس/رمز غلط فقط اینجا پیدا می‌شود
+          if (infoActive && infoReachable !== false && !localOnly) {
+            try {
+              const r = await fetch('/api/system/host-ping', { cache: 'no-store' })
+              if (r.ok) {
+                const j = await r.json()
+                infoDbOk = typeof j.ok === 'boolean' ? j.ok : null
+                if (infoDbOk === false && alive) {
+                  setPingFail({ kind: j.kind ?? null, error: j.error ?? null })
+                }
+              }
+              // اگر endpoint نبود (نسخه‌های قدیمی سرور) → null — بدون حلقهٔ ویزارد
+            } catch { infoDbOk = null }
+          }
         } catch { /* IPC در دسترس نیست — ویزارد نشان بده */ }
-        const d = decideFirstRun({ ...base, desktop: true, infoActive, infoReachable })
+        const d = decideFirstRun({ ...base, desktop: true, infoActive, infoReachable, infoDbOk })
         if (!alive) return
         if (d === 'app') {
           localStorage.setItem(SETUP_FLAG, '1')
@@ -910,7 +934,7 @@ function FirstRunGate() {
         return
       }
 
-      const d = decideFirstRun({ ...base, desktop: false, infoActive: false, infoReachable: null })
+      const d = decideFirstRun({ ...base, desktop: false, infoActive: false, infoReachable: null, infoDbOk: null })
       if (!alive) return
       if (d === 'wizard') {
         setState('wizard')
@@ -924,9 +948,20 @@ function FirstRunGate() {
     return () => { alive = false }
   }, [])
 
-  if (state === 'loading') return <div className="min-h-screen bg-background" aria-busy="true" />
+  if (state === 'loading') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3" aria-busy="true">
+        <div className="h-9 w-9 rounded-full border-[3px] border-primary border-t-transparent animate-spin" aria-hidden />
+        <p className="text-[13px] text-muted-foreground">
+          {t('در حال بررسی اتصال به هاست…', 'د هوسټ سره د نښلون په کتله کې…', 'Checking host connection…')}
+        </p>
+      </div>
+    )
+  }
   if (state === 'wizard') {
-    return LOCAL_MODE ? <ApkHostWizard onDone={() => setState('app')} /> : <SetupWizard onDone={() => setState('app')} />
+    return LOCAL_MODE
+      ? <ApkHostWizard onDone={() => setState('app')} />
+      : <SetupWizard onDone={() => setState('app')} dbPing={pingFail} />
   }
   return <Shell />
 }

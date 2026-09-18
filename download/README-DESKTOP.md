@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.23** — 🚪 **THE HOST PAGE NOW ALWAYS APPEARS ON FIRST LAUNCH (fixed for real)**: even if a connection file was written before (e.g. by host.bat) or a saved connection is actually broken, the app runs a quick 3-second reachability check at startup and re-opens the host page **with every field pre-filled** plus a yellow explanation banner — you just fix the wrong value and save; on Android, upgrades from older versions and unverified saved addresses now also return to the host page instead of being skipped. Plus 🔍 **CLEAR CONNECTION-FAILURE MESSAGES + HTTP FALLBACK (v1.0.22)**, 🚪 **HOST PAGE ALWAYS SHOWN UNTIL CONNECTED (v1.0.21)**, 🔐 **HOST-FIRST SETUP + OFFLINE SIGN-IN (v1.0.20)** and 🧪 **DEEP-TESTED v1.0.19**.
+**Version 1.0.24** — 📄 **CONFIG FILE NOW LIVES ON C:\ (visible, no hidden folders) + REAL MySQL CONNECTION CHECK**: the connection config is now kept at `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` — the app creates it **with a full Persian guide inside** on first run; you can type your host details directly into that file in Notepad (no forms needed), and the host page has **“Show file in Explorer”** and **“Re-read from file”** buttons. At startup the app now also runs a **real MySQL probe (SELECT 1)** — an active-but-broken saved connection (wrong database name / wrong password, which used to silently skip the host page and look like “nothing changed”) now re-opens the host page **with the exact failure reason**. The wizard footer shows `v1.0.24` so you can verify you installed the new build. Plus 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear connection-failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
 
 ---
 
@@ -11,8 +11,8 @@
 | File | Size | What it is |
 |---|---|---|
 | `ManufacturingERP-Setup.exe` | ~164 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~259 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
-| `host.bat` | ~9 KB | **Standalone interactive host-connect script** (v1.0.20+). Double-click, enter the host address & passwords when asked — it writes the connection config and restarts the app connected to the host. Works on any PC, even without the app installed yet. |
+| `ManufacturingERP-Windows-Portable.zip` | ~258 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `host.bat` | ~9 KB | (Optional, legacy) Standalone host-connect script. **No longer needed** — the app now creates and manages the config file itself (see §3). |
 | `README-DESKTOP.md` | — | This file. |
 
 Both artifacts contain the **complete, self-contained application**: an Electron shell (Chromium UI) plus an embedded production Next.js server and database clients for BOTH SQLite (offline local mode) and MySQL (shared-hosting mode). **No internet connection and no Node.js are required** — local mode works fully offline; host mode needs your hosting MySQL to be reachable.
@@ -74,25 +74,48 @@ Since v1.0.3 you do NOT need to find any config file by hand (and since v1.0.4 t
 
 Full step-by-step guide (Dari): `hosting-guide.md` served by the app at `/hosting-guide.md`.
 
-### Quick connect with `host.bat` (new in v1.0.20)
+### Quick connect: the config file on C:\ (NEW in v1.0.24 — recommended)
 
-A one-file helper so any user can connect the app to the host **without opening the app first**. Two ways — both work:
+You can now enter the host details **directly in a plain text file** — no forms, no scripts:
 
-**Way 1 — fill the file first (recommended, no questions asked at run time):**
-1. Right-click `host.bat` → **Edit** (or open in Notepad).
-2. Find the block **`*** ENTER YOUR HOST INFO HERE ***`** (right after the `#PSBEGIN#` line, near the top-third of the file).
-3. Fill your values between the `' '` quotes — e.g. `$CFG_MODE = 'ssh'`, `$CFG_SSH_HOST = 'server300.web-hosting.com'`, `$CFG_DB_NAME = 'setab_erp'`, … — and save.
-4. Double-click `host.bat`: it uses exactly those values, checks the host is reachable, writes the config and restarts the app connected. **Any field left empty is asked at run time**, so you can pre-fill only part of it.
-5. Password rule: type it between `' '`; if the password itself contains a `'`, write it twice (`'ab''123'` means `ab'123`). All other special characters (`@ : # % & !` …) need no escaping.
+1. The file lives at an easy path (the app creates it with a full Persian guide inside on first run):
 
-**Way 2 — no editing at all:** just double-click and answer the questions (connection type, host, port, database, users, masked passwords).
+   ```
+   C:\Users\<YourUser>\ManufacturingERP\db-connection.txt
+   ```
 
-Then (both ways):
-- The script checks that host:port is reachable, writes `%APPDATA%\ManufacturingERP\db-connection.txt` (same format the app uses in Settings), and offers to restart ManufacturingERP — the app then connects to the host automatically.
-- Re-run it any time to change the host; to go back to the local database, comment out the `mysql://` line in that file (or use Settings → host card).
-- Defaults if you press Enter: SSH port `21098`, MySQL port `3306`.
+   (The same content is also mirrored to `%APPDATA%\ManufacturingERP\db-connection.txt`.)
+2. Open it in **Notepad**, fill the connection line and save:
 
-Notes: it is a plain text file — open it in Notepad to review the code; every special character in passwords is safely URL-encoded; nothing is sent anywhere except to your own host.
+   ```
+   mysql://DBUSER:DBPASSWORD@DBHOST:3306/DBNAME
+   ssh-mode=direct
+   ```
+
+   For shared hosting (Namecheap/cPanel, where port 3306 is closed) use the SSH tunnel instead:
+
+   ```
+   mysql://DBUSER:DBPASSWORD@127.0.0.1:5522/DBNAME
+   ssh-mode=ssh
+   ssh-host=server370.web-hosting.com
+   ssh-port=21098
+   ssh-user=mycpaneluser
+   ssh-password=cpanelpassword
+   ```
+
+   (The app rewrites the `127.0.0.1:5522` part itself when you save from its UI; when editing the file by hand just keep the mysql:// host as the real DB host and set `ssh-mode=ssh` — the tunnel overrides it at startup.)
+3. Close the app and open it again — it connects to the host automatically and creates any missing tables by itself (no phpMyAdmin needed).
+
+You can also reach the file from inside the app: the host page (shown at startup until a working connection exists) has **“Show file in Explorer”** and **“Re-read from file”** buttons; after editing the file click “Re-read from file” (or just restart the app).
+
+If the saved connection is broken (wrong MySQL user/password, unknown database, tunnel down), the host page opens again at startup **showing the exact reason** — fix the values (in the form or in the file) and save.
+
+<details>
+<summary><b>Legacy: <code>host.bat</code> (optional, no longer needed)</b></summary>
+
+The old helper script is still in the repository for reference — double-click and answer its questions and it writes the same config file. With v1.0.24 the app manages the file itself, so you normally never need it.
+
+</details>
 
 ## 4) How it works (for IT staff)
 
@@ -176,7 +199,44 @@ npx electron-builder --win nsis
 راهنمای کامل گام‌به‌گام (دری): فایل `hosting-guide.md` — از داخل برنامه قابل دانلود است.
 
 
-### ✨ وصل کردن سریع برنامه به هاست با فایل `host.bat` (جدید در نسخهٔ ۱.۰.۲۰)
+### ✨ فایل تنظیمات روی C:\ — راه تازهٔ وصل کردن به هاست (جدید در نسخهٔ ۱.۰.۲۴)
+
+از این به بعد برای وصل کردن برنامه به هاست **فایل متنی ساده** کافی است — نه فرم، نه اسکریپت:
+
+۱. فایل تنظیم در این مسیر آسان قرار دارد (برنامه در اولین اجرا خودش با راهنمای کامل فارسی داخلش می‌سازد):
+
+```
+C:\Users\<نام‌کاربری شما>\ManufacturingERP\db-connection.txt
+```
+
+۲. فایل را با **Notepad** باز کنید، خط اتصال را با مشخصات خودتان پر کنید و ذخیره کنید:
+
+```
+mysql://DBUSER:DBPASSWORD@DBHOST:3306/DBNAME
+ssh-mode=direct
+```
+
+برای هاست اشتراکی (Namecheap/cPanel که پورت MySQL بسته است) حالت تونل:
+
+```
+mysql://DBUSER:DBPASSWORD@DBHOST:3306/DBNAME
+ssh-mode=ssh
+ssh-host=server370.web-hosting.com
+ssh-port=21098
+ssh-user=mycpaneluser
+ssh-password=cpanelpassword
+```
+
+۳. برنامه را ببندید و دوباره باز کنید — خودش به هاست وصل می‌شود و جدول‌های گمشده را خودکار می‌سازد (phpMyAdmin لازم نیست).
+
+نکته‌ها:
+- در صفحهٔ اطلاعات هاستِ برنامه (که تا وقتی اتصال سالم نشده در شروع نشان داده می‌شود) دو دکمهٔ جدید هست: **«باز کردن فایل در ویندوز»** (فایل در Explorer نشان داده می‌شود) و **«بازخوانی از فایل»** (بعد از ویرایش فایل، مقادیر داخل فرم به‌روز می‌شود).
+- اگر اتصال ذخیره‌شده خراب باشد (رمز/نام کاربری MySQL غلط، نام دیتابیس اشتباه، تونل قطع)، برنامه در شروع **دلیل دقیق خرابی** را روی صفحهٔ هاست نشان می‌دهد و فرم با مقادیر فعلی پرشده باز می‌شود — فقط ایراد را اصلاح و ذخیره کنید.
+- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.24`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است.
+- `host.bat` دیگر لازم نیست — به‌عنوان ابزار اختیاری در مخزن مانده است.
+- اگر هیچ خط `mysql://` فعالی در فایل نباشد، برنامه با دیتابیس محلی (SQLite) کار می‌کند.
+
+### ✨ وصل کردن سریع برنامه به هاست با فایل `host.bat` (ابزار اختیاری قدیمی)
 
 یک فایل مستقل و کوچک است؛ روی هر کمپیوتر که نسخهٔ دسکتاپ نصب باشد (یا حتی قبل از نصب) کار می‌کند. **دو راه** دارد — هر دو یک نتیجه می‌دهند:
 

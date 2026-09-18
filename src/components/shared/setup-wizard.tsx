@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
+import { APP_VERSION } from '@/lib/app-version'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +26,7 @@ import { toast } from 'sonner'
 import {
   Factory, HardDrive, Cloud, Globe, Server, KeyRound, Database,
   ArrowLeft, ArrowRight, Check, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
+  FileText, FolderOpen, FileClock,
 } from 'lucide-react'
 
 const COLOR_THEMES = [
@@ -51,7 +53,13 @@ function applyTheme(id: string) {
   localStorage.setItem('mfg-color-theme', id)
 }
 
-export default function SetupWizard({ onDone }: { onDone: () => void }) {
+/** دلیل شکست پینگ واقعی MySQL — از گِیت شروع برنامه می‌آید (v۱.۰.۲۴) */
+interface DbPingFailT {
+  kind?: string | null
+  error?: string | null
+}
+
+export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; dbPing?: DbPingFailT | null }) {
   const { t, lang } = useI18n()
   const setLang = useAppStore((s) => s.setLang)
   // ?desktop=1 — برای نمایش/تست مرحلهٔ هاست در مرورگر (ذخیره فقط در نسخهٔ ویندوز کار می‌کند)
@@ -73,6 +81,9 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [testFail, setTestFail] = useState<{ kind?: string; error?: string } | null>(null)
   /** اتصال ذخیره‌شده ولی وصل نمی‌شود — ویزارد با مقادیر فعلی دوباره باز شده */
   const [reopenedBroken, setReopenedBroken] = useState(false)
+  /** مسیر فایل تنظیمات روی C:\ — از info() می‌آید */
+  const [cfgPath, setCfgPath] = useState<string | null>(null)
+  const [rereading, setRereading] = useState(false)
 
   // فیلدهای هاست
   const [sshHost, setSshHost] = useState('')
@@ -86,26 +97,24 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
   const [dbPassword, setDbPassword] = useState('')
 
   // پیش‌پرکردن از اتصال ذخیره‌شده — ویزارد هرگز فیلدهای خالیِ تکراری نشان نمی‌دهد
-  // اگر اتصال ذخیره‌شده عملاً وصل نمی‌شود (reachable=false)، مستقیم گام هاست با
-  // مقادیر فعلی باز می‌شود تا کاربر فقط ایراد را اصلاح کند
+  // اگر اتصال ذخیره‌شده عملاً وصل نمی‌شود (reachable=false یا پینگ MySQL شکست
+  // خورده از گِیت)، مستقیم گام هاست با مقادیر فعلی باز می‌شود تا کاربر فقط ایراد را اصلاح کند
   useEffect(() => {
     let alive = true
     async function prefill() {
+      // شکست پینگ MySQL از گِیت — حتی بدون IPC هم گام هاست با بنر دلیل باز شود
+      if (dbPing) {
+        setReopenedBroken(true)
+        setStep(3)
+      }
       if (!conn) return
       try {
         const inf = await conn.info()
-        if (!inf || !inf.active || !alive) return
-        setMode(inf.sshMode ? 'ssh' : 'direct')
-        setSshHost(inf.sshHost || '')
-        setSshPort(String(inf.sshPort || '21098'))
-        setSshUser(inf.sshUser || '')
-        setSshPassword(inf.sshPassword || '')
-        setDbHost(inf.host || '')
-        setDbPort(String(inf.port || '3306'))
-        setDbName(inf.database || '')
-        setDbUser(inf.user || '')
-        setDbPassword(inf.password || '')
-        if (inf.reachable === false) {
+        if (!alive) return
+        setCfgPath(inf.friendlyPath || inf.path || null)
+        if (!inf || !inf.active) return
+        applyInfo(inf)
+        if (inf.reachable === false || dbPing) {
           setReopenedBroken(true)
           setStep(3)
         }
@@ -114,6 +123,47 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
     void prefill()
     return () => { alive = false }
   }, [])
+
+  /** پر کردن فرم از پاسخ info() — هم برای پیش‌پرکردن و هم «بازخوانی از فایل» */
+  function applyInfo(inf: {
+    active?: boolean; sshMode?: boolean; sshHost?: string | null; sshPort?: string | number | null
+    sshUser?: string | null; sshPassword?: string | null; host?: string | null; port?: string | number | null
+    database?: string | null; user?: string | null; password?: string | null
+  }) {
+    setMode(inf.sshMode ? 'ssh' : 'direct')
+    setSshHost(inf.sshHost || '')
+    setSshPort(String(inf.sshPort || '21098'))
+    setSshUser(inf.sshUser || '')
+    setSshPassword(inf.sshPassword || '')
+    setDbHost(inf.host || '')
+    setDbPort(String(inf.port || '3306'))
+    setDbName(inf.database || '')
+    setDbUser(inf.user || '')
+    setDbPassword(inf.password || '')
+  }
+
+  /** «بازخوانی از فایل» — کاربر فایل را در Notepad ویرایش کرده و اینجا دوباره خوانده می‌شود */
+  async function handleReread() {
+    if (!conn) return
+    setRereading(true)
+    setFormError(null)
+    try {
+      const inf = await conn.info()
+      setCfgPath(inf.friendlyPath || inf.path || null)
+      if (inf.active) {
+        applyInfo(inf)
+        setTestFail(null)
+        setReopenedBroken(false)
+        toast.success(t('فایل تنظیمات خوانده شد — مقادیر به‌روز شد', 'د تنظیماتو فایل لوستل شو — ارزښتونه نوي شول', 'Config file reloaded — values updated'))
+      } else {
+        toast.info(t('هنوز خط اتصال فعالی در فایل نیست', 'تراوس د نښلون فعلی کرښه نشته', 'No active connection line in the file yet'))
+      }
+    } catch (e) {
+      toast.error(String((e as Error)?.message || e))
+    } finally {
+      setRereading(false)
+    }
+  }
 
   function finish(localOnly = false) {
     localStorage.setItem(SETUP_FLAG, '1')
@@ -163,6 +213,34 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
         'No route to the server — check internet or firewall'
       )
     return t('اتصال SSH برقرار نشد', 'د SSH نښلون برقرار نشو', 'SSH connection failed') + (e ? ' — ' + e : '')
+  }
+
+  /** پیام دقیق شکست پینگ واقعی MySQL (SELECT 1) بر اساس نوع خطا */
+  function dbFailText(kind: string | undefined, error: string | undefined): string {
+    if (kind === 'AUTH')
+      return t(
+        'نام کاربری یا رمز MySQL اشتباه است — این‌ها در cPanel بخش «Manage My Databases» ساخته می‌شوند (نه همان رمز ورود cPanel)',
+        'د MySQL کارن نوم یا پټ نوم غلط دی — دا په cPanel کې په «Manage My Databases» کې جوړېږي',
+        'MySQL username or password is wrong — created under cPanel → Manage My Databases (not the cPanel login)'
+      )
+    if (kind === 'NO_DATABASE')
+      return t(
+        'دیتابیس با این نام پیدا نشد — در cPanel نام‌ها معمولاً با نام کاربری شروع می‌شوند (مثل myuser_mfg)',
+        'ډاټابیس د دې نوم سره نه موندل کېږي — په cPanel کې نومونه معمولاً د کارن نوم سره پیلېږي',
+        'Database not found with this name — cPanel names usually start with the username (e.g. myuser_mfg)'
+      )
+    if (kind === 'UNREACHABLE')
+      return t(
+        'MySQL در دسترس نیست — تونل SSH وصل نیست یا پورت/فایروال جلوی راه است',
+        'MySQL نه ته رسېدلی — د SSH تونل نه دي نښلی یا پورټ/فایروال مخنیوی کوي',
+        'MySQL is unreachable — the SSH tunnel is down or a port/firewall is blocking'
+      )
+    const e = String(error || '')
+    return t(
+      'اتصال به دیتابیس MySQL برقرار نشد — مقادیر زیر را با cPanel چک کنید',
+      'نښلون له MySQL سره برقرار نشو — ارزښتونه له cPanel سره وګورئ',
+      'Could not connect to MySQL — verify the values against cPanel'
+    ) + (e && kind !== 'UNKNOWN' ? ' — ' + e : '')
   }
 
   async function handleTest() {
@@ -409,11 +487,13 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                       )}
                     </p>
                     <p className="text-muted-foreground mt-0.5">
-                      {t(
-                        'مقادیر فعلی همان چیزی است که ذخیره شده — ایراد را پیدا و اصلاح کنید، بعد دوباره ذخیره کنید.',
-                        'ارزښتونه همغه دي چې خوندي شوي — ستونزه پیدا او اصلاح کړئ، بیا یې خوندي کړئ.',
-                        'The values below are what was saved — find and fix the problem, then save again.'
-                      )}
+                      {dbPing?.kind
+                        ? dbFailText(dbPing.kind, dbPing.error)
+                        : t(
+                            'مقادیر فعلی همان چیزی است که ذخیره شده — ایراد را پیدا و اصلاح کنید، بعد دوباره ذخیره کنید.',
+                            'ارزښتونه همغه دي چې خوندي شوي — ستونزه پیدا او اصلاح کړئ، بیا یې خوندي کړئ.',
+                            'The values below are what was saved — find and fix the problem, then save again.'
+                          )}
                     </p>
                   </div>
                 </div>
@@ -444,6 +524,63 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
                 </ol>
                 <p className="mt-1.5 text-muted-foreground">
                   {t('جدول‌ها به‌صورت خودکار ساخته می‌شوند — phpMyAdmin لازم نیست ✓', 'جدولونه په اتومات ډول جوړېږي — phpMyAdmin ته اړتیا نشته ✓', 'Tables are created automatically — no phpMyAdmin needed ✓')}
+                </p>
+              </div>
+
+              {/* راه دوم: وارد کردن مشخصات مستقیم در فایل تنظیمات (بدون هیچ فرم) */}
+              <div className="rounded-xl border bg-muted/40 p-3.5 text-[12px] leading-6 space-y-2">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  {t(
+                    'راه دوم — وارد کردن مشخصات در فایل تنظیمات:',
+                    'دویمه لار — په تنظیماتو فایل کې معلومات داخلول:',
+                    'Alternative — enter the details in the config file:'
+                  )}
+                </p>
+                <p className="text-muted-foreground">
+                  {t(
+                    'می‌توانید به‌جای این فرم، مشخصات هاست را مستقیم در فایل زیر بنویسید (با Notepad باز کنید، پر کنید، ذخیره کنید):',
+                    'کولای شئ د دې فورم پر ځای، د هوسټ معلومات په لاندې فایل کې ولیکئ (له Notepad پرانیزئ، ډک کړئ، خوندي کړئ):',
+                    'Instead of this form you can type the host details directly into this file (open in Notepad, fill it in, save):'
+                  )}
+                </p>
+                <code
+                  dir="ltr"
+                  className="block break-all rounded-lg border bg-background px-2.5 py-1.5 text-[11px] font-mono select-all"
+                >
+                  {cfgPath || 'C:\\Users\\<USERNAME>\\ManufacturingERP\\db-connection.txt'}
+                </code>
+                {conn && (
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => { void conn.showFile?.() }}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      {t('باز کردن فایل در ویندوز', 'فایل په ویندوز کې پرانیستل', 'Show file in Explorer')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      disabled={rereading}
+                      onClick={() => void handleReread()}
+                    >
+                      {rereading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileClock className="h-3.5 w-3.5" />}
+                      {t('بازخوانی از فایل', 'له فایل بیا لوستل', 'Re-read from file')}
+                    </Button>
+                  </div>
+                )}
+                <p className="text-muted-foreground">
+                  {t(
+                    'بعد از ویرایش فایل: «بازخوانی از فایل» را بزنید یا برنامه را ببندید و دوباره باز کنید. قالب کامل و نمونه‌ها داخل خود فایل نوشته شده است.',
+                    'له فایل منځولو وروسته: «له فایل بیا لوستل» کېکاږئ یا پروګرام بنډول او بیا پرانیزئ. بشپړ فارمټ او بېلګې پخپله فایل کې ليکل شوي دي.',
+                    'After editing the file: click “Re-read from file” or restart the app. The full format and examples are written inside the file itself.'
+                  )}
                 </p>
               </div>
 
@@ -650,6 +787,11 @@ export default function SetupWizard({ onDone }: { onDone: () => void }) {
             </div>
           )}
         </div>
+
+        {/* نسخهٔ برنامه — کاربر بتواند تأیید کند نصبش به‌روز است */}
+        <p className="text-center text-[11px] text-muted-foreground/70 mt-4" dir="ltr">
+          ManufacturingERP v{APP_VERSION}
+        </p>
       </div>
     </div>
   )
