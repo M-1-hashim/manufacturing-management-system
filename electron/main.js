@@ -306,9 +306,19 @@ function ensureDatabase() {
       : path.join(__dirname, '..', 'db', 'custom.db');
     if (fs.existsSync(src)) {
       fs.copyFileSync(src, dbPath);
+      // روی ویندوز اگر فایل منبع فقط‌خواندنی باشد (یا آنتی‌ویروس attribute بگذارد)
+      // کوئری‌های نوشتن «readonly database» می‌دهند — صریحاً قابل‌نوشتن می‌کنیم
+      try { fs.chmodSync(dbPath, 0o644); } catch (_e) { /* ignore */ }
       logLine(`demo database copied to ${dbPath}`);
     } else {
       logLine(`WARN: demo database not found at ${src} — starting with empty db file`);
+    }
+  } else {
+    // دیتابیس موجود که شاید از نسخه‌های قدیمی فقط‌خواندنی مانده باشد
+    try {
+      fs.accessSync(dbPath, fs.constants.W_OK);
+    } catch (_e) {
+      try { fs.chmodSync(dbPath, 0o644); logLine(`fixed read-only database file: ${dbPath}`); } catch (_e2) { /* ignore */ }
     }
   }
   return dbPath;

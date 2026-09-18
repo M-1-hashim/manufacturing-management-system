@@ -24,10 +24,14 @@ const SPECS: TableSpec[] = [
       "role" TEXT NOT NULL DEFAULT 'viewer',
       "department" TEXT NOT NULL DEFAULT 'general',
       "active" BOOLEAN NOT NULL DEFAULT true,
+      "tokenVersion" INTEGER NOT NULL DEFAULT 0,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
-    columns: [],
+    /* دیتابیس‌های محلیِ نسخه‌های ≤۱.۰.۱۸ ستون tokenVersion را ندارند —
+     * بدون این ALTER هر findUnique/create روی کاربر P2022 می‌دهد و مسیر ورود
+     * همیشه با «خطای داخلی هاست» شکست می‌خورد (باگ v1.0.25-). */
+    columns: [{ name: 'tokenVersion', ddl: '"tokenVersion" INTEGER NOT NULL DEFAULT 0' }],
     indexes: [],
   },
   {

@@ -2,7 +2,24 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.25** — 📄 **“THE FILE IS NOT THERE” IS NOW ANSWERED INSIDE THE APP**: the host page and Settings now show **live file status** — a green “فایل تنظیمات روی کامپیوتر شما موجود است ✓” when `db-connection.txt` exists, or an amber warning **plus a one-click “ساخت فایل تنظیمات” (Create config file)** button when it does not. The template file itself now carries the app version line, and if the file could not be created (e.g. antivirus/permissions) the error is logged. ⚠️ **If the file never appears on your PC, your installed build is older than v1.0.24 — old versions do not create any file. Download and install the latest Setup from the release page, then check the wizard footer version.** Previous: v1.0.24 put the config file on `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` (visible, no hidden folders) with a full Persian guide inside + real MySQL probe (SELECT 1) so a broken connection re-opens the host page with the exact reason. Plus 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear connection-failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
+**Version 1.0.26** — 🛠 **“خطای داخلی هاست” (Internal host error) at sign-in is FIXED**: the root cause was a missing `tokenVersion` column — local databases created by v1.0.18 or older were never upgraded, so every sign-in attempt died with a generic 500. Now the local database is **auto-upgraded before the first login**, and if any “missing table/column” error appears anyway, the app **repairs the schema automatically and retries transparently**. Fresh **web deployments on a new host now create the 19 MySQL tables automatically** on first successful ping (previously they were never created → same generic error). If a failure remains, the error message now carries the error code + a practical hint instead of an empty generic line. Local DB file writability is also enforced (antivirus/readonly-copy protection). Previous: v1.0.25 live config-file status + one-click “Create config file” answering “the file is not there” inside the app; v1.0.24 put the config file on `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` with a Persian guide + real MySQL probe (SELECT 1); 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
+
+
+### “خطای داخلی هاست” when signing in (fixed in v1.0.26)
+
+Older installs (≤ v1.0.25) whose local database was created by **v1.0.18 or earlier** hit this on every
+sign-in: the local SQLite was missing the `tokenVersion` column added in v1.0.19 and **nothing ever
+upgraded it**. v1.0.26 fixes the cause and adds a self-heal layer:
+
+1. **Install v1.0.26 (or newer) and just restart the app** — the database is upgraded automatically
+   before the first login; no action needed.
+2. If you still see an error, the message now includes the **error code** (e.g. `P2022`) and a hint —
+   send a screenshot of it to support. Close and reopen the app once; the automatic repair runs again.
+3. Fully local mode (no host) always keeps working: after the upgrade the default account
+   `admin / admin123` is available when the database was empty.
+
+Also new in v1.0.26: **web deployments on a fresh host create all 19 MySQL tables automatically** at the
+first successful ping — previously an empty MySQL database produced the same generic error on login.
 
 ---
 
@@ -239,7 +256,7 @@ ssh-password=cpanelpassword
 نکته‌ها:
 - در صفحهٔ اطلاعات هاستِ برنامه (که تا وقتی اتصال سالم نشده در شروع نشان داده می‌شود) دو دکمهٔ جدید هست: **«باز کردن فایل در ویندوز»** (فایل در Explorer نشان داده می‌شود) و **«بازخوانی از فایل»** (بعد از ویرایش فایل، مقادیر داخل فرم به‌روز می‌شود).
 - اگر اتصال ذخیره‌شده خراب باشد (رمز/نام کاربری MySQL غلط، نام دیتابیس اشتباه، تونل قطع)، برنامه در شروع **دلیل دقیق خرابی** را روی صفحهٔ هاست نشان می‌دهد و فرم با مقادیر فعلی پرشده باز می‌شود — فقط ایراد را اصلاح و ذخیره کنید.
-- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.25`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است. اگر فایل `db-connection.txt` وجود ندارد یعنی نسخهٔ نصب‌شده قدیمی است (قبل از ۱.۰.۲۴ هیچ فایلی ساخته نمی‌شد) — Setup جدید را نصب کنید؛ از نسخهٔ ۱.۰.۲۵ اگر فایل نباشد دکمهٔ «ساخت فایل تنظیمات» در همان صفحه آن را یک‌جا می‌سازد.
+- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.26`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است. اگر فایل `db-connection.txt` وجود ندارد یعنی نسخهٔ نصب‌شده قدیمی است (قبل از ۱.۰.۲۴ هیچ فایلی ساخته نمی‌شد) — Setup جدید را نصب کنید؛ از نسخهٔ ۱.۰.۲۵ اگر فایل نباشد دکمهٔ «ساخت فایل تنظیمات» در همان صفحه آن را یک‌جا می‌سازد.
 - `host.bat` دیگر لازم نیست — به‌عنوان ابزار اختیاری در مخزن مانده است.
 - اگر هیچ خط `mysql://` فعالی در فایل نباشد، برنامه با دیتابیس محلی (SQLite) کار می‌کند.
 

@@ -14,7 +14,7 @@ import {
   type ClientPair,
   type SyncSummary,
 } from '@/lib/sync-engine'
-import { ensureHostReady } from '@/lib/host-setup'
+import { ensureHostReady, createHostTables, migrateHostSchema } from '@/lib/host-setup'
 import { MYSQL_TABLE_NAMES } from '@/lib/mysql-ddl'
 import { ensureLocalSchema } from '@/lib/local-schema'
 
@@ -70,6 +70,9 @@ interface ManagerState {
   fails: number
   hostReady: boolean
   hostSetupTried: boolean
+  /** استقرار وب روی هاست (بدون دیتابیس محلی) — جدول‌های هاست یک‌بار ساخته شدند */
+  webHostReady: boolean
+  webSetupTried: boolean
   lastCheckAt: string | null
   lastOkAt: string | null
   lastError: string | null
@@ -99,6 +102,8 @@ function st(): ManagerState {
       fails: 0,
       hostReady: false,
       hostSetupTried: false,
+      webHostReady: false,
+      webSetupTried: false,
       lastCheckAt: null,
       lastOkAt: null,
       lastError: null,
@@ -182,6 +187,41 @@ async function ensureHostOnce(): Promise<boolean> {
     return false
   } catch (e) {
     console.error('[conn] host setup failed:', e)
+    return false
+  }
+}
+
+/* --------------------------- راه‌اندازی وب (بدون دیتابیس محلی) --------------------------- */
+
+/**
+ * استقرار وب روی هاست: pair وجود ندارد (SQLite محلی در کار نیست) پس ensureHostOnce
+ * هرگز اجرا نمی‌شد — دیتابیس MySQL خالی یعنی هر کوئری P2021 («خطای داخلی هاست»)
+ * می‌داد. این تابع در اولین پینگ موفق جدول‌ها + ستون‌ها را یک‌بار می‌سازد.
+ * بوت‌استرپ کاربران (بدون دستگاه محلی) در مسیر ورود انجام می‌شود.
+ */
+async function ensureWebHostOnce(): Promise<boolean> {
+  const s = st()
+  if (s.webHostReady) return true
+  if (s.webSetupTried) return false
+  if (dbInternal.hasLocal()) return false // مسیر pair با ensureHostOnce حل می‌شود
+  const { mysql } = dbInternal.getClients()
+  if (!mysql) return false
+  s.webSetupTried = true
+  try {
+    const ddl = await createHostTables(mysql)
+    if (ddl.failed.length > 0) {
+      console.error('[conn] web host table creation failed:', JSON.stringify(ddl.failed.slice(0, 3)))
+      return false
+    }
+    const mig = await migrateHostSchema(mysql)
+    s.webHostReady = true
+    console.log(
+      `[conn] web host setup OK: tables ${ddl.after}/${MYSQL_TABLE_NAMES.length}` +
+        ` created=[${ddl.created.join(',') || '-'}] migrated=[${mig.migratedColumns.join(',') || '-'}]`
+    )
+    return true
+  } catch (e) {
+    console.error('[conn] web host setup failed:', e)
     return false
   }
 }
@@ -316,7 +356,8 @@ export async function checkNow(): Promise<ReturnType<typeof getState>> {
       await switchToOnline()
     } else if (mode === 'host-mysql') {
       // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/ستون‌ها/بوت‌استرپ) — یک‌بار
-      const ready = await ensureHostOnce()
+      // (استقرار وب بدون دیتابیس محلی — ensureWebHostOnce)
+      const ready = (await ensureHostOnce()) || (await ensureWebHostOnce())
       if (ready) {
         await ensureInitialPull()
       }
@@ -385,9 +426,19 @@ export function startConnectionManager(): void {
 
   const pair = getPair()
   if (!pair) {
-    // استقرار وب روی هاست (بدون دیتابیس محلی) — بدون failover و بدون سینک
+    // استقرار وب روی هاست (بدون دیتابیس محلی) — بدون failover و بدون سینک،
+    // اما پینگ دوره‌ای + ساخت خودکار جدول‌های هاست (ensureWebHostOnce) لازم است —
+    // وگرنه دیتابیس MySQL خالی هرگز راه‌اندازی نمی‌شد و ورود P2021 می‌داد
     dbInternal.setMode('host-mysql')
     console.log('[conn] mysql configured but no local db — local-first disabled (web deploy)')
+    void (async () => {
+      try {
+        void checkNow()
+      } catch (e) {
+        console.error('[conn] web initial check failed:', e)
+      }
+      s.timer = setInterval(() => void checkNow(), CHECK_INTERVAL_MS)
+    })()
     return
   }
 
