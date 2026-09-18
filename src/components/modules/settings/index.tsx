@@ -39,6 +39,12 @@ interface DbConnInfoT {
   path: string
   /** مسیر دوست‌داشتنی روی C:\Users\<کاربر>\ManufacturingERP\db-connection.txt (۱.۰.۲۴) */
   friendlyPath?: string
+  /** وضعیت واقعی فایل روی دیسک (۱.۰.۲۵) — جواب مستقیم به «فایل db-connection.txt نیست» */
+  friendlyFileExists?: boolean
+  fileExists?: boolean
+  ensureError?: string | null
+  appVersion?: string
+  logPath?: string
   active: boolean
   host: string | null
   port: string
@@ -77,6 +83,8 @@ interface DbConnApiT {
   reset: () => Promise<{ ok: boolean; path?: string; error?: string }>
   openFolder: () => Promise<{ ok: boolean; path?: string; error?: string }>
   showFile?: () => Promise<{ ok: boolean; path?: string; error?: string }>
+  /** ساخت دستی فایل تنظیمات اگر به هر دلیلی روی C:\ نیست (۱.۰.۲۵) */
+  createFile?: () => Promise<{ ok: boolean; path?: string; existed?: boolean; error?: string }>
   relaunch: () => Promise<{ ok: boolean }>
 }
 
@@ -1823,9 +1831,43 @@ export default function SettingsModule() {
                   </p>
                 )}
                 {connInfo?.path && (
-                  <p className="text-xs text-muted-foreground break-all" dir="ltr">
-                    {t('فایل تنظیمات:', 'د امستنې فایل:', 'Config file:')} <span className="font-mono">{connInfo.path}</span>
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground break-all" dir="ltr">
+                      {t('فایل تنظیمات:', 'د امستنې فایل:', 'Config file:')} <span className="font-mono">{connInfo.friendlyPath || connInfo.path}</span>
+                    </p>
+                    {typeof connInfo.friendlyFileExists === 'boolean' && (
+                      <p className={'flex items-center gap-1.5 text-xs font-medium ' + (connInfo.friendlyFileExists ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+                        {connInfo.friendlyFileExists ? '✓' : '!'}
+                        {connInfo.friendlyFileExists
+                          ? t('فایل روی کامپیوتر موجود است ✓', 'فایل په کمپیوټر کې شته ✓', 'File exists on this computer ✓')
+                          : t('فایل موجود نیست — دکمهٔ «ساخت فایل تنظیمات» را بزنید', 'فایل نشته — «د تنظیماتو فایل جوړول» کېکاږئ', 'File missing — click “Create config file”')}
+                      </p>
+                    )}
+                    {connInfo.friendlyFileExists === false && connApi?.createFile && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
+                        onClick={async () => {
+                          try {
+                            const r = await connApi.createFile!()
+                            if (r.ok) {
+                              toast.success(t('فایل تنظیمات ساخته شد ✓', 'د تنظیماتو فایل جوړ شو ✓', 'Config file created ✓'))
+                              const inf = await connApi.info()
+                              setConnInfo(inf)
+                            } else {
+                              toast.error(t('ساخت فایل ناموفق بود: ', 'ناکام شو: ', 'Failed: ') + (r.error || ''))
+                            }
+                          } catch (e) {
+                            toast.error(String((e as Error)?.message || e))
+                          }
+                        }}
+                      >
+                        {t('ساخت فایل تنظیمات', 'د تنظیماتو فایل جوړول', 'Create config file')}
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {connForm.mode === 'ssh' ? (
                   <p className="text-xs text-muted-foreground">

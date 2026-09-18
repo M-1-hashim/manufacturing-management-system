@@ -13,5 +13,6 @@ contextBridge.exposeInMainWorld('dbConnection', {
   reset: () => ipcRenderer.invoke('db-connection:reset'),
   openFolder: () => ipcRenderer.invoke('db-connection:openFolder'),
   showFile: () => ipcRenderer.invoke('db-connection:showFile'),
+  createFile: () => ipcRenderer.invoke('db-connection:createFile'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
 });

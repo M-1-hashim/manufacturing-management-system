@@ -105,6 +105,7 @@ function templateLines(activeUrl) {
   const lines = [
     '# ======================================================================',
     '#   ManufacturingERP — فایل تنظیم اتصال به هاست',
+    `#   نسخهٔ برنامه: ${app.getVersion()} — این فایل به‌صورت خودکار ساخته شده است`,
     '#   این فایل را با Notepad ویرایش کنید، ذخیره کنید، بعد برنامه را ببندید',
     '#   و دوباره باز کنید.',
     '# ======================================================================',
@@ -170,14 +171,27 @@ function writeConnectionFile(activeUrl) {
 /**
  * اگر هیچ فایل تنظیمی وجود نداشته باشد، همان اولِ اجرا قالب راهنما ساخته می‌شود
  * تا کاربر همیشه یک فایل روی C:\ داشته باشد که بتواند در Notepad پرش کند.
+ *
+ * نتیجهٔ آخرین تلاش در lastEnsureResult نگه‌داری می‌شود تا IPC info بتواند
+ * وضعیت واقعی فایل (موجود/نه + خطا) را به رندرر بدهد — «فایل db-connection.txt نیست»
+ * دیگر یک معمای خاموش نیست؛ کاربر در خود برنامه دلیل و راه‌حل را می‌بیند.
  */
+let lastEnsureResult = null; // { attempted, created, path, error }
+
 function ensureTemplateFile() {
   try {
-    if (configCandidates().some((p) => fs.existsSync(p))) return;
+    const existing = configCandidates().find((p) => fs.existsSync(p));
+    if (existing) {
+      lastEnsureResult = { attempted: false, created: false, path: existing, error: null };
+      return;
+    }
     const p = writeConnectionFile(null);
+    lastEnsureResult = { attempted: true, created: true, path: p, error: null };
     logLine(`db-connection template created at ${p}`);
   } catch (e) {
-    logLine(`db-connection template create failed: ${e && e.message ? e.message : e}`);
+    const msg = e && e.message ? e.message : String(e);
+    lastEnsureResult = { attempted: true, created: false, path: null, error: msg };
+    logLine(`db-connection template create failed: ${msg}`);
   }
 }
 
@@ -453,9 +467,13 @@ function probeReachable(cfg) {
 ipcMain.handle('db-connection:info', async () => {
   try {
     const candidates = configCandidates();
-    if (!candidates.some((p) => fs.existsSync(p))) writeConnectionFile(null);
-  } catch (_e) {
-    /* ignore */
+    if (!candidates.some((p) => fs.existsSync(p))) {
+      writeConnectionFile(null);
+      lastEnsureResult = { attempted: true, created: true, path: candidates[0], error: null };
+    }
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    lastEnsureResult = { attempted: true, created: false, path: null, error: msg };
   }
   const parsed = parseActiveOverride();
   const reachable = await probeReachable(parsed);
@@ -464,6 +482,12 @@ ipcMain.handle('db-connection:info', async () => {
     // مسیری که واقعاً از آن خوانده شد + مسیر دوست‌داشتنی برای نمایش به کاربر
     path: parsed.path || friendlyConfigPath(),
     friendlyPath: friendlyConfigPath(),
+    // وضعیت واقعی فایل روی دیسک — «فایل db-connection.txt نیست» را در خود برنامه جواب می‌دهد
+    friendlyFileExists: fs.existsSync(friendlyConfigPath()),
+    fileExists: configCandidates().some((p) => fs.existsSync(p)),
+    ensureError: lastEnsureResult && lastEnsureResult.error ? lastEnsureResult.error : null,
+    appVersion: app.getVersion(),
+    logPath: logFilePath(),
     active: parsed.active,
     host: parsed.host,
     port: parsed.port,
@@ -578,6 +602,24 @@ ipcMain.handle('db-connection:openFolder', async () => {
     return result ? { ok: false, error: result } : { ok: true, path: app.getPath('userData') };
   } catch (err) {
     return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+// ساخت دستی فایل تنظیمات — اگر به هر دلیلی فایل روی C:\ نیست، با یک کلیک ساخته می‌شود
+// (اگر فایل از قبل هست، هیچ‌وقت بازنویسی نمی‌شود تا تنظیمات کاربر پاک نشود)
+ipcMain.handle('db-connection:createFile', async () => {
+  try {
+    const existing = configCandidates().find((p) => fs.existsSync(p));
+    if (existing) return { ok: true, path: existing, existed: true };
+    const p = writeConnectionFile(null);
+    lastEnsureResult = { attempted: true, created: true, path: p, error: null };
+    logLine(`db-connection template created on demand at ${p}`);
+    return { ok: true, path: p, existed: false };
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    lastEnsureResult = { attempted: true, created: false, path: null, error: msg };
+    logLine(`db-connection create on demand failed: ${msg}`);
+    return { ok: false, error: msg };
   }
 });
 

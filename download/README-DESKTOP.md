@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.24** — 📄 **CONFIG FILE NOW LIVES ON C:\ (visible, no hidden folders) + REAL MySQL CONNECTION CHECK**: the connection config is now kept at `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` — the app creates it **with a full Persian guide inside** on first run; you can type your host details directly into that file in Notepad (no forms needed), and the host page has **“Show file in Explorer”** and **“Re-read from file”** buttons. At startup the app now also runs a **real MySQL probe (SELECT 1)** — an active-but-broken saved connection (wrong database name / wrong password, which used to silently skip the host page and look like “nothing changed”) now re-opens the host page **with the exact failure reason**. The wizard footer shows `v1.0.24` so you can verify you installed the new build. Plus 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear connection-failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
+**Version 1.0.25** — 📄 **“THE FILE IS NOT THERE” IS NOW ANSWERED INSIDE THE APP**: the host page and Settings now show **live file status** — a green “فایل تنظیمات روی کامپیوتر شما موجود است ✓” when `db-connection.txt` exists, or an amber warning **plus a one-click “ساخت فایل تنظیمات” (Create config file)** button when it does not. The template file itself now carries the app version line, and if the file could not be created (e.g. antivirus/permissions) the error is logged. ⚠️ **If the file never appears on your PC, your installed build is older than v1.0.24 — old versions do not create any file. Download and install the latest Setup from the release page, then check the wizard footer version.** Previous: v1.0.24 put the config file on `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` (visible, no hidden folders) with a full Persian guide inside + real MySQL probe (SELECT 1) so a broken connection re-opens the host page with the exact reason. Plus 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear connection-failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
 
 ---
 
@@ -106,9 +106,16 @@ You can now enter the host details **directly in a plain text file** — no form
    (The app rewrites the `127.0.0.1:5522` part itself when you save from its UI; when editing the file by hand just keep the mysql:// host as the real DB host and set `ssh-mode=ssh` — the tunnel overrides it at startup.)
 3. Close the app and open it again — it connects to the host automatically and creates any missing tables by itself (no phpMyAdmin needed).
 
-You can also reach the file from inside the app: the host page (shown at startup until a working connection exists) has **“Show file in Explorer”** and **“Re-read from file”** buttons; after editing the file click “Re-read from file” (or just restart the app).
+You can also reach the file from inside the app: the host page (shown at startup until a working connection exists) has **“Show file in Explorer”** and **“Re-read from file”** buttons; after editing the file click “Re-read from file” (or just restart the app). From v1.0.25 the page also shows whether the file actually exists — and a **“Create config file”** button that writes the template immediately if it does not.
 
 If the saved connection is broken (wrong MySQL user/password, unknown database, tunnel down), the host page opens again at startup **showing the exact reason** — fix the values (in the form or in the file) and save.
+
+### Troubleshooting: «فایل db-connection.txt نیست» — the config file is not there?
+
+1. **Check the installed version first.** Old builds (v1.0.23 and earlier) do **not** create any file. On the host page the footer shows `ManufacturingERP v…`; Settings → about/version shows the same. If it is older than **1.0.24**, download the latest Setup from <https://github.com/M-1-hashim/manufacturing-management-system/releases/latest> and install it — the file is created automatically at first launch.
+2. **Let the app create it for you.** On the host page, the file card shows the full path and (v1.0.25+) an amber warning with a **«ساخت فایل تنظیمات»** button if the file is missing — one click writes the template to both `C:\Users\<YourUser>\ManufacturingERP\` and `%APPDATA%\ManufacturingERP\`, then **“Show file in Explorer”** opens it.
+3. **Check the exact folder.** The file is inside *your own user profile* — `<YourUser>` is your Windows account name (e.g. `C:\Users\ahmad\ManufacturingERP\db-connection.txt`). Copy-paste `%APPDATA%\ManufacturingERP` into the **Win + R** box to open the mirror copy.
+4. **If creation still fails** (very rare — antivirus/“Controlled folder access” can block writes): open the log at `%APPDATA%\ManufacturingERP\electron.log` and look for lines starting with `db-connection` — the exact Windows error is written there. Add an antivirus exclusion for the app, or create the folder+file manually per the template above.
 
 <details>
 <summary><b>Legacy: <code>host.bat</code> (optional, no longer needed)</b></summary>
@@ -232,7 +239,7 @@ ssh-password=cpanelpassword
 نکته‌ها:
 - در صفحهٔ اطلاعات هاستِ برنامه (که تا وقتی اتصال سالم نشده در شروع نشان داده می‌شود) دو دکمهٔ جدید هست: **«باز کردن فایل در ویندوز»** (فایل در Explorer نشان داده می‌شود) و **«بازخوانی از فایل»** (بعد از ویرایش فایل، مقادیر داخل فرم به‌روز می‌شود).
 - اگر اتصال ذخیره‌شده خراب باشد (رمز/نام کاربری MySQL غلط، نام دیتابیس اشتباه، تونل قطع)، برنامه در شروع **دلیل دقیق خرابی** را روی صفحهٔ هاست نشان می‌دهد و فرم با مقادیر فعلی پرشده باز می‌شود — فقط ایراد را اصلاح و ذخیره کنید.
-- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.24`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است.
+- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.25`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است. اگر فایل `db-connection.txt` وجود ندارد یعنی نسخهٔ نصب‌شده قدیمی است (قبل از ۱.۰.۲۴ هیچ فایلی ساخته نمی‌شد) — Setup جدید را نصب کنید؛ از نسخهٔ ۱.۰.۲۵ اگر فایل نباشد دکمهٔ «ساخت فایل تنظیمات» در همان صفحه آن را یک‌جا می‌سازد.
 - `host.bat` دیگر لازم نیست — به‌عنوان ابزار اختیاری در مخزن مانده است.
 - اگر هیچ خط `mysql://` فعالی در فایل نباشد، برنامه با دیتابیس محلی (SQLite) کار می‌کند.
 

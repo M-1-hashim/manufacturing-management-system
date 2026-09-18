@@ -1776,3 +1776,31 @@ Stage Summary:
 - تضمین تازه: اتصالِ «فعال ولی خراب» (پورت باز، MySQL/auth/db خراب) دیگر برنامه را بدون صفحهٔ هاست باز نمی‌کند — گِیت با SELECT 1 می‌سنجد و دلیل دقیق را نشان می‌دهد
 - MD5: apk 4ad255cc9beb9f438bf001f09502f99e · Setup 7adae3400689210154f1718d9973c486 · Portable 27ad570dc5135d29b9be4b2d8bcedc95
 - sha256: apk b7ff7baf8e61036a9cb4c3d490ad7af965585735f6a6e25bec637248f45c6a96 · Setup fd027e3169d578ea01e83d79eed9aae74acd79e7076cc14a228befd690cb247a · Portable 3856f23ef9b920104e23df1b89a35f658a173f5548e1a84b47927e99ff9b43bb
+
+---
+Task ID: 19
+Agent: Z.ai Code (main)
+Task: «فایل db-connection.txt نیست» — بررسی ریشه، سخت‌سازی ساخت فایل، وضعیت زندهٔ فایل در UI، دکمهٔ «ساخت فایل تنظیمات»، ریلیز v1.0.25 با تأیید digest
+
+Work Log:
+- ریشه‌یابی: parseActiveOverride/ensureTemplateFile در main.js سالم‌اند (قبل از باز شدن پنجره اجرا می‌شوند؛ migrate داخل try/catch است)؛ ریلیز v1.0.24 روی گیت‌هاب با digest تأیید شد (Setup fd027e31…) → نتیجه: فایلِ نبود روی کامپیوتر کاربر تقریباً قطعاً یعنی نسخهٔ نصب‌شده ≤ v1.0.23 است (فایل‌سازی از ۱.۰.۲۴ آمد) یا خطای نوشتن (آنتی‌ویروس) که بی‌صدا در electron.log می‌رفت
+- main.js: lastEnsureResult برای ردیابی نتیجهٔ آخرین ensure؛ info IPC حالا friendlyFileExists/fileExists/ensureError/appVersion/logPath برمی‌گرداند؛ IPC جدید db-connection:createFile (ساخت فقط در صورت نبود + خطای دقیق)؛ خط «نسخهٔ برنامه: X» سرِ قالب فایل
+- preload.js: createFile expose شد
+- setup-wizard.tsx: وضعیت زندهٔ فایل — سبز «فایل موجود است ✓» / کهربایی «ساخته نشده» + دکمهٔ «ساخت فایل تنظیمات» + نکتهٔ «نسخهٔ قدیمی؟ Setup v1.0.25+ نصب کن»؛ syncFileInfo در prefill/reread/create
+- settings/index.tsx: تایپ‌های جدید + وضعیت فایل و دکمهٔ ساخت کنار «فایل تنظیمات:»
+- scripts/test-db-connection.mjs (دائمی): ۳۹/۳۹ PASS — استخراج واقعی connectionConfigPath..parseActiveOverride از main.js با fs/app فیک: ساخت قالب/پرش روی موجود/SSH round-trip (رمز URL-encoded)/direct 3307/اولویت friendly/نوشتن دو مسیر/EACCES → error بدون crash/CRLF
+- تست مرورگر: ویزارد ?setup=1&desktop=1 هر سه حالت (بدون bridge / fileExists=false → کهربایی+دکمه / fileExists=true → سبز) با mock stateful؛ موبایل ۳۹۰px تاریک رندر سالم؛ لاگین+تنظیمات بدون خطای کنسول
+- bump: app-version.ts/package.json/installer.nsi/AndroidManifest → 1.0.25 / versionCode 10
+- محیط بیلد از نو (sandbox reset): JDK 21.0.12.1 → ~/jdk21؛ build-tools r36 → ~/android-sdk/android-16؛ platform-34-ext7_r03 → ~/android-sdk/android-34؛ NSIS 3.08+deb12u1 از pool دبیان → ~/nsis-works/nsis-root/usr/{bin,share} (makensis فقط با NSISDIR کار می‌کند)
+- بیلد: win-unpacked 592M (app/package.json=1.0.25، createFile در main.js بسته‌بندی‌شده، رشتهٔ «ساخت فایل تنظیمات» در chunks)؛ makensis بار اول ناموفق (بیداربودن مجدد/حافظه)، بار دوم OK — Setup.exe 168,556,348B با «1.0.25.0» UTF-16 داخل باینری؛ Portable.zip 265,475,500B؛ APK 1,108,776B (versionCode 10 / versionName 1.0.25، همان keystore SHA-256 c553eb67…)
+- ریلیز v1.0.25 (id 391676404): ۴ asset آپلود؛ sha256 گیت‌هاب == لوکال برای هر ۴ فایل (apk 1ae60512… / Setup 6e893ffa… / Portable 0c078f5c… / notes 68039f45…) — تأیید سخت‌گیرانهٔ «تغییر نکرده» انجام شد
+- ۲۴ ریلیز قدیمی → prerelease=true؛ /releases/latest حالا به v1.0.25 ریدایرکت می‌شود (دانلود stale ناممکن)
+- README-DESKTOP.md: هدر ۱.۰.۲۵ + بخش Troubleshooting «فایل db-connection.txt نیست» چهار-گامی + بروزرسانی بخش فارسی؛ RELEASE-NOTES-v1.0.25.md ساخته شد
+- db/custom.db و desktop-assets/demo-db با git checkout بازگردانده شدند
+
+Stage Summary:
+- v1.0.25 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.25
+- پاسخ محصولی به «فایل db-connection.txt نیست»: (۱) اگر نسخه قدیمی است فایل هرگز ساخته نمی‌شد → پیام+لینک نصب جدید؛ (۲) اگر فایل نیست دکمهٔ «ساخت فایل تنظیمات» فوراً می‌سازد؛ (۳) اگر ساخت شکست بخورد خطای دقیق در UI/log دیده می‌شود
+- تضمین دانلود درست: همهٔ ریلیزهای قدیمی pre-release شدند — لینک Latest و صفحهٔ ریلیز دیگر به Setup کهنه اشاره نمی‌کند
+- MD5: apk 98999601e6fc06de6918e75e9831d827 · Setup 5647a21b0b7aa054f27b2d1ff70712d8 · Portable 6134625f3e658f2d67248b54ce41e466
+- sha256: apk 1ae6051269542c321e69878b8d1a9400e768697e9f65b8f6a9cb0379932f2345 · Setup 6e893ffad3875b741da2b3b5c0f36fb62e2644addc7dde11c83789e8a7d8d062 · Portable 0c078f5c630807c907c79aaf1d002485e73b7c60c2c1ec5a4094360ba35a82db

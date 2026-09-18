@@ -25,8 +25,8 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Factory, HardDrive, Cloud, Globe, Server, KeyRound, Database,
-  ArrowLeft, ArrowRight, Check, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
-  FileText, FolderOpen, FileClock,
+  ArrowLeft, ArrowRight, Check, CheckCircle2, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
+  FileText, FolderOpen, FileClock, FilePlus2,
 } from 'lucide-react'
 
 const COLOR_THEMES = [
@@ -84,6 +84,15 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
   /** مسیر فایل تنظیمات روی C:\ — از info() می‌آید */
   const [cfgPath, setCfgPath] = useState<string | null>(null)
   const [rereading, setRereading] = useState(false)
+  /** آیا فایل db-connection.txt واقعاً روی دیسک هست؟ (null = نامعلوم/مرورگر) */
+  const [fileExists, setFileExists] = useState<boolean | null>(null)
+  const [creatingFile, setCreatingFile] = useState(false)
+
+  function syncFileInfo(inf: { friendlyFileExists?: boolean; fileExists?: boolean; friendlyPath?: string; path?: string }) {
+    if (typeof inf.friendlyFileExists === 'boolean') setFileExists(inf.friendlyFileExists)
+    else if (typeof inf.fileExists === 'boolean') setFileExists(inf.fileExists)
+    if (inf.friendlyPath || inf.path) setCfgPath(inf.friendlyPath || inf.path || null)
+  }
 
   // فیلدهای هاست
   const [sshHost, setSshHost] = useState('')
@@ -111,7 +120,7 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
       try {
         const inf = await conn.info()
         if (!alive) return
-        setCfgPath(inf.friendlyPath || inf.path || null)
+        syncFileInfo(inf)
         if (!inf || !inf.active) return
         applyInfo(inf)
         if (inf.reachable === false || dbPing) {
@@ -149,7 +158,7 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
     setFormError(null)
     try {
       const inf = await conn.info()
-      setCfgPath(inf.friendlyPath || inf.path || null)
+      syncFileInfo(inf)
       if (inf.active) {
         applyInfo(inf)
         setTestFail(null)
@@ -162,6 +171,39 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
       toast.error(String((e as Error)?.message || e))
     } finally {
       setRereading(false)
+    }
+  }
+
+  /** «ساخت فایل تنظیمات» — اگر فایل به هر دلیلی روی C:\ نیست، با یک کلیک ساخته می‌شود */
+  async function handleCreateFile() {
+    if (!conn?.createFile) {
+      toast.error(
+        t(
+          'این دکمه فقط در نسخهٔ ۱.۰.۲۵ یا بالاتر کار می‌کند — Setup جدید را از صفحهٔ دانلود نصب کنید',
+          'دا تڼۍ یوازې په ۱.۰.۲۵ یا نوي نسخه کې کار کوي — نوی Setup نصب کړئ',
+          'This button needs version 1.0.25+ — install the latest Setup from the download page'
+        )
+      )
+      return
+    }
+    setCreatingFile(true)
+    try {
+      const r = await conn.createFile()
+      if (r && r.ok) {
+        toast.success(
+          t('فایل تنظیمات ساخته شد ✓', 'د تنظیماتو فایل جوړ شو ✓', 'Config file created ✓')
+        )
+        try {
+          const inf = await conn.info()
+          syncFileInfo(inf)
+        } catch { /* ignore */ }
+      } else {
+        toast.error(t('ساخت فایل ناموفق بود: ', 'فایل جوړول ناکام شو: ', 'File creation failed: ') + (r?.error || ''))
+      }
+    } catch (e) {
+      toast.error(String((e as Error)?.message || e))
+    } finally {
+      setCreatingFile(false)
     }
   }
 
@@ -544,6 +586,40 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                     'Instead of this form you can type the host details directly into this file (open in Notepad, fill it in, save):'
                   )}
                 </p>
+                {/* وضعیت واقعی فایل روی دیسک — جواب مستقیم به «فایل db-connection.txt نیست» */}
+                {fileExists === true && (
+                  <p className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    {t(
+                      'فایل تنظیمات روی کامپیوتر شما موجود است ✓ — کافی است آن را با Notepad باز کنید و پر کنید',
+                      'د تنظیماتو فایل ستاسو په کمپیوټر کې شته ✓ — له Notepad پرانیزئ او ډک کړئ',
+                      'The config file exists on your computer ✓ — open it in Notepad and fill it in'
+                    )}
+                  </p>
+                )}
+                {fileExists === false && (
+                  <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-700/60 dark:bg-amber-950/30">
+                    <p className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      {t(
+                        'فایل هنوز روی کامپیوتر شما ساخته نشده است — با دکمهٔ زیر همین حالا بسازید:',
+                        'فایل تراوسه په کمپیوټر کې نه دی جوړ شوی — له لاندې تڼۍ يې جوړ کړئ:',
+                        'The file has not been created on your computer yet — create it now with the button below:'
+                      )}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
+                      disabled={creatingFile}
+                      onClick={() => void handleCreateFile()}
+                    >
+                      {creatingFile ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FilePlus2 className="h-3.5 w-3.5" />}
+                      {t('ساخت فایل تنظیمات', 'د تنظیماتو فایل جوړول', 'Create config file')}
+                    </Button>
+                  </div>
+                )}
                 <code
                   dir="ltr"
                   className="block break-all rounded-lg border bg-background px-2.5 py-1.5 text-[11px] font-mono select-all"
@@ -580,6 +656,13 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                     'بعد از ویرایش فایل: «بازخوانی از فایل» را بزنید یا برنامه را ببندید و دوباره باز کنید. قالب کامل و نمونه‌ها داخل خود فایل نوشته شده است.',
                     'له فایل منځولو وروسته: «له فایل بیا لوستل» کېکاږئ یا پروګرام بنډول او بیا پرانیزئ. بشپړ فارمټ او بېلګې پخپله فایل کې ليکل شوي دي.',
                     'After editing the file: click “Re-read from file” or restart the app. The full format and examples are written inside the file itself.'
+                  )}
+                </p>
+                <p className="text-[11px] text-muted-foreground/80">
+                  {t(
+                    `اگر فایل ساخته نمی‌شود یا این صفحه اصلاً دیده نمی‌شود، نسخهٔ نصب‌شده روی کامپیوتر شما قدیمی است — Setup نسخهٔ ${'v' + APP_VERSION} یا بالاتر را از صفحهٔ دانلود نصب کنید.`,
+                    `که فایل جوړېږي نه یا دا پاڼه نه ښکاري، ستاسو نسخه زړه ده — ${'v' + APP_VERSION} یا نوی Setup نصب کړئ.`,
+                    `If the file is not created or this page never appears, the installed version is old — install Setup v${APP_VERSION}+ from the download page.`
                   )}
                 </p>
               </div>
