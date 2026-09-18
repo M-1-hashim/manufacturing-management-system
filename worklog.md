@@ -1804,3 +1804,31 @@ Stage Summary:
 - تضمین دانلود درست: همهٔ ریلیزهای قدیمی pre-release شدند — لینک Latest و صفحهٔ ریلیز دیگر به Setup کهنه اشاره نمی‌کند
 - MD5: apk 98999601e6fc06de6918e75e9831d827 · Setup 5647a21b0b7aa054f27b2d1ff70712d8 · Portable 6134625f3e658f2d67248b54ce41e466
 - sha256: apk 1ae6051269542c321e69878b8d1a9400e768697e9f65b8f6a9cb0379932f2345 · Setup 6e893ffad3875b741da2b3b5c0f36fb62e2644addc7dde11c83789e8a7d8d062 · Portable 0c078f5c630807c907c79aaf1d002485e73b7c60c2c1ec5a4094360ba35a82db
+
+---
+Task ID: 23
+Agent: Z.ai Code (main)
+Task: «این ایرور را میدهد "خطای داخلی هاست"» — ریشه‌یابی خطای عمومی ورود + ترمیم خودکار اسکیما + ریلیز v1.0.26 با تأیید digest
+
+Work Log:
+- ریشه‌یابی: «خطای داخلی هاست» فقط در ۴ مسیر auth تولید می‌شود (catch عمومی). اثبات واقعی: دیتابیس محلیِ ساخته‌شده با نسخه‌های ≤۱.۰.۱۸ ستون tokenVersion را ندارد (v1.0.19 اضافه‌اش کرد) و ensureLocalSchema هم DDL بدون آن داشت و columns خالی — هر findUnique/create روی کاربر P2022 می‌داد → ۵۰۰ عمومی. تست Prisma واقعی: P2022 روی findUnique و create تأیید شد. سناریوی دوم: استقرار وب روی هاست تازه — pair نیست پس ensureHostOnce هرگز اجرا نمی‌شد و دیتابیس MySQL خالی می‌ماند → P2021 → ۵۰۰
+- dif اسکیمای برنامه‌نویسی‌شده با dev db واقعی: فقط User.tokenVersion غایب بود (۱۸ جدول دیگر سالم)
+- local-schema.ts: ستون tokenVersion به DDL User + ALTER ترقیم («tokenVersion» INTEGER NOT NULL DEFAULT 0) اضافه شد
+- db-repair.ts (جدید): isSchemaGapError (P2021/P2022 + no such table/column + does not exist — بدون Unknown database) + repairSchemaGap (sqlite → ensureLocalSchema؛ وب → createHostTables+migrateHostSchema) + internalDbErrorText (پیام فارسی با کد + راهنما؛ حالت readonly هم پوشش داده شد)
+- auth routes (login/me/change-password): تضمین ensureLocalSchema قبل از کوئری + الگوی handleX که خطا پرتاب می‌کند + catch بیرونی: تشخیص شکاف → ترمیم → تلاش دوباره یک‌بار → ۵۰۰ با پیام دقیق. logout دست‌نخورده (فقط logAudit)
+- connection-manager.ts: ensureWebHostOnce (ساخت جدول‌های هاست در استقرار وب — یک‌بار در اولین پینگ موفق) + شروع تایمر پینگ در شاخهٔ web deploy (قبلاً return زودهنگام یعنی هیچ تایمری نبود!) + تغییر شاخهٔ host-mysql به (ensureHostOnce || ensureWebHostOnce)
+- electron/main.js: ensureDatabase حالا chmod 0644 بعد از کپی demo-db + repair فایل موجودِ فقط‌خواندنی (accessSync W_OK) — جلوگیری از «readonly database» آنتی‌ویروس/کپی
+- تست‌ها (scripts/test-schema-repair.mjs دائمی): A: db قدیمی + ورود → ۲۰۰ + کوکی + ستون اضافه شد ✓؛ B: db کاملاً خالی → ۱۹ جدول + بوت‌استرپ ادمین → ۲۰۰ ✓؛ C: isSchemaGapError + repairSchemaGap مستقیم → جدول سالم ✓؛ D: پسورد غلط → ۴۰۱ عادی ✓
+- تست مرورگر: ورود admin/admin123 → داشبورد ✓؛ موبایل ۳۹۰px تاریک رندر سالم؛ بدون خطای کنسول؛ lint سبز
+- smoke پروداکشن (standalone واقعی، درست مثل بستهٔ دسکتاپ): db قدیمی → GET / 200 + ورود ۲۰۰ + «19 tables ensured» + tokenVersion اضافه شد + پسورد غلط ۴۰۱ ✓ (نکتهٔ محیط: پروسه‌های پس‌زمینه باید در همان فراخوانی bash اجرا شوند — setsid/nohup بین فراخوانی‌ها کشته می‌شوند)
+- bump: package.json/app-version.ts/installer.nsi/AndroidManifest → 1.0.26 / versionCode 11
+- بیلد: export شامل رشتهٔ 1.0.26 ✓؛ APK versionCode=11/versionName=1.0.26 (keystore SHA-256 c553eb67…، 1,108,776B)؛ دسکتاپ win-unpacked 598MB با app/package.json=1.0.26 و کد repair در باندل؛ makensis بار اول/دوم با -V2 exit 2 بی‌خروجی داد — بار سوم با -V3 موفق (Output 172,032,981B)؛ رشتهٔ UTF-16 «1.0.26.0» داخل Setup ✓؛ Portable.zip 270,891,061B (2947 فایل)
+- ریلیز v1.0.26 (id 391761443): ۴ asset آپلود؛ sha256 گیت‌هاب == لوکال برای هر ۴ فایل (apk 68c9cf01… / Setup bb226f2d… / Portable 43d3770d… / notes 11827bd8…)؛ v1.0.25 → prerelease شد؛ /releases/latest حالا v1.0.26
+- README-DESKTOP.md: هدر ۱.۰.۲۶ + بخش Troubleshooting دوزبانهٔ «خطای داخلی هاست» + RELEASE-NOTES-v1.0.26.md
+
+Stage Summary:
+- v1.0.26 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.26
+- پاسخ محصولی به «خطای داخلی هاست»: نصب v1.0.26 و یک‌بار باز کردن برنامه — دیتابیس خودکار ترقی می‌یابد و ورود کار می‌کند؛ اگر خطا ماند، حالا کد خطا + راهنما در پیام است
+- تضمین تازه: هیچ «جدول/ستون غایب»ی دیگر ورود را نمی‌شکند — ترمیم خودکار شفاف؛ استقرار وب تازه هم خودش جدول‌ها را می‌سازد
+- MD5: apk c52bb3e9bda16ecc5154745e9308effb · Setup 31a025e6020f7d712f1c72b73074b0f0 · Portable 379bb5437889c3432726e46980e15444
+- sha256: apk 68c9cf01412b53b5993f8553e2626d06e36e393fc79d00bcba93a18d4d4c9656 · Setup bb226f2dddd812bffdfb248985fc08775ca6a9c64a5029c122062503c1a429cf · Portable 43d3770d4cddca1680bddbc297fcdb8c8c4b22b7a12f514c45f0500f62f4967e
