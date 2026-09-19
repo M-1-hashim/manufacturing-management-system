@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit'
 import { ensureInitialPull } from '@/lib/connection-manager'
 import { ensureLocalSchema } from '@/lib/local-schema'
 import { isSchemaGapError, repairSchemaGap, internalDbErrorText } from '@/lib/db-repair'
+import { consumeAdminPasswordReset } from '@/lib/admin-reset'
 
 // قفل شدن حساب بعد از 5 بار داخل شدن ناکام به مدت 15 دقیقه (حافظه محلی هاست)
 const MAX_FAILS = 5
@@ -131,6 +132,14 @@ export async function POST(req: Request) {
   // اسکیمای محلی قبل از هر کوئری تضمین می‌شود (پس از اجرای اول، فقط یک Promise کش‌شده است) —
   // بدون این، نصب‌های قدیمی (≤۱.۰.۱۸) روی اولین کوئری کاربر P2022 می‌گرفتند
   await ensureLocalSchema().catch(() => {})
+  // مکانیزم «رمز ادمین را فراموش کرده‌ام» — فایل reset-admin-password.txt اگر
+  // روی دیسک باشد، قبل از بررسی اعتبارنامه مصرف می‌شود (هرگز خطا پرتاب نمی‌کند؛
+  // حتی ورود ناموفق ریست را اعمال می‌کند — کاربر بدون ری‌استارت برنامه رها می‌شود)
+  const reset = await consumeAdminPasswordReset().catch((e) => {
+    console.error('[login] admin reset failed', e)
+    return null
+  })
+  if (reset?.attempted) console.log(`[login] admin-reset attempted complete=${reset.complete}`)
   try {
     return await handleLogin(req)
   } catch (e) {

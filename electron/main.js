@@ -356,6 +356,8 @@ function startServerOnPort(port, dbPath, dbUrlOverride) {
       // دیتابیس محلی همیشه مشخص است — در حالت قطعی اینترنت، سرور روی آن سوییچ می‌کند
       LOCAL_DATABASE_URL: 'file:' + dbPathPosix,
       HOSTNAME: '127.0.0.1',
+      // مسیرهای فایل ریست رمز ادمین — سرور در هر POST /api/auth/login چک می‌کند
+      ERP_ADMIN_RESET_FILES: adminResetCandidates().join('|'),
     };
 
     let child = null;
@@ -514,6 +516,9 @@ ipcMain.handle('db-connection:info', async () => {
     reachable,
     tunnelStatus: sshTunnelInstance ? sshTunnelInstance.status : null,
     tunnelLocalPort: sshTunnelInstance ? sshTunnelInstance.localPort : null,
+    // فایل ریست رمز ادمین — برای راهنمای «رمز را فراموش کرده‌ام» در صفحهٔ ورود
+    adminResetPath: friendlyAdminResetPath(),
+    adminResetExists: adminResetCandidates().some((p) => fs.existsSync(p)),
   };
 });
 
@@ -631,6 +636,94 @@ ipcMain.handle('db-connection:createFile', async () => {
     logLine(`db-connection create on demand failed: ${msg}`);
     return { ok: false, error: msg };
   }
+});
+
+/*
+ * ریست رمز ادمین — فایل reset-admin-password.txt
+ * همان فلسفهٔ db-connection.txt: کاربر با Notepad فایل را می‌سازد/پر می‌کند و
+ * در اولین دکمهٔ «داخل شدن»، رمز کاربر admin به مقدار داخل فایل (یا admin123)
+ * برمی‌گردد — بدون ری‌استارت، بدون ترمینال.
+ *
+ * سرور مسیرها را از ERP_ADMIN_RESET_FILES می‌گیرد و در POST /api/auth/login
+ * قبل از بررسی اعتبارنامه مصرف می‌کند؛ فایل پس از موفقیت به *.done.txt
+ * تغییر نام می‌یابد.
+ */
+function friendlyAdminResetPath() {
+  let home = '';
+  try { home = app.getPath('home') || ''; } catch (_e) { /* ignore */ }
+  if (!home) {
+    try { home = app.getPath('appData'); } catch (_e2) { home = ''; }
+  }
+  return path.join(home || '.', 'ManufacturingERP', 'reset-admin-password.txt');
+}
+
+function userDataAdminResetPath() {
+  return path.join(app.getPath('userData'), 'reset-admin-password.txt');
+}
+
+function adminResetCandidates() {
+  const list = [friendlyAdminResetPath(), userDataAdminResetPath()];
+  return list.filter((p, i, arr) => p && arr.indexOf(p) === i);
+}
+
+function adminResetTemplateLines() {
+  return [
+    '# ======================================================================',
+    '#   ManufacturingERP — فایل ریست رمز ادمین',
+    `#   نسخهٔ برنامه: ${app.getVersion()}`,
+    '#   وقتی این فایل روی دیسک باشد، در اولین کلیک روی «داخل شدن» رمز کاربر',
+    '#   admin به رمزِ خط زیر تغییر می‌کند و نشست‌های قبلی ادمین بی‌اعتبار می‌شوند.',
+    '# ======================================================================',
+    '#',
+    '# ❶ رمز جدید — یک خط مثل نمونه (در ابتدای خط # نگذارید):',
+    '#',
+    '#    password=admin123',
+    '#',
+    '#      به‌جای admin123 رمز دلخواه خود را بنویسید (حداقل ۴ کاراکتر).',
+    '#      اگر خط را خالی/کوتاه بنویسید، رمز به admin123 برمی‌گردد.',
+    '#',
+    '# ❷ بعد از ساخت/ذخیرهٔ این فایل، برنامه را دوباره باز نکنید — فقط در صفحهٔ',
+    '#    ورود، نام کاربری admin و رمزِ بالا را وارد کنید و «داخل شدن» را بزنید.',
+    '#',
+    '# ❸ بعد از ورود موفق، از «تنظیمات → پروفایل» رمز جدید بگذارید.',
+    '#    این فایل خودکار به reset-admin-password.done.txt تغییر نام می‌یابد و',
+    '#    دیگر اثری ندارد. برای ریست دوباره، آن را حذف کنید و فایل تازه بسازید.',
+    '#',
+    '# نکته‌ها:',
+    '#   • خطوطی که با # شروع می‌شوند توضیح هستند و نادیده گرفته می‌شوند.',
+    '#   • این فایل فقط کاربر admin را تغییر می‌دهد — بقیهٔ دیتا دست‌نخورده می‌ماند.',
+    '#   • اگر به هاست وصل هستید، رمز روی دیتابیس هاست هم (وقتی وصل شود) عوض می‌شود.',
+    '#',
+    'password=admin123',
+    '',
+  ].join('\r\n');
+}
+
+function writeAdminResetFile() {
+  const p = friendlyAdminResetPath();
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, adminResetTemplateLines(), 'utf8');
+  return p;
+}
+
+ipcMain.handle('admin-reset:prepare', () => {
+  try {
+    const existing = adminResetCandidates().find((p) => fs.existsSync(p));
+    if (existing) return { ok: true, path: existing, existed: true };
+    const p = writeAdminResetFile();
+    logLine(`admin reset file created at ${p}`);
+    return { ok: true, path: p, existed: false };
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    logLine(`admin reset file create failed: ${msg}`);
+    return { ok: false, error: msg };
+  }
+});
+
+ipcMain.handle('admin-reset:status', () => {
+  const candidates = adminResetCandidates();
+  const existing = candidates.filter((p) => fs.existsSync(p));
+  return { ok: true, exists: existing.length > 0, path: friendlyAdminResetPath(), paths: existing };
 });
 
 /*
@@ -836,4 +929,4 @@ app.on('quit', () => {
  * export برای تست‌پذیری (الکترون main بودن این فایل را تحت تأثیر نمی‌گذارد):
  * فرمت db-connection.txt باید بین save() و parseActiveOverride() round-trip شود
  */
-module.exports = { parseActiveOverride, templateLines, sanitizeHost };
+module.exports = { parseActiveOverride, templateLines, sanitizeHost, adminResetTemplateLines };

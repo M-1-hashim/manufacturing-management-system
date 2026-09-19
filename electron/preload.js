@@ -16,3 +16,9 @@ contextBridge.exposeInMainWorld('dbConnection', {
   createFile: () => ipcRenderer.invoke('db-connection:createFile'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
 });
+
+// ریست رمز ادمین — ساخت فایل reset-admin-password.txt از داخل صفحهٔ ورود
+contextBridge.exposeInMainWorld('adminReset', {
+  prepare: () => ipcRenderer.invoke('admin-reset:prepare'),
+  status: () => ipcRenderer.invoke('admin-reset:status'),
+});
