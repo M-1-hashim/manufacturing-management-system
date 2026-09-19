@@ -1832,3 +1832,22 @@ Stage Summary:
 - تضمین تازه: هیچ «جدول/ستون غایب»ی دیگر ورود را نمی‌شکند — ترمیم خودکار شفاف؛ استقرار وب تازه هم خودش جدول‌ها را می‌سازد
 - MD5: apk c52bb3e9bda16ecc5154745e9308effb · Setup 31a025e6020f7d712f1c72b73074b0f0 · Portable 379bb5437889c3432726e46980e15444
 - sha256: apk 68c9cf01412b53b5993f8553e2626d06e36e393fc79d00bcba93a18d4d4c9656 · Setup bb226f2dddd812bffdfb248985fc08775ca6a9c64a5029c122062503c1a429cf · Portable 43d3770d4cddca1680bddbc297fcdb8c8c4b22b7a12f514c45f0500f62f4967e
+
+---
+Task ID: 20
+Agent: main (Z.ai Code)
+Task: کاربر رمز ادمین را فراموش کرده و می‌خواهد از cPanel ریستش کند — اسکریپت/دستور آمادهٔ اجرا بده
+
+Work Log:
+- بررسی زنجیرهٔ رمز: src/lib/passwords.ts (فرمت scrypt:salt:hash با node:crypto، scryptSync(pwd, salt, 64)) + admin-reset.ts (مکانیزم فایل reset-admin-password.txt در v1.0.27) + docs/mysql-schema.sql (جدول User هاست) + host-setup.ts (برنامه خودش ستون tokenVersion را روی MySQL هاست می‌سازد)
+- هش آماده برای admin123 با node تولید و با verifyPassword واقعی برنامه تأیید شد (admin123 → true، رمز غلط → false)
+- اسکریپت جدید scripts/reset-admin-password.cjs (مستقل، CJS، بدون وابستگی خارجی):
+  * رمز از argv[2]، DATABASE_URL از argv[3] یا env یا .env (پارس‌کنندهٔ داخلی)
+  * mysql: → @prisma/client موجود در node_modules هاست + $executeRawUnsafe (ALTER/UPDATE/INSERT + AuditLog best-effort)
+  * file: → bun:sqlite یا node:sqlite (Node≥22) — SELECT موجودیت سپس UPDATE/INSERT
+  * tokenVersion +1 (بطلان نشست‌های قدیمی)، active=1، ساخت ادمین اگر غایب بود
+- تست کامل: (۱) SQLite+node — UPDATE ادمین موجود → verify NewPass456 ✓ / رد رمز قدیمی ✓ / tokenVersion=1 ✓؛ (۲) SQLite+bun — ساخت ادمین غایب ✓ (باگ اولیهٔ ALTER تکراری bun اصلاح شد: exec داخل try/catch + SELECT قبل از write)؛ (۳) node --check سبز؛ (۴) بدون آرگومان → پیام راهنمای فارسی
+- نکته: مسیر MySQL بدون سرور واقعی MySQL قابل تست نبود؛ SQL همان DDL تست‌شدهٔ phpMyAdmin است
+
+Stage Summary:
+- سه راه ریست رمز ادمین از cPanel تحویل شد: (الف) SQL آمادهٔ phpMyAdmin با هش ازپیش‌محاسبه‌شدهٔ admin123، (ب) فایل reset-admin-password.txt در File Manager (مکانیزم داخلی v1.0.27 — رمز دلخواه، بدون ترمینال)، (ج) اسکریپت تست‌شدهٔ scripts/reset-admin-password.cjs در ترمینال cPanel با رمز دلخواه
