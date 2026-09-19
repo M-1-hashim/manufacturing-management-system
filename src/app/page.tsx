@@ -1207,3 +1207,7 @@ export default function Home() {
     </I18nProvider>
   )
 }
+
+// v1.0.27 — ریست رمز ادمین (HMR touch)
+
+// HMR touch 2
