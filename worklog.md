@@ -1919,3 +1919,21 @@ Stage Summary:
 - دیپلوی Vercel بدون هیچ دیتابیسی ممکن شد: کافی است DATABASE_URL تنظیم نشود → برنامه خودش در حالت دمو بالا می‌آید (لاگین ساده admin/admin123، دیتا در مرورگر هر بازدیدکننده)؛ تغییر حساب دمو با NEXT_PUBLIC_DEMO_USERNAME/PASSWORD
 - آیکن تب مرورگر در همهٔ پلتفرم‌ها (SVG/PNG/apple-touch) به آیکن کارخانهٔ زمردی هماهنگ با هویت برنامه تغییر کرد
 - استقرار واقعی با MySQL مثل قبل سر جایش است — جابجایی دمو↔واقعی فقط با افزودن/حذف DATABASE_URL + redeploy
+
+---
+Task ID: 23-fix
+Agent: main (Z.ai Code)
+Task: ریشه‌یابی «تغییرات اعمال نشده» — رفع واگرایی گیت و مانع push
+
+Work Log:
+- گزارش کاربر: «تغییرات اعمال نشده» — بررسی نشان داد تسک ۲۲ و ۲۳ روی HEAD محلی کامل و commit شده‌اند ولی هرگز به گیت‌هاب push نشده‌اند؛ deploy گیت‌هاب Vercel فاقد تغییرات بود
+- کشف واگرایی تاریخچه: کامیت worklog «Task 23 — v1.0.26 release record» دو بار ساخته شده بود (محلی faba3be + origin 2e50543؛ تفاوت فقط db/custom.db باینری) → main محلی [ahead 7, behind 1]
+- ترمیم با `git rebase --onto origin/main faba3be main -X theirs` — کامیت تکراری حذف، ۶ کامیت تسک ۲۲/۲۳ بدون تضاد روی origin/main بازپخش شد؛ تضاد باینری custom.db با -X theirs خودکار حل شد
+- push دوبار ناموفق: «Invalid username or token» → توکن گیت‌هاب تعبیه‌شده در remote URL منقضی/باطل شده (ls-remote چون repo عمومی است بدون auth جواب می‌دهد ولی push احراز می‌خواهد)
+- جایگزین‌ها چک شد: gh CLI نصب نیست، ~/.ssh وجود ندارد (کلاینت ssh هم نیست)، ~/.netrc/credential helper/env token هیچ‌کدام موجود نیست → push از این sandbox بدون توکن جدید ناممکن
+- اعتبارسنجی محلی پس از rebase: dev server سالم ✓ صفحه ورود ✓ ورود admin ✓ داشبورد ۸ KPI ✓ linkهای head به آیکن‌های جدید (icon.svg/icon.png/apple-icon.png) ✓ بدون خطای کنسول ✓
+
+Stage Summary:
+- وضعیت گیت سالم شد: main = origin/main + ۶ کامیت آمادهٔ push (همهٔ تغییرات تسک ۲۲ و ۲۳)؛ `git status` تمیز
+- تنها مانع باقی‌مانده: توکن گیت‌هاب منقضی — کاربر باید PAT جدید بسازد (classic با scope repo) تا push انجام شود؛ بعد از push، در Vercel redeploy لازم است
+- تغییرات تسک ۲۳ (لاگین سادهٔ دمو بدون دیتابیس + آیکن کارخانهٔ زمردی) تست‌شده و آمادهٔ انتشار است
