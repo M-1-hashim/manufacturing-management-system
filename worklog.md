@@ -1873,3 +1873,27 @@ Work Log:
 Stage Summary:
 - فایل دمو تک‌فایلی ۱۶۸KB آماده ارائه: download/ManufacturingERP-Demo.html (و public/demo.html برای دانلود از پنل)
 - با دبل‌کلیک در هر مرورگری بدون انترنت باز می‌شود؛ همه ماژول‌ها با دیتای نمونه تعاملی‌اند
+
+---
+Task ID: 22
+Agent: main (Z.ai Code)
+Task: آماده‌سازی پروژه ManufacturingERP برای دیپلوی روی Vercel
+
+Work Log:
+- بررسی کامل معماری استقرار: db.ts (دو-کلاینت SQLite/MySQL)، connection-manager (مسیر «استقرار وب» بدون دیتابیس محلی — ensureWebHostOnce جدول‌های MySQL را خودکار می‌سازد)، middleware (Web Crypto — سازگار Edge)، session.ts، backup.ts (نوشتن فایل روی دیسک)، login (بوت‌استرپ ادمین)، download/setup (404 گریس‌فول)، admin/backup (خروجی JSON درون-حافظه‌ای)
+- ساخت prisma/schema.vercel.prisma — اسکیمای MySQL تک-generator (بدون clientDesktop دسکتاپ و بدون binaryTargets ویندوز) برای بیلد ابری سریع؛ ساختار جدول‌ها عیناً = schema.mysql.prisma → همان دیتابیس cPanel بدون تغییر کار می‌کند؛ prisma validate ✓ (هر دو اسکیما)
+- ساخت vercel.json: buildCommand = «prisma generate --schema prisma/schema.vercel.prisma && next build»، regions=[fra1]، maxDuration=60 برای API routes
+- next.config.ts: روی VERCEL=1 خروجی پیش‌فرض (بدون standalone) — standalone فقط برای خودمیزبان/دسکتاپ و export فقط برای APK
+- db.ts ایمن‌سازی: safeNewClient (کرش بیلد Vercel وقتی DATABASE_URL هنوز تنظیم نشده prevents P1012 در لحظهٔ import) + خطای واضح فارسی از proxy db وقتی کلاینت غایب است
+- instrumentation.ts: روی Vercel زمان‌بند بکاپ فایل skip می‌شود (FS فقط‌خواندنی) + await ensureWebHostTables() قبل از startConnectionManager (جدول‌ها قبل از اولین درخواست آماده)
+- connection-manager.ts: export جدید ensureWebHostTables() — ping + ساخت جدول‌های گمشده برای هر نمونهٔ سرد
+- backup.ts: isServerless() + گارد در createBackup (پیام فارسی «از خروجی JSON استفاده کنید») + restoreFromBuffer بدون کاپی احتیاطی دیسکی روی سرورلس (تراکنش اتمیک حفظ می‌شود)؛ admin/backup/route.ts پیام خطای واقعی را عبور می‌دهد
+- .env.example (DATABASE_URL نمونهٔ cPanel/ابری + SESSION_SECRET) + .gitignore استثنا !.env.example + engines node>=20.9 در package.json
+- راهنمای کامل فارسی docs/DEPLOY-VERCEL.fa.md: دیتابیس (Remote MySQL با % یا سرویس ابری)، ایمپورت از GitHub (repo موجود M-1-hashim/manufacturing-management-system)، env vars، منطقهٔ فرانکفورت/دبی، بوت‌استرپ خودکار جدول‌ها/ادمین، ریست رمز ادمین (اسکریپت از رایانهٔ شخصی + SQL با هش تازهٔ verify-شدهٔ admin123)، محدودیت‌ها (بکاپ فایل/دانلود setup)، عیب‌یابی P1012/P1001/Access denied/SSL، دیپلوی CLI، چک‌لیست
+- اسکریپت reset-admin-password.cjs: eslint-disable برای require (سبز شدن lint)
+- اعتبارسنجی: lint سبز ✓، vercel.json JSON معتبر ✓، dev server سالم ✓، تست agent-browser: صفحه ورود ✓ ورود admin ✓ داشبورد ۸ KPI ✓ db-info (19 جدول، schemaComplete) ✓ بدون خطای کنسول ✓
+
+Stage Summary:
+- پروژه کامل برای Vercel آماده است: vercel.json + schema.vercel.prisma + گاردهای سرورلس + .env.example + راهنمای فارسی docs/DEPLOY-VERCEL.fa.md
+- مسیر دیپلوی کاربر: push به GitHub → Import در Vercel → تنظیم DATABASE_URL (MySQL هاست فعلی با Remote MySQL %) + SESSION_SECRET → Deploy — جدول‌ها و ادمین خودکار راه می‌افتند
+- دیتابیس MySQL فعلی cPanel بدون مهاجرت قابل استفاده است (استقرار وب از قبل پشتیبانی می‌شد)؛ محدودیت‌های سرورلس (بکاپ فایل، دانلود ست‌آپ) با پیام‌های فارسی واضح جایگزین دارند

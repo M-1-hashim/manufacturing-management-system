@@ -37,6 +37,24 @@ const MODEL_DELEGATES = new Set([
   'salaryPayment', 'setting',
 ])
 
+/**
+ * ساخت امن کلاینت — اگر متغیر محیطی DATABASE_URL نباشد (مثلاً بیلد ابری
+ * روی Vercel که هنوز env تنظیم نشده) PrismaClient در لحظهٔ سازنده خطای
+ * P1012 می‌دهد و کل بیلد می‌شکند. اینجا خطا گرفته می‌شود تا بیلد تمام شود؛
+ * در زمان اجرا کوئری‌ها پیام واضح «دیتابیس تنظیم نشده» می‌دهند.
+ */
+function safeNewClient(ctor: AnyPrismaCtor, opts?: Record<string, unknown>): PrismaClient | null {
+  try {
+    return new ctor(opts) as PrismaClient
+  } catch (e) {
+    console.error(
+      '[db] PrismaClient init failed — DATABASE_URL تنظیم نشده یا نامعتبر است:',
+      e instanceof Error ? e.message : e
+    )
+    return null
+  }
+}
+
 function loadMysqlClientCtor(): AnyPrismaCtor | null {
   try {
     // cwd در نسخهٔ بسته‌شده = resources/server (node_modules همان‌جاست)
@@ -87,21 +105,24 @@ function buildCore(): DbCore {
 
   let sqlite: PrismaClient | null = null
   if (lUrl) {
-    sqlite = lUrl === (process.env.DATABASE_URL || '')
-      ? new PrismaClient()
-      : new PrismaClient({ datasources: { db: { url: lUrl } } })
+    sqlite = safeNewClient(
+      PrismaClient as unknown as AnyPrismaCtor,
+      lUrl === (process.env.DATABASE_URL || '')
+        ? undefined
+        : { datasources: { db: { url: lUrl } } }
+    )
   }
 
   let mysql: PrismaClient | null = null
   if (mUrl) {
     const MysqlCtor = loadMysqlClientCtor()
     if (MysqlCtor) {
-      mysql = new MysqlCtor({ datasources: { db: { url: mUrl } } })
+      mysql = safeNewClient(MysqlCtor, { datasources: { db: { url: mUrl } } })
     } else if (!lUrl) {
       // استقرار وب روی هاست که طبق راهنما کلاینت پیش‌فرض را با اسکیمای mysql
       // ساخته است — همان پیش‌فرض جواب می‌دهد (دیتابیس محلی در کار نیست)
       console.error('[db] DATABASE_URL is mysql:// — using default client (web deploy)')
-      mysql = new PrismaClient()
+      mysql = safeNewClient(PrismaClient as unknown as AnyPrismaCtor)
     } else {
       // دسکتاپ: کلاینت MySQL در بسته نیست (نصب خراب) — روی دیتابیس محلی کار
       // می‌کنیم؛ دادن mysql:// به کلاینت SQLite همهٔ کوئری‌ها را می‌شکند
@@ -175,6 +196,12 @@ function wrapTxForJournal(tx: object, hook: (table: string, where: unknown) => v
 export const db = new Proxy({} as PrismaClient, {
   get(_t, prop) {
     const active = core.active
+    if (!active) {
+      // DATABASE_URL تنظیم نشده (بیلد/اجرای بدوت env) — خطای واضح فارسی
+      throw new Error(
+        'دیتابیس تنظیم نشده است — متغیر محیطی DATABASE_URL را در پنل میزبانی (Vercel → Settings → Environment Variables) تنظیم کنید'
+      )
+    }
     const raw: unknown = Reflect.get(active as unknown as object, prop, active)
     if (typeof raw === 'function') {
       // $transaction: کلاینت tx پاس‌داده‌شده به callback هم باید ژورنال حذف بگیرد

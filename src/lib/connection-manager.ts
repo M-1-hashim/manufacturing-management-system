@@ -410,6 +410,24 @@ async function reconcile(): Promise<void> {
 
 /* ------------------------------- شروع ------------------------------- */
 
+/**
+ * اطمینان از آماده‌بودن جدول‌های هاست در استقرار وب (سرورلس/Vercel):
+ * یک پینگ + ساخت جدول‌های گمشده (ensureWebHostOnce درون checkNow).
+ * در instrumentation هنگام بوت هر نمونهٔ سرد فراخوانی می‌شود تا اولین
+ * درخواست کاربر با P2021 «جدول وجود ندارد» مواجه نشود.
+ * اگر دیتابیس محلی (SQLite) در کار باشد، این تابع کاری نمی‌کند.
+ */
+export async function ensureWebHostTables(): Promise<boolean> {
+  if (!dbInternal.mysqlConfigured()) return true // حالت محلی — هاستی در کار نیست
+  if (dbInternal.hasLocal()) return true // معماری محلی‌محور — ensureHostOnce خودش حل می‌کند
+  try {
+    await checkNow()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function startConnectionManager(): void {
   const s = st()
   if (s.started) return

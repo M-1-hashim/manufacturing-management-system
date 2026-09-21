@@ -18,6 +18,19 @@ export interface BackupFile {
 const NAME_RE = /^backup-\d{8}-\d{6}\.(db|json)$/
 const DEFAULT_KEEP = 10
 
+// ---------------- محیط سرورلس (Vercel) ----------------
+/**
+ * روی پلتفرم‌های سرورلس فایل‌سیستم فقط‌خواندنی است — نوشتن فایل کاپی
+ * احتیاطی ممکن نیست. در این حالت:
+ *  • ساخت کاپی احتیاطی روی دیسک → خطای واضح فارسی (کاربر از «خروجی JSON»
+ *    که مستقیم به مرورگر دانلود می‌شود استفاده می‌کند)
+ *  • بازیابی JSON همچنان کار می‌کند (تراکنش اتمیک در دیتابیس) — فقط
+ *    «کاپی احتیاطی پیش از بازیابی» روی دیسک انجام نمی‌شود
+ */
+export function isServerless(): boolean {
+  return process.env.VERCEL === '1'
+}
+
 // ---------------- مسیرها ----------------
 export function dbFilePath(): string {
   const url = process.env.DATABASE_URL || ''
@@ -114,6 +127,11 @@ export async function createBackup(
   actor?: AuditActor | null,
   format?: 'json' | 'db'
 ): Promise<BackupFile> {
+  if (isServerless()) {
+    throw new Error(
+      'در استقرار سرورلس (Vercel) ذخیرهٔ فایل کاپی احتیاطی روی سرور ممکن نیست — از دکمهٔ «خروجی JSON» استفاده کنید که فایل مستقیم به رایانهٔ شما دانلود می‌شود'
+    )
+  }
   const isJson = format === 'json' || (format !== 'db' && currentDbType() === 'mysql')
   const dir = backupsDir()
   await fsp.mkdir(dir, { recursive: true })
@@ -193,7 +211,15 @@ export async function restoreFromBuffer(
     const validated = validateJsonBackup(data)
 
     // کاپی احتیاطی از دیتابیس فعلی (قبل از هر تغییری)
-    const safety = await createBackup('manual', actor)
+    // روی سرورلس (Vercel) نوشتن فایل ممکن نیست — بدون کاپی احتیاطی ادامه
+    // می‌دهیم (خود بازیابی در تراکنش اتمیک است و در خطا خودش برنمی‌گردد)
+    let safety: BackupFile | null = null
+    try {
+      safety = await createBackup('manual', actor)
+    } catch (sbErr) {
+      if (!isServerless()) throw sbErr
+      console.warn('[backup] serverless: skipping pre-restore safety backup (read-only fs)')
+    }
     try {
       const res = await restoreFromJson(validated)
       await logAudit(
@@ -201,9 +227,9 @@ export async function restoreFromBuffer(
         'backup_restore',
         'system',
         undefined,
-        `${sourceLabel} (json) — safety: ${safety.name} — ${res.restoredRows} rows`
+        `${sourceLabel} (json) — safety: ${safety?.name ?? '—'} — ${res.restoredRows} rows`
       )
-      return { safetyBackup: safety.name, rowsRestored: res.restoredRows }
+      return { safetyBackup: safety?.name ?? '—', rowsRestored: res.restoredRows }
     } catch (e) {
       // تراکنش اتمیک — دیتابیس تغییری نکرده است
       console.error('[backup] json restore failed', e)

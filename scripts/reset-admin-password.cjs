@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /*
  * ریست رمز ادمین — اسکریپت مستقل (بدون نیاز به build یا TypeScript)
  *

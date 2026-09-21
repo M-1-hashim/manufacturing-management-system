@@ -141,7 +141,9 @@ export async function POST(req: Request) {
     return NextResponse.json(created, { status: 201 })
   } catch (e) {
     console.error('backup POST', e)
-    return NextResponse.json({ error: 'خطا در تهیه نسخه کاپی احتیاطی' }, { status: 500 })
+    // پیام خطای خودتابعی (مثل گارد سرورلس Vercel) عیناً نمایش داده می‌شود
+    const msg = e instanceof Error && e.message ? e.message : 'خطا در تهیه نسخه کاپی احتیاطی'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
