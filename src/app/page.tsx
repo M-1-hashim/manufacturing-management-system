@@ -12,7 +12,7 @@ import { DirectionProvider } from '@radix-ui/react-direction'
 import { apiGet, apiPost } from '@/lib/api'
 import { installAuthInterceptor } from '@/lib/auth-client'
 import { installOfflineInterceptor, trySync, refreshPendingCount, clearOfflineCache } from '@/lib/offline-client'
-import { LOCAL_MODE, installLocalApi } from '@/lib/local-api'
+import { LOCAL_MODE, DEMO_MODE, installLocalApi } from '@/lib/local-api'
 import { decideFirstRun } from '@/lib/first-run'
 import { canAccess, roleLabel, departmentLabel } from '@/lib/rbac'
 import { getHostConfig, getSavedCreds, saveCreds, probeHost } from '@/lib/host-link'
@@ -585,6 +585,29 @@ function LoginView() {
             </div>
           )}
 
+          {/* بنر حالت دمو — استقرار ابری بدون دیتابیس (مثلاً Vercel بدون MySQL) */}
+          {DEMO_MODE && (
+            <div className="mb-4 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 text-[12.5px]">
+              <p className="flex items-center gap-1.5 font-semibold text-primary">
+                <FlaskConical className="h-3.5 w-3.5 shrink-0" />
+                {t('حالت نمایشی — بدون دیتابیس', 'د ډیمو حالت — بې ډېټابیس', 'Demo mode — no database')}
+              </p>
+              <p className="mt-1.5 leading-relaxed text-muted-foreground">
+                {t(
+                  'کل سیستم همین‌جا در مرورگر اجرا می‌شود؛ دیتای نمونه و تغییرات شما فقط در همین دستگاه ذخیره می‌شود و با سرور کاری ندارد.',
+                  'ټول سیسټم په همدې براوزر کې کار کوي؛ ډېټا یوازې په همدې وسیله کې خوندي کیږي.',
+                  'The whole system runs in this browser; sample data and changes are stored only on this device.'
+                )}
+              </p>
+              {!process.env.NEXT_PUBLIC_DEMO_PASSWORD && !process.env.NEXT_PUBLIC_DEMO_USERNAME && (
+                <p className="mt-1.5 text-muted-foreground">
+                  {t('ورود:', 'ننوتل:', 'Sign in:')}{' '}
+                  <span dir="ltr" className="font-mono font-semibold text-foreground">admin / admin123</span>
+                </p>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">{t('نام کاربری', 'کارن نوم', 'Username')}</Label>
@@ -600,14 +623,17 @@ function LoginView() {
             <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? t('در حال داخل شدن...', 'ننوتل...', 'Signing in...') : <><Lock className="h-4 w-4 me-2" />{t('داخل شدن به سیستم', 'سیسټم ته ننوتل', 'Sign in')}</>}
             </Button>
-            <button
-              type="button"
-              onClick={() => setForgotOpen(true)}
-              className="mx-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[44px] sm:min-h-0"
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              {t('رمز ادمین را فراموش کرده‌اید؟', 'د اډمین پټ نوم مو هېر دی؟', 'Forgot the admin password?')}
-            </button>
+            {/* در حالت دمو مکانیزم فایل ریست روی سرور معنا ندارد */}
+            {!DEMO_MODE && (
+              <button
+                type="button"
+                onClick={() => setForgotOpen(true)}
+                className="mx-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[44px] sm:min-h-0"
+              >
+                <KeyRound className="h-3.5 w-3.5" />
+                {t('رمز ادمین را فراموش کرده‌اید؟', 'د اډمین پټ نوم مو هېر دی؟', 'Forgot the admin password?')}
+              </button>
+            )}
           </form>
 
           <ForgotPasswordDialog
@@ -912,7 +938,11 @@ function Shell() {
             </div>
             <div className="min-w-0">
               <p className="font-bold text-[15.5px] tracking-tight truncate">{t('سیستم مدیریتی تولید', 'د تولید سیسټم', 'Mfg. ERP')}</p>
-              <p className="text-[12.5px] text-muted-foreground truncate">{t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}</p>
+              <p className="text-[12.5px] text-muted-foreground truncate">
+                {DEMO_MODE
+                  ? t('نسخه نمایشی — دیتای مرورگر', 'ډیمو نسخه — د براوزر ډېټا', 'Demo — browser data')
+                  : t('نسخه حرفه‌ای', 'مسلکي نسخه', 'Professional')}
+              </p>
             </div>
             <button className="ms-auto lg:hidden p-1" onClick={() => setSidebarOpen(false)} aria-label="بستن منو">
               <X className="h-5 w-5" />
@@ -1128,6 +1158,7 @@ function FirstRunGate() {
         setupFlag,
         hasSavedUser,
         localMode: LOCAL_MODE,
+        demoMode: DEMO_MODE,
         hasHostConfig: !!hostCfg,
         hostConfigUnverified: !!hostCfg && !hostCfg.verifiedAt,
       }

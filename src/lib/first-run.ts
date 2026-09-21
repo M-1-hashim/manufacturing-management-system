@@ -46,6 +46,8 @@ export interface FirstRunInput {
   hasSavedUser: boolean
   /** بیلد اندروید مستقل (NEXT_PUBLIC_LOCAL_MODE=1) */
   localMode: boolean
+  /** حالت دمو بدون دیتابیس (استقرار ابری) — مثل وب: بدون ویزارد، لاگین ساده */
+  demoMode?: boolean
   /** hostConfig ذخیره شده (آدرس سرور مرکزی) */
   hasHostConfig: boolean
   /** hostConfig هست ولی هرگز تست موفق نشده (verifiedAt ندارد) */
@@ -68,12 +70,13 @@ export function decideFirstRun(i: FirstRunInput): FirstRunDecision {
 
   // ---------- اندروید (LOCAL_MODE) ----------
   // مهم: این چک باید قبل از میان‌بر «کاربر ذخیره‌شده» باشد — وگرنه ارتقا از
-  // نسخه‌های قدیمی (با حساب محلی ذخیره‌شده) هرگز صفحهٔ اطلاعات هاست را نمی‌بیند
-  if (i.localMode && (!i.hasHostConfig || i.hostConfigUnverified)) return 'wizard'
+  // نسخه‌های قدیمی (با حساب محلی ذخیره‌شده) هرگز صفحهٔ اطلاعات هاست را نمی‌بیند.
+  // حالت دمو (استقرار ابری بدون دیتابیس) ویزارد هاست ندارد — لاگین ساده.
+  if (i.localMode && !i.demoMode && (!i.hasHostConfig || i.hostConfigUnverified)) return 'wizard'
 
   // ---------- نسخهٔ وب / بقیهٔ حالت‌ها ----------
   if (i.setupFlag) return 'app'
   if (i.hasSavedUser) return 'app'
-  if (i.localMode) return 'wizard' // دفاعی — بالاتر پوشش داده شده
-  return 'app' // وب تازه — بدون ویزارد
+  if (i.localMode) return 'wizard' // دفاعی — بالاتر پوشش داده شده (به‌جز دمو)
+  return 'app' // وب تازه / دمو — بدون ویزارد
 }

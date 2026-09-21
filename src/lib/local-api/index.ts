@@ -7,5 +7,5 @@
  *   if (LOCAL_MODE) installLocalApi()
  */
 
-export { LOCAL_MODE, installLocalApi } from './engine'
+export { LOCAL_MODE, DEMO_MODE, DEMO_USERNAME, DEMO_PASSWORD, installLocalApi } from './engine'
 export { ApiError } from './types'

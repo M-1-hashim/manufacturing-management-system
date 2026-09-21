@@ -7,6 +7,7 @@
  */
 
 import { newRow, nowISO, readCol, uid, writeCol, type Row } from './db'
+import { DEMO_MODE, DEMO_USERNAME, DEMO_PASSWORD } from './engine'
 
 type U = Row & Record<string, unknown>
 
@@ -36,17 +37,32 @@ export function ensureSeeded(): void {
 }
 
 function seedAll(): void {
-  // ---- کاربران (مطابق seed-users.ts) ----
-  const users: U[] = [
-    { username: 'admin', password: 'admin123', fullName: 'مدیر سیستم', role: 'admin', department: 'general', active: true },
-    { username: 'manager', password: 'manager123', fullName: 'احمد کریمی', role: 'manager', department: 'general', active: true },
-    { username: 'prodstaff', password: 'prod123', fullName: 'محمود نوری — مسئول تولید', role: 'operator', department: 'production', active: true },
-    { username: 'salesstaff', password: 'sales123', fullName: 'فرید احمدی — مسئول فروش', role: 'operator', department: 'sales', active: true },
-    { username: 'storestaff', password: 'store123', fullName: 'نجیب‌الله رحیمی — انباردار', role: 'operator', department: 'inventory', active: true },
-    { username: 'finstaff', password: 'fin123', fullName: 'زکیه سادات — حسابدار', role: 'operator', department: 'finance', active: true },
-    { username: 'hrstaff', password: 'hr123', fullName: 'سمیع‌الله جواد — منابع انسانی', role: 'operator', department: 'hr', active: true },
-    { username: 'viewer', password: 'viewer123', fullName: 'بازرس کیفیت', role: 'viewer', department: 'general', active: true },
-  ].map((u) => newRow(u))
+  // ---- کاربران ----
+  // حالت دمو (استقرار ابری بدون دیتابیس): فقط یک حساب سادهٔ ورود —
+  // با NEXT_PUBLIC_DEMO_USERNAME / NEXT_PUBLIC_DEMO_PASSWORD قابل تغییر است
+  const users: U[] = (
+    DEMO_MODE
+      ? [
+          {
+            username: DEMO_USERNAME,
+            password: DEMO_PASSWORD,
+            fullName: 'مدیر سیستم',
+            role: 'admin',
+            department: 'general',
+            active: true,
+          },
+        ]
+      : [
+          { username: 'admin', password: 'admin123', fullName: 'مدیر سیستم', role: 'admin', department: 'general', active: true },
+          { username: 'manager', password: 'manager123', fullName: 'احمد کریمی', role: 'manager', department: 'general', active: true },
+          { username: 'prodstaff', password: 'prod123', fullName: 'محمود نوری — مسئول تولید', role: 'operator', department: 'production', active: true },
+          { username: 'salesstaff', password: 'sales123', fullName: 'فرید احمدی — مسئول فروش', role: 'operator', department: 'sales', active: true },
+          { username: 'storestaff', password: 'store123', fullName: 'نجیب‌الله رحیمی — انباردار', role: 'operator', department: 'inventory', active: true },
+          { username: 'finstaff', password: 'fin123', fullName: 'زکیه سادات — حسابدار', role: 'operator', department: 'finance', active: true },
+          { username: 'hrstaff', password: 'hr123', fullName: 'سمیع‌الله جواد — منابع انسانی', role: 'operator', department: 'hr', active: true },
+          { username: 'viewer', password: 'viewer123', fullName: 'بازرس کیفیت', role: 'viewer', department: 'general', active: true },
+        ]
+  ).map((u) => newRow(u))
   writeCol('users', users)
 
   // ---- تنظیمات ----

@@ -15,8 +15,20 @@ import { ApiError, type Ctx } from './types'
 import { getHostConfig, saveCreds } from '@/lib/host-link'
 import { remoteLogin, upsertLocalUserFromHost } from './host-client'
 
-/** حالت محلی فعال است؟ — فقط در بیلد APK اندروید (NEXT_PUBLIC_LOCAL_MODE=1) */
-export const LOCAL_MODE: boolean = process.env.NEXT_PUBLIC_LOCAL_MODE === '1'
+/**
+ * حالت دمو بدون دیتابیس — استقرار ابری (مثلاً Vercel) بدون DATABASE_URL:
+ * در زمان بیلد توسط next.config.ts تعیین می‌شود (NEXT_PUBLIC_DEMO_MODE=1)؛
+ * همان موتور نسخهٔ اندروید (localStorage) اجرا می‌شود با یک حساب سادهٔ ورود.
+ */
+export const DEMO_MODE: boolean = process.env.NEXT_PUBLIC_DEMO_MODE === '1'
+
+/** حساب سادهٔ دمو — قابل تنظیم با NEXT_PUBLIC_DEMO_USERNAME / NEXT_PUBLIC_DEMO_PASSWORD */
+export const DEMO_USERNAME: string = process.env.NEXT_PUBLIC_DEMO_USERNAME || 'admin'
+export const DEMO_PASSWORD: string = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'admin123'
+
+/** حالت محلی فعال است؟ — بیلد APK اندروید (NEXT_PUBLIC_LOCAL_MODE=1) یا حالت دمو */
+export const LOCAL_MODE: boolean =
+  process.env.NEXT_PUBLIC_LOCAL_MODE === '1' || DEMO_MODE
 
 let installed = false
 

@@ -1897,3 +1897,25 @@ Stage Summary:
 - پروژه کامل برای Vercel آماده است: vercel.json + schema.vercel.prisma + گاردهای سرورلس + .env.example + راهنمای فارسی docs/DEPLOY-VERCEL.fa.md
 - مسیر دیپلوی کاربر: push به GitHub → Import در Vercel → تنظیم DATABASE_URL (MySQL هاست فعلی با Remote MySQL %) + SESSION_SECRET → Deploy — جدول‌ها و ادمین خودکار راه می‌افتند
 - دیتابیس MySQL فعلی cPanel بدون مهاجرت قابل استفاده است (استقرار وب از قبل پشتیبانی می‌شد)؛ محدودیت‌های سرورلس (بکاپ فایل، دانلود ست‌آپ) با پیام‌های فارسی واضح جایگزین دارند
+
+---
+Task ID: 23
+Agent: main (Z.ai Code)
+Task: لاگین بدون دیتابیس برای Vercel (حالت دمو) + تغییر آیکن تب مرورگر
+
+Work Log:
+- کشف موتور local-api موجود (نسخهٔ APK): رهگیری کامل fetch /api/* در مرورگر با localStorage — فعال با NEXT_PUBLIC_LOCAL_MODE=1 — برای Vercel بازاستفاده شد
+- next.config.ts: تزریق env زمان‌بیلد NEXT_PUBLIC_DEMO_MODE — اگر DATABASE_URL در بیلد نباشد → «1» (خودکار)؛ با NEXT_PUBLIC_DEMO_MODE=0 قابل خاموش‌کردن؛ بیلد APK و sandbox (دارای DATABASE_URL) بی‌تغییر
+- engine.ts: DEMO_MODE + DEMO_USERNAME/DEMO_PASSWORD (پیش‌فرض admin/admin123، قابل تغییر با env) — LOCAL_MODE = APK || دمو
+- seed.ts: در حالت دمو فقط «یک» حساب ساده سید می‌شود (لاگین ساده)؛ در APK همان ۸ کاربر قبلی
+- first-run.ts: فلگ demoMode — در دمو ویزارد هاستِ اندروید باز نمی‌شود؛ مستقیم صفحهٔ ورود
+- page.tsx: بنر «حالت نمایشی — بدون دیتابیس» روی صفحهٔ ورود با راهنمای ورود (وقتی رمز پیش‌فرض است)، مخفی‌شدن «فراموشی رمز» در دمو (مکانیزم فایل سرور بی‌معنا)، زیرنویس سایدبار «نسخه نمایشی — دیتای مرورگر»
+- آیکن تب مرورگر: logo.svg قدیمی (حرف Z خاکستری با انیمیشن) → آیکن کارخانهٔ سفید روی گرادیان زمردی (هماهنگ با تم oklch hue 165 و آیکن Factory برنامه)؛ src/app/icon.svg + icon.png (512) + apple-icon.png (180 با sharp تولید شد)؛ layout.tsx به قرارداد فایل‌محور App Router سپرده شد؛ public/logo.svg هم با طرح جدید جایگزین شد (سازگاری لینک‌های قدیمی)
+- تست مرورگر (حالت دمو با env موقت): بنر دمو ✓، مخفی‌شدن فراموشی رمز ✓، ورود admin/admin123 بدون سرور ✓، داشبورد ۸ KPI با دیتای دمو ✓، ماژول فروش با فکتورهای دمو ✓، نشان سایدبار ✓، صفر درخواست API به سرور (dev.log) ✓، بدون خطای کنسول ✓
+- بازگشت .env: حالت عادی (سرور + SQLite) دوباره تست شد — ورود عادی ✓، lint سبز ✓، هر ۴ مسیر آیکن 200 با content-type درست ✓
+- docs/DEPLOY-VERCEL.fa.md: بخش «🎬 حالت دمو — بدون دیتابیس، لاگین ساده» + گام ۳ (DATABASE_URL برای دمو اختیاری) + .env.example (متغیرهای NEXT_PUBLIC_DEMO_*)
+
+Stage Summary:
+- دیپلوی Vercel بدون هیچ دیتابیسی ممکن شد: کافی است DATABASE_URL تنظیم نشود → برنامه خودش در حالت دمو بالا می‌آید (لاگین ساده admin/admin123، دیتا در مرورگر هر بازدیدکننده)؛ تغییر حساب دمو با NEXT_PUBLIC_DEMO_USERNAME/PASSWORD
+- آیکن تب مرورگر در همهٔ پلتفرم‌ها (SVG/PNG/apple-touch) به آیکن کارخانهٔ زمردی هماهنگ با هویت برنامه تغییر کرد
+- استقرار واقعی با MySQL مثل قبل سر جایش است — جابجایی دمو↔واقعی فقط با افزودن/حذف DATABASE_URL + redeploy

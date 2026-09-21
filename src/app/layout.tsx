@@ -11,9 +11,8 @@ export const metadata: Metadata = {
   description:
     "سیستم جامع مدیریت چرخه تولید از مواد خام تا محصول نهایی و فروش — طراحی‌شده برای کارخانه‌های افغانستان",
   keywords: ["مدیریت تولید", "ERP", "افغانستان", "تولید", "انبار", "فروش"],
-  icons: {
-    icon: "/logo.svg",
-  },
+  // آیکن تب مرورگر از فایل‌های src/app/icon.svg / icon.png / apple-icon.png
+  // به‌صورت خودکار (قرارداد فایل‌محور App Router) سرو می‌شود
 };
 
 export const viewport: Viewport = {
