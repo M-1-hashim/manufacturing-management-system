@@ -1937,3 +1937,17 @@ Stage Summary:
 - وضعیت گیت سالم شد: main = origin/main + ۶ کامیت آمادهٔ push (همهٔ تغییرات تسک ۲۲ و ۲۳)؛ `git status` تمیز
 - تنها مانع باقی‌مانده: توکن گیت‌هاب منقضی — کاربر باید PAT جدید بسازد (classic با scope repo) تا push انجام شود؛ بعد از push، در Vercel redeploy لازم است
 - تغییرات تسک ۲۳ (لاگین سادهٔ دمو بدون دیتابیس + آیکن کارخانهٔ زمردی) تست‌شده و آمادهٔ انتشار است
+
+---
+Task ID: 23-push
+Agent: main (Z.ai Code)
+Task: انتشار تغییرات تسک ۲۲/۲۳ به گیت‌هاب با توکن جدید
+
+Work Log:
+- کاربر PAT جدید گیت‌هاب ارائه داد؛ remote origin با توکن جدید به‌روز شد و ls-remote موفق
+- کامیت کاربران نهایی: worklog (23-push) + checkpoint دیتابیس dev
+- push کامل main به origin انجام شد — همهٔ تغییرات آمادهٔ Vercel
+
+Stage Summary:
+- مخزن گیت‌هاب M-1-hashim/manufacturing-management-system اکنون شامل: آماده‌سازی کامل Vercel (تسک ۲۲)، حالت دمو با لاگین سادهٔ بدون دیتابیس و آیکن جدید تب مرورگر (تسک ۲۳) است
+- گام کاربر: در Vercel تب Deployments → Redeploy (بدون DATABASE_URL = حالت دمو admin/admin123)
