@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useI18n } from '@/lib/i18n'
 import { formatNumber, toGregorianStr } from '@/lib/format'
-import { downloadHostSetupFile, validateHostSetupConfig, type HostSetupConfig } from '@/lib/host-setup-file'
+import { downloadHostSetupFile, downloadHostSetupJsonFile, validateHostSetupConfig, type HostSetupConfig } from '@/lib/host-setup-file'
 import { useAppStore } from '@/lib/store'
 import { useFetch } from '@/lib/hooks'
 import { apiGet, apiPut, apiDelete, apiPost } from '@/lib/api'
@@ -234,6 +234,8 @@ export default function SettingsModule() {
   const [connSaving, setConnSaving] = useState(false)
   const [connResetting, setConnResetting] = useState(false)
   const [connTesting, setConnTesting] = useState(false)
+  /** آدرس نسخهٔ وب برای فایل تنظیمات آپلودی (اختیاری — فقط برای نسخهٔ اندروید) */
+  const [setupWebUrl, setSetupWebUrl] = useState('')
 
   // ---------- وضعیت واقعی دیتابیس (کدام حالت؟ وصل است؟ جدول‌ها کامل؟) ----------
   const [dbInfo, setDbInfo] = useState<DbInfoT | null>(null)
@@ -520,6 +522,44 @@ export default function SettingsModule() {
     if (downloadHostSetupFile(cfg)) {
       toast.success(
         t('فایل ManufacturingERP-HostSetup.bat دانلود شد — آن را برای کارکنان بفرستید', 'فایل دانلود شو — د کارکوونکو ته یې ولېږئ', 'ManufacturingERP-HostSetup.bat downloaded — send it to staff')
+      )
+    } else {
+      toast.error(t('خطا در ساخت فایل', 'د فایل جوړولو ستونزه', 'Could not build the file'))
+    }
+  }
+
+  /* فایل تنظیمات آپلودی (JSON) — در اولین باز شدن برنامه (ویزارد) آپلود می‌شود — ویندوز + اندروید */
+  function handleDownloadHostSetupJson() {
+    const cfg: HostSetupConfig = {
+      mode: connForm.mode,
+      host: connForm.host.trim(),
+      port: connForm.port.trim() || '3306',
+      database: connForm.database.trim(),
+      user: connForm.user.trim(),
+      password: connForm.password,
+      sshHost: connForm.sshHost.trim(),
+      sshPort: connForm.sshPort.trim() || '21098',
+      sshUser: connForm.sshUser.trim(),
+      sshPassword: connForm.sshPassword,
+    }
+    const err = validateHostSetupConfig(cfg)
+    if (err) {
+      toast.error(
+        err === 'MISSING_SSH_PASSWORD'
+          ? t('پسورد SSH (همان پسورد cPanel) الزامی است', 'د SSH پسورد اړین دی', 'SSH password is required')
+          : t('اول معلومات هاست را در همین فرم کامل کنید (حالت، آدرس، دیتابیس، کاربر و پسورد)', 'لومړی د هوسټ معلومات په دې فورم کې بشپړ کړئ', 'Fill the host details in this form first')
+      )
+      return
+    }
+    // آدرس وب اگر از قبل شناخته است (حالت اندروید) — وگرنه از ورودی فرم
+    const webUrl = setupWebUrl.trim() || (LOCAL_MODE ? getHostConfig()?.url ?? '' : '')
+    if (downloadHostSetupJsonFile(webUrl, cfg)) {
+      toast.success(
+        t(
+          'فایل ManufacturingERP-HostSetup.json دانلود شد — آن را برای کارکنان بفرستید؛ در اولین باز شدن برنامه از ویزارد همان‌جا آپلود و تنظیم می‌شود',
+          'فایل دانلود شو — د کارکوونکو ته یې ولېږئ؛ په لومړي پرانیستلو کې اپلودېږي',
+          'ManufacturingERP-HostSetup.json downloaded — send it to staff; they upload it in the first-run wizard'
+        )
       )
     } else {
       toast.error(t('خطا در ساخت فایل', 'د فایل جوړولو ستونزه', 'Could not build the file'))
@@ -1845,7 +1885,7 @@ export default function SettingsModule() {
                     </Button>
                   )}
                 </div>
-                {/* فایل تنظیم خودکار هاست — یک دابل‌کلیک روی کمپیوتر کارمند */}
+                {/* فایل تنظیم خودکار هاست — یک دابل‌کلیک روی کمپیوتر کارمند + فایل آپلودی ویزارد */}
                 <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-6 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
                   <p className="font-semibold">
                     {t('فایل تنظیم خودکار هاست (برای کمپیوترهای کارکنان):', 'د اتوماتیک هوسټ فایل (د کارکوونکو کمپیوټرونه):', 'Auto host-setup file (for staff computers):')}
@@ -1857,6 +1897,35 @@ export default function SettingsModule() {
                       'Press "Download auto host-setup file" — ManufacturingERP-HostSetup.bat is downloaded. Send it to staff (USB, email, WhatsApp). They double-click it on their computer: host details are saved automatically, the app closes and reopens — no manual setup at all.'
                     )}
                   </p>
+                  <p className="font-semibold mt-2.5">
+                    {t('فایل تنظیمات برای آپلود در ویزارد (ویندوز و اندروید):', 'د تنظیماتو فایل د ویزارد لپاره (ویندوز او اندروید):', 'Setup file for the first-run wizard (Windows & Android):')}
+                  </p>
+                  <p>
+                    {t(
+                      'اگر نسخهٔ وب هم دارید، آدرسش را وارد کنید (برای گوشی‌ها لازم می‌شود) و دکمهٔ زیر را بزنید — فایل JSON دانلود می‌شود. کارمند فایل را در اولین باز شدن برنامه در ویزارد «آپلود فایل تنظیمات» انتخاب می‌کند و همه‌چیز خودکار تنظیم می‌شود.',
+                      'که ویب نسخه لرئ، پته یې ولیکئ او تڼۍ کېکاږئ — فایل JSON دانلودېږي چې کارکوونکی په ویزارد کې اپلودوي.',
+                      'If you also have the web version, enter its address and press the button — a JSON file downloads; staff upload it in the first-run wizard and everything configures automatically.'
+                    )}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-1.5">
+                    <Input
+                      dir="ltr"
+                      value={setupWebUrl}
+                      onChange={(e) => setSetupWebUrl(e.target.value)}
+                      placeholder="https://erp.example.com (اختیاری — برای اندروید)"
+                      inputMode="url"
+                      className="h-8 flex-1 bg-white/70 text-[12px] dark:bg-black/25"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1.5 border-sky-300 dark:border-sky-700"
+                      onClick={handleDownloadHostSetupJson}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {t('دانلود فایل تنظیمات (JSON)', 'د تنظیماتو فایل (JSON) ښکته کول', 'Download setup file (JSON)')}
+                    </Button>
+                  </div>
                   <p className="mt-1 opacity-80">
                     {t(
                       'نکته: این فایل شامل پسورد هاست است — فقط به افراد مورد اعتماد بدهید. اگر پسورد هاست را تغییر دادید، یک فایل جدید بسازید و بفرستید.',
@@ -2047,6 +2116,25 @@ function ApkHostLinkCard() {
     setTimeout(() => { window.location.href = '/' }, 900)
   }
 
+  /** فایل تنظیمات برای نصب‌های جدید — آدرس همین سرور داخل آن است؛ در ویزارد اولین باز شدن آپلود می‌شود */
+  function downloadSetupFileJson() {
+    if (!cfg?.url) {
+      toast.error(t('اول آدرس سرور را ذخیره کنید', 'لومړی د سرور پته خوندي کړئ', 'Save the server address first'))
+      return
+    }
+    if (downloadHostSetupJsonFile(cfg.url, null)) {
+      toast.success(
+        t(
+          'فایل تنظیمات دانلود شد — برای نصب‌های جدید بفرستید؛ در اولین باز شدن برنامه، فایل را در ویزارد «آپلود فایل تنظیمات» انتخاب می‌کنند و آدرس سرور خودکار تنظیم می‌شود',
+          'د تنظیماتو فایل دانلود شو — د نویو نصبونو لپاره یې ولېږئ؛ په ویزارد کې اپلودېږي',
+          'Setup file downloaded — send it to new installs; they pick it in the first-run wizard and the server address configures automatically'
+        )
+      )
+    } else {
+      toast.error(t('خطا در ساخت فایل', 'د فایل جوړولو ستونزه', 'Could not build the file'))
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -2071,6 +2159,16 @@ function ApkHostLinkCard() {
                 <Button size="sm" className="h-9 gap-1.5" onClick={runPull} disabled={busy !== null}>
                   <RefreshCw className={busy === 'pull' ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
                   {t('بروزرسانی کپی آفلاین', 'افلاین کاپی تازه کول', 'Update offline copy')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={downloadSetupFileJson}
+                  title={t('فایل تنظیمات برای نصب‌های جدید — در اولین باز شدن برنامه آپلود می‌شود', 'د تنظیماتو فایل د نویو نصبونو لپاره', 'Setup file for new installs — uploaded in the first-run wizard')}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {t('فایل تنظیمات', 'د تنظیماتو فایل', 'Setup file')}
                 </Button>
                 <Button
                   variant="outline"

@@ -21,7 +21,11 @@ function Switch({
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
+          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform",
+          // حرکت انگشت باید جهت‌آگاه باشد — translate فیزیکی است و در RTL معکوس می‌شود
+          // (بدون این فیکس، در RTL انگشت در حالت checked از ریل بیرون می‌زند)
+          "ltr:data-[state=checked]:translate-x-[calc(100%-2px)] ltr:data-[state=unchecked]:translate-x-0",
+          "rtl:data-[state=checked]:-translate-x-[calc(100%-2px)] rtl:data-[state=unchecked]:translate-x-0"
         )}
       />
     </SwitchPrimitive.Root>

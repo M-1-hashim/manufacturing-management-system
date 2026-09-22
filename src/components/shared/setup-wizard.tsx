@@ -14,10 +14,11 @@
  * در مرورگر (نسخهٔ وب) گام هاست غیرفعال است — اتصال هاست مخصوص نسخهٔ ویندوز.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
 import { APP_VERSION } from '@/lib/app-version'
+import { parseHostSetupFile } from '@/lib/host-setup-file'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,7 +27,7 @@ import { toast } from 'sonner'
 import {
   Factory, HardDrive, Cloud, Globe, Server, KeyRound, Database,
   ArrowLeft, ArrowRight, Check, CheckCircle2, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
-  FileText, FolderOpen, FileClock, FilePlus2,
+  FileText, FolderOpen, FileClock, FilePlus2, Upload,
 } from 'lucide-react'
 
 const COLOR_THEMES = [
@@ -104,6 +105,70 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
   const [dbName, setDbName] = useState('')
   const [dbUser, setDbUser] = useState('')
   const [dbPassword, setDbPassword] = useState('')
+
+  // ---------- آپلود فایل تنظیمات هاست (از مدیر سیستم) ----------
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+  const [uploadSummary, setUploadSummary] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  /** فایل تنظیمات آپلود شد → همهٔ فیلدها خودکار پر می‌شود */
+  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    // اجازهٔ انتخاب دوبارهٔ همان فایل بعد از اصلاح
+    e.target.value = ''
+    if (!f) return
+    setUploadSummary(null)
+    setUploadError(null)
+    try {
+      const text = await f.text()
+      const parsed = parseHostSetupFile(f.name, text)
+      if (!parsed) {
+        setUploadError(
+          t(
+            'فایل شناسایی نشد — فایل تنظیمات (ManufacturingERP-HostSetup.json یا .bat یا db-connection.txt) را از «تنظیمات» یک دستگاه متصل دانلود کنید',
+            'فایل و پېژندل نه شو — د تنظیماتو فایل له یوه نښلولي وسیله ښکته کړئ',
+            'File not recognized — get the setup file from Settings of a connected device'
+          )
+        )
+        return
+      }
+      if (parsed.db) {
+        applyInfo({
+          sshMode: parsed.db.mode === 'ssh',
+          sshHost: parsed.db.sshHost,
+          sshPort: parsed.db.sshPort,
+          sshUser: parsed.db.sshUser,
+          sshPassword: parsed.db.sshPassword,
+          host: parsed.db.host,
+          port: parsed.db.port,
+          database: parsed.db.database,
+          user: parsed.db.user,
+          password: parsed.db.password,
+        })
+        setTestFail(null)
+        setReopenedBroken(false)
+        setUploadSummary(
+          t(
+            `فایل خوانده شد ✓ — دیتابیس: ${parsed.db.database || '؟'} · هاست: ${parsed.db.mode === 'ssh' ? parsed.db.sshHost || '؟' : parsed.db.host || '؟'} — فقط «ذخیره و ادامه» را بزنید`,
+            `فایل لوستل شو ✓ — یوازې «ثبت او ادامه» کېکاږئ`,
+            `File loaded ✓ — just press “Save & continue”`
+          )
+        )
+        toast.success(t('تنظیمات هاست از فایل پر شد ✓', 'د هوسټ امستنې له فایل ډکې شوې ✓', 'Host settings loaded from file ✓'))
+      } else {
+        // فایل فقط webUrl دارد (فایل اندروید) — مشخصات MySQL ندارد
+        setUploadError(
+          t(
+            'این فایل فقط آدرس سرور وب دارد (برای نسخهٔ اندروید) و مشخصات دیتابیس ویندوز در آن نیست — از نسخهٔ ویندوزِ متصل فایل بگیرید یا فیلدها را دستی پر کنید',
+            'دا فایل یوازې د ویب سرور پته لري — د ډېټابیس معلومات نه لري',
+            'This file only contains the web server address (for Android) — no database details'
+          )
+        )
+      }
+    } catch {
+      setUploadError(t('خواندن فایل ناموفق بود', 'فایل لوستل ناکام شو', 'Could not read the file'))
+    }
+  }
 
   // پیش‌پرکردن از اتصال ذخیره‌شده — ویزارد هرگز فیلدهای خالیِ تکراری نشان نمی‌دهد
   // اگر اتصال ذخیره‌شده عملاً وصل نمی‌شود (reachable=false یا پینگ MySQL شکست
@@ -530,7 +595,7 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                     </p>
                     <p className="text-muted-foreground mt-0.5">
                       {dbPing?.kind
-                        ? dbFailText(dbPing.kind, dbPing.error)
+                        ? dbFailText(dbPing.kind ?? undefined, dbPing.error ?? undefined)
                         : t(
                             'مقادیر فعلی همان چیزی است که ذخیره شده — ایراد را پیدا و اصلاح کنید، بعد دوباره ذخیره کنید.',
                             'ارزښتونه همغه دي چې خوندي شوي — ستونزه پیدا او اصلاح کړئ، بیا یې خوندي کړئ.',
@@ -545,6 +610,54 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('مشخصات را از cPanel هاست خود بردارید', 'مشخصات له خپل cPanel واخلئ', 'Grab the credentials from your cPanel')}
                 </p>
+              </div>
+
+              {/* راه اول — آپلود فایل تنظیمات (اگر مدیر سیستم فایل را فرستاده باشد) */}
+              <div className="rounded-xl border-2 border-primary/35 bg-primary/5 p-3.5 space-y-2.5">
+                <p className="font-semibold flex items-center gap-1.5 text-[13px]">
+                  <Upload className="h-4 w-4 text-primary shrink-0" />
+                  {t(
+                    'سریع‌ترین راه — آپلود فایل تنظیمات:',
+                    'ترټولو ژر لار — د تنظیماتو فایل اپلودول:',
+                    'Fastest way — upload the setup file:'
+                  )}
+                </p>
+                <p className="text-[12px] text-muted-foreground leading-5">
+                  {t(
+                    'اگر مدیر سیستم برایتان فایل تنظیمات فرستاده (ManufacturingERP-HostSetup.json یا .bat یا db-connection.txt)، همین‌جا انتخابش کنید — همهٔ مشخصات هاست خودکار پر می‌شود و لازم نیست چیزی تایپ کنید.',
+                    'که مدیر سیسټم فایل درېږلي وي، همدلته یې وټاکئ — ټول معلومات په اتومات ډول ډکېږي.',
+                    'If your admin sent you a setup file (.json / .bat / db-connection.txt), pick it here — all host details fill in automatically.'
+                  )}
+                </p>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept=".json,.bat,.cmd,.txt"
+                  className="hidden"
+                  onChange={(e) => void handleUploadFile(e)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 border-primary/40"
+                  onClick={() => uploadInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  {t('انتخاب فایل تنظیمات…', 'د تنظیماتو فایل ټاکنه…', 'Choose setup file…')}
+                </Button>
+                {uploadSummary && (
+                  <p className="flex items-start gap-1.5 text-[12.5px] font-medium text-emerald-600 dark:text-emerald-400 leading-5">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{uploadSummary}</span>
+                  </p>
+                )}
+                {uploadError && (
+                  <p className="flex items-start gap-1.5 text-[12.5px] text-destructive leading-5">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{uploadError}</span>
+                  </p>
+                )}
               </div>
 
               {/* راهنمای cPanel */}
@@ -862,7 +975,7 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                 </Button>
               )}
               <div>
-                <Button variant="ghost" size="sm" onClick={finish}>
+                <Button variant="ghost" size="sm" onClick={() => finish()}>
                   <MonitorSmartphone className="h-4 w-4" />
                   {t('بعداً راه‌اندازی می‌کنم — ادامه به برنامه', 'وروسته بیا پرانیزم — پروګرام ته دوام', 'Restart later — continue to the app')}
                 </Button>

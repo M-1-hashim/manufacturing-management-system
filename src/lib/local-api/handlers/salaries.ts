@@ -9,6 +9,7 @@
 import { ApiError, bodyAs, route, type RouteDef } from '../types'
 import { newRow, readCol, writeCol, getSetting, type Row } from '../db'
 import { tallyAttendance, absenceDeduction } from '@/lib/salary-deduction'
+import type { LocalAttendance } from './attendance'
 
 interface LocalSalaryPayment extends Row {
   employeeId: string
@@ -47,7 +48,7 @@ export const routes: RouteDef[] = [
     if (!employee) throw new ApiError(404, 'کارمند یافت نشد')
     const salary = Number(employee.salary) || 0
 
-    const attRows = readCol<{ status: string; date: string }>('attendance').filter(
+    const attRows = readCol<LocalAttendance>('attendance').filter(
       (a) => a.employeeId === employeeId
     )
     const stats = tallyAttendance(attRows, month)
@@ -116,7 +117,7 @@ export const routes: RouteDef[] = [
     }
 
     // کسر خودکار غیبت — مثل هاست (applyDeduction=false → پرداخت کامل دستی)
-    const attRows = readCol<{ status: string; date: string }>('attendance').filter(
+    const attRows = readCol<LocalAttendance>('attendance').filter(
       (a) => a.employeeId === employeeId
     )
     const stats = tallyAttendance(attRows, month)

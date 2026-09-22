@@ -14,7 +14,7 @@
  * حذف اتصال / تغییر آدرس: ?setup=1 روی همان نشست، یا ماژول تنظیمات.
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { parseHostSetupFile } from '@/lib/host-setup-file'
 import {
   getHostConfig,
   normalizeHostUrl,
@@ -32,7 +33,7 @@ import {
 } from '@/lib/host-link'
 import {
   Factory, Globe, Check, RefreshCw, ArrowLeft, ArrowRight, AlertTriangle, Server, Wifi, WifiOff,
-  HelpCircle, Info, MonitorSmartphone, Database,
+  HelpCircle, Info, MonitorSmartphone, Database, Upload,
 } from 'lucide-react'
 
 const SETUP_FLAG = 'mfg-setup-completed'
@@ -80,6 +81,62 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [techError, setTechError] = useState<string | null>(null)
   const [showHelp, setShowHelp] = useState(false)
+
+  // ---------- آپلود فایل تنظیمات (از مدیر سیستم) ----------
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+  const [uploadSummary, setUploadSummary] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  /** فایل تنظیمات آپلود شد → آدرس سرور خودکار پر و تست می‌شود */
+  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    // اجازهٔ انتخاب دوبارهٔ همان فایل بعد از اصلاح
+    e.target.value = ''
+    if (!f) return
+    setUploadSummary(null)
+    setUploadError(null)
+    try {
+      const text = await f.text()
+      const parsed = parseHostSetupFile(f.name, text)
+      if (!parsed) {
+        setUploadError(
+          t(
+            'فایل شناسایی نشد — فایل تنظیمات (ManufacturingERP-HostSetup.json) را از تنظیمات یک دستگاه متصل دانلود کنید',
+            'فایل و پېژندل نه شو — د تنظیماتو فایل له یوه نښلولي وسیله ښکته کړئ',
+            'File not recognized — get the setup file from Settings of a connected device'
+          )
+        )
+        return
+      }
+      if (parsed.webUrl) {
+        setHostUrl(parsed.webUrl)
+        setProbe(null)
+        setFormError(null)
+        setTechError(null)
+        setUploadSummary(
+          t(
+            `فایل خوانده شد ✓ — آدرس سرور پر شد: ${parsed.webUrl} — در حال تست اتصال…`,
+            `فایل لوستل شو ✓ — د سرور پته ډکه شوه: ${parsed.webUrl}`,
+            `File loaded ✓ — server address filled: ${parsed.webUrl} — testing…`
+          )
+        )
+        toast.success(t('آدرس سرور از فایل پر شد ✓', 'د سرور پته له فایل ډکه شوه ✓', 'Server address loaded from file ✓'))
+        // تست خودکار — نتیجه در همین صفحه نمایش داده می‌شود
+        void handleTest()
+      } else {
+        // فایل ویندوزی — فقط مشخصات MySQL دارد، آدرس وب ندارد
+        setUploadError(
+          t(
+            'این فایل مشخصات دیتابیس ویندوز است و آدرس سرور وب در آن نیست — از نسخهٔ ویندوزِ متصل فایل بگیرید یا آدرس را دستی وارد کنید',
+            'دا فایل د ویندوز ډېټابیس معلومات لري او د ویب سرور پته نه لري',
+            'This is a Windows database file without the web server address — get the file from a connected Windows device or type the address manually'
+          )
+        )
+      }
+    } catch {
+      setUploadError(t('خواندن فایل ناموفق بود', 'فایل لوستل ناکام شو', 'Could not read the file'))
+    }
+  }
 
   /** پیام کاربردی بر اساس علت شکست — به‌جای خطای خام فنی */
   function reasonText(p: HostProbe): string {
@@ -327,6 +384,55 @@ export default function ApkHostWizard({ onDone }: { onDone: () => void }) {
 
               <div className="space-y-2">
                 <Label htmlFor="host-url">{t('آدرس سرور', 'د سرور پته', 'Server address')}</Label>
+
+                {/* آپلود فایل تنظیمات — اگر مدیر سیستم فایل را فرستاده باشد */}
+                <div className="rounded-xl border-2 border-primary/35 bg-primary/5 p-3 space-y-2 mb-3">
+                  <p className="font-semibold flex items-center gap-1.5 text-[12.5px]">
+                    <Upload className="h-4 w-4 text-primary shrink-0" />
+                    {t(
+                      'فایل تنظیمات دارید؟ همین‌جا آپلودش کنید:',
+                      'د تنظیماتو فایل لرئ؟ همدلته یې اپلود کړئ:',
+                      'Have a setup file? Upload it here:'
+                    )}
+                  </p>
+                  <p className="text-[11.5px] text-muted-foreground leading-5">
+                    {t(
+                      'اگر مدیر سیستم فایل ManufacturingERP-HostSetup.json برایتان فرستاده، همین‌جا انتخابش کنید — آدرس سرور خودکار پر و تست می‌شود؛ لازم نیست چیزی تایپ کنید.',
+                      'که مدیر سیسټم فایل درېږلي وي، همدلته یې وټاکئ — پته په اتومات ډول ډکه او ازمویل کېږي.',
+                      'If your admin sent you a ManufacturingERP-HostSetup.json file, pick it here — the server address fills in and tests automatically.'
+                    )}
+                  </p>
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept=".json,.txt,.bat,.cmd"
+                    className="hidden"
+                    onChange={(e) => void handleUploadFile(e)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-primary/40"
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {t('انتخاب فایل تنظیمات…', 'د تنظیماتو فایل ټاکنه…', 'Choose setup file…')}
+                  </Button>
+                  {uploadSummary && (
+                    <p className="flex items-start gap-1.5 text-[12px] font-medium text-emerald-600 dark:text-emerald-400 leading-5">
+                      <Check className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{uploadSummary}</span>
+                    </p>
+                  )}
+                  {uploadError && (
+                    <p className="flex items-start gap-1.5 text-[12px] text-destructive leading-5">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{uploadError}</span>
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex gap-2">
                   <Input
                     id="host-url"

@@ -8,7 +8,7 @@
 import { ApiError, bodyAs, route, type RouteDef } from '../types'
 import { newRow, readCol, withUpdate, writeCol, type Row } from '../db'
 
-interface LocalAttendance extends Row {
+export interface LocalAttendance extends Row {
   employeeId: string
   date: string
   status: string
