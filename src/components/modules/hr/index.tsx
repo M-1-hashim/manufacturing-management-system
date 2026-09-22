@@ -22,6 +22,7 @@ import { useI18n } from '@/lib/i18n'
 import { formatMoney, formatNumber, jalaliMonthName, STATUS_COLORS, toJalaliStr } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { amountToWords } from '@/lib/amount-words'
+import { currentJalaliMonth } from '@/lib/salary-deduction'
 import { EmptyState, PageHeader, StatCard, TableSkeleton } from '@/components/shared/common'
 import {
   DocCell,
@@ -420,7 +421,7 @@ export default function HrModule() {
   // ---------- پرداخت معاش ----------
   function openPay() {
     setPEmpId('')
-    setPMonth('')
+    setPMonth(currentJalaliMonth()) // ماه شمسی جاری پیش‌فرض — پیش‌نمایش کسر غیبت بلافاصله فعال شود
     setPAmount('')
     setPNotes('')
     setPPreview(null)

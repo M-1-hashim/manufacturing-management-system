@@ -6,6 +6,12 @@ import * as jalaali from 'jalaali-js'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
+/** ماه شمسی جاری به شکل «1405-06» — پیش‌فرض دیالوگ پرداخت معاش */
+export function currentJalaliMonth(now: Date = new Date()): string {
+  const j = jalaali.toJalaali(now)
+  return `${j.jy}-${String(j.jm).padStart(2, '0')}`
+}
+
 /** بازهٔ میلادی یک ماه شمسی به‌شکل «1403-01» → [start، end) — نتیجهٔ نامعتبر = null */
 export function jalaliMonthRange(month: string): { start: Date; end: Date } | null {
   const m = /^(\d{4})-(\d{2})$/.exec(String(month ?? '').trim())

@@ -46,8 +46,13 @@ function pruneFailMap(): void {
 
 // POST /api/auth/login — تصدیق هویت با نقش و بخش سازمانی + نشست کوکی امن
 // (خطاها پرتاب می‌شوند — POST پایین ترمیم اسکیما + تلاش دوباره را مدیریت می‌کند)
-async function handleLogin(req: Request): Promise<NextResponse> {
-  const { username, password } = await req.json()
+// توجه: body بیرون خوانده و پاس داده می‌شود — در retry نمی‌توان req.json() را دوباره خواند
+// (Body is unusable: Body has already been read) — باگ ۵۰۰ در لاگینِ پس از ترمیم اسکیما
+async function handleLogin(
+  body: { username?: unknown; password?: unknown },
+  req: Request
+): Promise<NextResponse> {
+  const { username, password } = body
   if (!username || !password) {
     return NextResponse.json({ error: 'نام کاربری و پسورد الزامی است' }, { status: 400 })
   }
@@ -132,6 +137,8 @@ export async function POST(req: Request) {
   // اسکیمای محلی قبل از هر کوئری تضمین می‌شود (پس از اجرای اول، فقط یک Promise کش‌شده است) —
   // بدون این، نصب‌های قدیمی (≤۱.۰.۱۸) روی اولین کوئری کاربر P2022 می‌گرفتند
   await ensureLocalSchema().catch(() => {})
+  // body فقط یک‌بار خوانده می‌شود و به handleLogin پاس داده می‌شود (retry ایمن)
+  const body = await req.json().catch(() => ({}))
   // مکانیزم «رمز ادمین را فراموش کرده‌ام» — فایل reset-admin-password.txt اگر
   // روی دیسک باشد، قبل از بررسی اعتبارنامه مصرف می‌شود (هرگز خطا پرتاب نمی‌کند؛
   // حتی ورود ناموفق ریست را اعمال می‌کند — کاربر بدون ری‌استارت برنامه رها می‌شود)
@@ -141,7 +148,7 @@ export async function POST(req: Request) {
   })
   if (reset?.attempted) console.log(`[login] admin-reset attempted complete=${reset.complete}`)
   try {
-    return await handleLogin(req)
+    return await handleLogin(body, req)
   } catch (e) {
     // شکاف اسکیما (جدول/ستون غایب) → ترمیم خودکار → یک‌بار تلاش دوباره
     if (isSchemaGapError(e)) {
@@ -149,7 +156,7 @@ export async function POST(req: Request) {
       console.warn(`[auth] schema gap repaired=${rep.repaired} (${rep.detail}) — retrying login`)
       if (rep.repaired) {
         try {
-          return await handleLogin(req)
+          return await handleLogin(body, req)
         } catch (e2) {
           console.error('login error (after repair)', e2)
           return NextResponse.json({ error: internalDbErrorText(e2) }, { status: 500 })
