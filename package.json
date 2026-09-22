@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "productName": "ManufacturingERP",
   "private": true,
   "main": "electron/main.js",

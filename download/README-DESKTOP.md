@@ -2,7 +2,7 @@
 
 نسخهٔ دسکتاپ (ویندوز) سیستم مدیریت تولید — دفترچهٔ نصب و استفاده
 
-**Version 1.0.26** — 🛠 **“خطای داخلی هاست” (Internal host error) at sign-in is FIXED**: the root cause was a missing `tokenVersion` column — local databases created by v1.0.18 or older were never upgraded, so every sign-in attempt died with a generic 500. Now the local database is **auto-upgraded before the first login**, and if any “missing table/column” error appears anyway, the app **repairs the schema automatically and retries transparently**. Fresh **web deployments on a new host now create the 19 MySQL tables automatically** on first successful ping (previously they were never created → same generic error). If a failure remains, the error message now carries the error code + a practical hint instead of an empty generic line. Local DB file writability is also enforced (antivirus/readonly-copy protection). Previous: v1.0.25 live config-file status + one-click “Create config file” answering “the file is not there” inside the app; v1.0.24 put the config file on `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` with a Persian guide + real MySQL probe (SELECT 1); 🚪 host page always shown until connected (v1.0.21/23), 🔍 clear failure messages + HTTP fallback (v1.0.22), 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
+**Version 1.0.27** — 💱 **Live exchange rates from sarafi.af** (Kabul market reference): USD & PKR are fetched automatically and applied everywhere prices are used (POS/sales, dashboard, reports, settings) with a 1-hour cache and fallback providers. 👥 **Automatic absence deduction from salary**: absent days are counted per Jalali month and deducted at a configurable daily rate (empty = 1/30 of salary), with a live preview in the payment dialog and deduction lines on the salary slip. 🎚 **RTL switch rendering fixed** across all modules. 🗑 the “Forgot admin password?” button was removed from the sign-in screen. 📤 **Connect to your host by uploading a settings file**: the first-run wizard now accepts a settings file (JSON / db-connection.txt / Windows .bat) — upload it and SSH/database fields (Windows) or the server URL (Android) are auto-filled and auto-tested; the desktop settings page can **download a settings JSON** to hand to new installs. Previous: v1.0.26 auto-repair of the “internal host error” (missing tokenVersion column) + auto table creation on fresh web hosts; v1.0.24/25 the config file on `C:\Users\<YourUser>\ManufacturingERP\db-connection.txt` + live file status + one-click “Create config file”; 🔐 host-first setup + offline sign-in (v1.0.20), 🧪 deep-tested v1.0.19.
 
 
 ### “خطای داخلی هاست” when signing in (fixed in v1.0.26)
@@ -27,8 +27,8 @@ first successful ping — previously an empty MySQL database produced the same g
 
 | File | Size | What it is |
 |---|---|---|
-| `ManufacturingERP-Setup.exe` | ~164 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
-| `ManufacturingERP-Windows-Portable.zip` | ~258 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
+| `ManufacturingERP-Setup.exe` | ~165 MB | **Real NSIS installer** (PE32, Nullsoft self-extracting, LZMA). Install via wizard, creates Start-menu + Desktop shortcuts, registers an uninstaller in "Add/Remove Programs". |
+| `ManufacturingERP-Windows-Portable.zip` | ~259 MB | Portable build (no installation). Unzip anywhere and run `ManufacturingERP.exe` directly. |
 | `host.bat` | ~9 KB | (Optional, legacy) Standalone host-connect script. **No longer needed** — the app now creates and manages the config file itself (see §3). |
 | `README-DESKTOP.md` | — | This file. |
 
@@ -256,7 +256,7 @@ ssh-password=cpanelpassword
 نکته‌ها:
 - در صفحهٔ اطلاعات هاستِ برنامه (که تا وقتی اتصال سالم نشده در شروع نشان داده می‌شود) دو دکمهٔ جدید هست: **«باز کردن فایل در ویندوز»** (فایل در Explorer نشان داده می‌شود) و **«بازخوانی از فایل»** (بعد از ویرایش فایل، مقادیر داخل فرم به‌روز می‌شود).
 - اگر اتصال ذخیره‌شده خراب باشد (رمز/نام کاربری MySQL غلط، نام دیتابیس اشتباه، تونل قطع)، برنامه در شروع **دلیل دقیق خرابی** را روی صفحهٔ هاست نشان می‌دهد و فرم با مقادیر فعلی پرشده باز می‌شود — فقط ایراد را اصلاح و ذخیره کنید.
-- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.26`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است. اگر فایل `db-connection.txt` وجود ندارد یعنی نسخهٔ نصب‌شده قدیمی است (قبل از ۱.۰.۲۴ هیچ فایلی ساخته نمی‌شد) — Setup جدید را نصب کنید؛ از نسخهٔ ۱.۰.۲۵ اگر فایل نباشد دکمهٔ «ساخت فایل تنظیمات» در همان صفحه آن را یک‌جا می‌سازد.
+- پایین صفحهٔ راه‌اندازی، شمارهٔ نسخه (`ManufacturingERP v1.0.27`) نوشته شده تا مطمئن شوید نسخهٔ جدید نصب است. اگر فایل `db-connection.txt` وجود ندارد یعنی نسخهٔ نصب‌شده قدیمی است (قبل از ۱.۰.۲۴ هیچ فایلی ساخته نمی‌شد) — Setup جدید را نصب کنید؛ از نسخهٔ ۱.۰.۲۵ اگر فایل نباشد دکمهٔ «ساخت فایل تنظیمات» در همان صفحه آن را یک‌جا می‌سازد؛ از نسخهٔ ۱.۰.۲۷ می‌توانید به‌جای تایپ، «فایل تنظیمات» را در همان صفحه آپلود کنید تا همهٔ فیلدها خودکار پر شوند.
 - `host.bat` دیگر لازم نیست — به‌عنوان ابزار اختیاری در مخزن مانده است.
 - اگر هیچ خط `mysql://` فعالی در فایل نباشد، برنامه با دیتابیس محلی (SQLite) کار می‌کند.
 

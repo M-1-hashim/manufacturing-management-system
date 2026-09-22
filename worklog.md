@@ -2016,3 +2016,28 @@ Work Log:
 Stage Summary:
 - سوییچ‌های کل سیستم (تنظیمات/کاربران/کارکنان/محصولات/فرمولاسیون) حالا در RTL و LTR درست رندر می‌شوند
 - جریان کامل «اتصال به هاست با فایل»: مدیر از تنظیمات دستگاه متصل فایل JSON (یا bat) دانلود می‌کند → برای کارمند می‌فرستد → کارمند برنامه را نصب می‌کند → در اولین باز شدن، صفحهٔ راه‌اندازی باز می‌شود → فایل را همان‌جا آپلود می‌کند → تنظیمات هاست (ویندوز: MySQL/SSH، اندروید: آدرس سرور) خودکار اعمال می‌شود
+
+---
+Task ID: 26
+Agent: main (Z.ai Code)
+Task: «setup.exe و app.apk را در git hub پوش کن» — بیلد و انتشار v1.0.27 (هر سه باینری) در GitHub Releases
+
+Work Log:
+- کشف الگوی تاریخی: Setup.exe (~172MB) از سقف ۱۰۰ مگابایتی گیت بزرگ‌تر است → طبق روال ۱.۰.۱۹ تا ۱.۰.۲۶ به‌صورت asset در GitHub Releases منتشر می‌شود نه کامیت در مخزن؛ آخرین ریلیز v1.0.26 فاقد تسک‌های ۲۴/۲۵ بود → بیلد تازهٔ ۱.۰.۲۷ لازم بود
+- محیط بیلد از نو (sandbox reset): JDK 21.0.12.1 (Adoptium) → ~/jdk21؛ build-tools r36 → ~/android-sdk/android-16؛ platform-34-ext7_r03 → ~/android-sdk/android-34 (android.jar مستقیم)؛ NSIS 3.08-3+deb12u1 از pool دبیان → ~/nsis-works/nsis-root/usr/{bin,share} (نسخهٔ غلط «3.08+deb12u1» اول 404 داد)
+- bump: package.json / src/lib/app-version.ts / electron/installer.nsi (1.0.27.0) / android/AndroidManifest.xml → 1.0.27 / versionCode 12
+- APK: build_web_export.sh (export استاتیک LOCAL_MODE=1 → android/assets/app=2.9M، رشتهٔ 1.0.27 در chunks تأیید شد) + build.sh → app.apk 1,285,456B؛ aapt2 badging: com.setab.erp versionCode=12 versionName=1.0.27؛ keystore همان SHA-256 c553eb67… ✓
+- دسکتاپ: electron/build-desktop.sh کامل (کلاینت دوم prisma-mysql، next build با .next-electron، electron-builder --win dir، ssh2 در resources/app، productName=ManufacturingERP) → win-unpacked 599M؛ app/package.json=1.0.27؛ رشتهٔ 1.0.27 در server+client chunks و sarafi در باندل ✓
+- smoke سرور بسته‌بندی‌شده: DATABASE_URL=file:/tmp/smoke → GET / 200 + ورود admin/admin123 200 + «19 tables ensured» ✓
+- Setup.exe: makensis از desktop-dist با NSISDIR → 172,620,177B؛ رشتهٔ UTF-16 «1.0.27.0» داخل باینری ✓
+- Portable.zip: zip win-unpacked → 271,875,613B (3016 فایل)
+- ریلیز v1.0.27 (id 393741153) با GitHub API ساخته شد؛ چهار asset آپلود: app.apk 1,285,456B · ManufacturingERP-Setup.exe 172,620,177B · ManufacturingERP-Windows-Portable.zip 271,875,613B · RELEASE-NOTES-v1.0.27.md 3910B — state=uploaded برای همه؛ sha256 گیت‌هاب == لوکال برای هر چهار فایل (apk 812bc756… / Setup 1b0b79dd… / Portable 22887a3c… / notes dafcfaa3…)
+- v1.0.26 → prerelease=true؛ /releases/latest → 302 → v1.0.27 ✓؛ URL عمومی Setup 302 به CDN release-assets ✓
+- MD5: apk 89d4331e8c45a091f581a3d49d52bca5 · Setup a8e8ae66ec038ab82fb4bc39a80b2325 · Portable 726c62a097177cb5f1b3b9e104e8e445
+- README-DESKTOP.md: هدر ۱.۰.۲۷ (نرخ زنده + کسر غیبت + سوییچ + آپلود فایل) + حجم‌های تازه (~165/~259MB) + نکتهٔ فارسی آپلود فایل در ویزارد
+- desktop-assets/demo-db پس از بیلد با git checkout بازگردانده شد؛ RELEASE-NOTES-v1.0.27.md (فارسی، پنج بخش تغییرات) ساخته شد
+
+Stage Summary:
+- v1.0.27 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.27 — شامل هر سه باینری تازه با تمام تغییرات تسک‌های ۲۴ (نرخ ارز زندهٔ sarafi.af + کسر خودکار غیبت)، ۲۴-test (دیباگینگ عمیق) و ۲۵ (فیکس سوییچ RTL + حذف فراموشی رمز + آپلود فایل تنظیمات هاست)
+- لینک Latest گیت‌هاب حالا به v1.0.27 اشاره می‌کند؛ نسخه‌های قدیمی‌تر همگی pre-release
+- sha256: apk 812bc7569d5c31484f66ef030e430f5f1433b2dba0c2a04d9c6823549e7e6380 · Setup 1b0b79dde1dbd744fe727fc15472f392ade3b605c301622fb2e60848c546f0d3 · Portable 22887a3c423260937a10c4af5997bc19356b4fbe38537d605cc467f7ba5911c0
