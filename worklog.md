@@ -2041,3 +2041,22 @@ Stage Summary:
 - v1.0.27 منتشر شد: https://github.com/M-1-hashim/manufacturing-management-system/releases/tag/v1.0.27 — شامل هر سه باینری تازه با تمام تغییرات تسک‌های ۲۴ (نرخ ارز زندهٔ sarafi.af + کسر خودکار غیبت)، ۲۴-test (دیباگینگ عمیق) و ۲۵ (فیکس سوییچ RTL + حذف فراموشی رمز + آپلود فایل تنظیمات هاست)
 - لینک Latest گیت‌هاب حالا به v1.0.27 اشاره می‌کند؛ نسخه‌های قدیمی‌تر همگی pre-release
 - sha256: apk 812bc7569d5c31484f66ef030e430f5f1433b2dba0c2a04d9c6823549e7e6380 · Setup 1b0b79dde1dbd744fe727fc15472f392ade3b605c301622fb2e60848c546f0d3 · Portable 22887a3c423260937a10c4af5997bc19356b4fbe38537d605cc467f7ba5911c0
+
+---
+Task ID: 27
+Agent: main (Z.ai Code)
+Task: «یک کد بده تا رمز و نام کاربری admin را ریستارت کنم» — گسترش اسکریپت ریست برای نام کاربری + رمز
+
+Work Log:
+- اسکریپت موجود فقط رمز را ریست می‌کرد (نام کاربری ثابت admin) → scripts/reset-admin-password.cjs بازنویسی شد
+- پارس آرگومان جدید parseArgs: رمز (argv1)، DATABASE_URL (argv2)، و --user=NAME یا --user NAME (در هر جای دستور)
+- جستجوی حساب هدف سه‌مرحله‌ای: username=نام-جدید → username=admin → هر حساب role=admin (برای وقتی نام کاربری فعلی فراموش شده) — در هر سه شاخه MySQL/bun/node
+- UPDATE هم‌زمان username + password + active=1 + tokenVersion+1؛ اگر حساب نبود INSERT با role=admin
+- اعتبارسنجی نام جدید: ۲..۶۴ کاراکتر حرف/عدد/._- و فاصله + یونیکد فارسی
+- تست‌ها روی کپی دیتابیس: rename به setab-admin ✓؛ اجرای دوباره بدون --user → یافتن با role و برگشت به admin ✓؛ هش scrypt تأیید (رمز جدید true / قدیمی false، tokenVersion=2) ✓؛ شاخه node:sqlite (Node 24) با نام فارسی «مدیر» ✓؛ رد رمز کوتاه و نام نامعتبر ✓؛ node --check + eslint سبز
+- شاخه MySQL بدون سرور واقعی قابل تست نبود — همان الگوی SQL تست‌شدهٔ قبلی
+- پاک‌سازی /tmp/reset-test
+
+Stage Summary:
+- ریست هم‌زمان نام کاربری و رمز مدیر ممکن شد: bun scripts/reset-admin-password.cjs "رمز-جدید" --user="نام-جدید"
+- بدون --user فقط رمز ریست می‌شود (سازگار با مصرف قبلی)؛ اگر نام کاربری فعلی فراموش شده باشد، اسکریپت خودش حساب role=admin را پیدا و به نام/رمز دلخواه ریست می‌کند
