@@ -14,6 +14,8 @@ const LOCK_MS = 15 * 60 * 1000
 // سقف حافظهٔ نقشهٔ کوشش‌های ناموفق — جلوگیری از رشد بی‌حد حافظه
 const FAIL_MAP_MAX = 1000
 const failMap = new Map<string, { count: number; lockedUntil: number }>()
+// تایم‌اوت پینگ هاست در مسیر fallback ورود — کاربر نباید برای پیام خطا صبر کند
+const HOST_FALLBACK_TIMEOUT_MS = 6000
 
 function isLocked(entry: { count: number; lockedUntil: number } | undefined): number {
   if (!entry) return 0
@@ -44,6 +46,75 @@ function pruneFailMap(): void {
   }
 }
 
+type HostUserRow = {
+  id: string
+  username: string
+  password: string
+  fullName: string
+  role: string
+  department: string
+  active: boolean
+}
+
+/**
+ * تأیید کاربر مستقیم از هاست — برگشت امن ورود (fallback):
+ * وقتی آینهٔ محلی هنوز کاربر را ندارد یا رمزش قدیمی است (مثلاً رمز در دستگاه
+ * دیگری عوض شده یا اسنپ‌شات پذیرش هاست هنوز تمام نشده)، اعتبارنامه مستقیم روی
+ * دیتابیس MySQL هاست چک می‌شود؛ در موفقیت، کاربر روی آینهٔ محلی تازه می‌شود.
+ * هر خطای هاست (قطعی/کندی) → null — ورود هرگز به‌خاطر این fallback کند یا شکسته نمی‌شود.
+ */
+async function verifyUserOnHost(username: string, password: string): Promise<HostUserRow | null> {
+  const { mysql } = dbInternal.getClients()
+  if (!mysql) return null
+  try {
+    const ping = mysql.$queryRawUnsafe('SELECT 1')
+    ping.catch(() => {}) // جلوگیری از unhandledRejection پس از تایم‌اوت مسابقه
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('HOST_FALLBACK_TIMEOUT')), HOST_FALLBACK_TIMEOUT_MS)
+      ping.then(() => { clearTimeout(timer); resolve() }, (e) => { clearTimeout(timer); reject(e) })
+    })
+    const user = (await (mysql as unknown as {
+      user: { findUnique: (a: { where: { username: string } }) => Promise<HostUserRow | null> }
+    }).user.findUnique({ where: { username } }))
+    if (!user || !user.active) return null
+    if (!verifyPassword(password, user.password)) return null
+    return user
+  } catch (e) {
+    console.warn('[auth] host fallback verify skipped:', (e as Error)?.message || e)
+    return null
+  }
+}
+
+/**
+ * تازه‌کردن آینهٔ محلی یک کاربر از ردیف هاست — بعد از fallback موفق:
+ *   • کاربر با همان username روی محلی هست → فیلدهایش با هاست به‌روز می‌شود
+ *   • نیست → با همان id هاست ساخته می‌شود تا سینک بعدی همان سطر را ببیند
+ */
+async function mirrorHostUser(hostUser: HostUserRow): Promise<void> {
+  if (!dbInternal.hasLocal()) return // استقرار وب — کاربر مستقیم روی هاست است
+  try {
+    const existing = await db.user.findUnique({ where: { username: hostUser.username } })
+    if (existing) {
+      await db.user.update({
+        where: { id: existing.id },
+        data: {
+          password: hostUser.password,
+          fullName: hostUser.fullName,
+          role: hostUser.role,
+          department: hostUser.department,
+          active: hostUser.active,
+        },
+      })
+    } else {
+      const { tokenVersion: _tv, ...rest } = hostUser as HostUserRow & { tokenVersion?: number }
+      void _tv
+      await db.user.create({ data: { ...rest } })
+    }
+  } catch (e) {
+    console.error('[auth] mirror host user failed:', e)
+  }
+}
+
 // POST /api/auth/login — تصدیق هویت با نقش و بخش سازمانی + نشست کوکی امن
 // (خطاها پرتاب می‌شوند — POST پایین ترمیم اسکیما + تلاش دوباره را مدیریت می‌کند)
 // توجه: body بیرون خوانده و پاس داده می‌شود — در retry نمی‌توان req.json() را دوباره خواند
@@ -57,6 +128,21 @@ async function handleLogin(
     return NextResponse.json({ error: 'نام کاربری و پسورد الزامی است' }, { status: 400 })
   }
 
+  // ─── گِیت سرور: تا هاست تنظیم نشده، هیچ ورودی — حتی محلی ───
+  // سیاست نسخهٔ دسکتاپ (۱.۰.۲۸+): ورود فقط با کاربران هاست؛ دیتابیس محلی فقط
+  // «آینهٔ آفلاین» همان دیتاست. وقتی سرور بدون mysql:// بالا آمده یعنی هاست
+  // هنوز تنظیم نشده — صفحهٔ ورود اصلاً نباید کار کند (و رندرر هم ویزارد نشان می‌دهد).
+  if (!dbInternal.mysqlConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          'اتصال به هاست تنظیم نشده است — ورود فقط بعد از تنظیم هاست ممکن است. در صفحهٔ راه‌اندازی، مشخصات هاست را وارد یا فایل تنظیمات را آپلود کنید.',
+        code: 'HOST_NOT_CONFIGURED',
+      },
+      { status: 451 }
+    )
+  }
+
   const uname = String(username).trim()
   const lockKey = failKey(uname, req)
   const lockMin = isLocked(failMap.get(lockKey))
@@ -67,28 +153,57 @@ async function handleLogin(
     )
   }
 
-  // آماده‌سازی خودکار حساب ادمین — فقط وقتی جدول کاربران سیستم محلی خالی است.
-  // اگر هاست تنظیم شده باشد، اول دیتای هاست کشیده می‌شود (نصب تازه روی
-  // دستگاه جدید) تا ورود با کاربران سیستم واقعی هاست انجام شود — نه ادمین ساختگی.
-  const userCountBefore = await db.user.count()
-  if (userCountBefore === 0 && dbInternal.mysqlConfigured()) {
-    await ensureInitialPull()
-  }
-  const userCount = await db.user.count()
+  // کاربران از هاست می‌آیند — اگر آینهٔ محلی خالی است (نصب تازه)، اول از هاست
+  // کشیده می‌شود تا ورود با کاربران سیستم واقعی هاست انجام شود، نه حساب ساختگی.
+  // فقط استقرار وب روی هاستِ واقعاً خالی (بدون دستگاه محلی) ادمین اول را می‌سازد.
+  let userCount = await db.user.count()
   if (userCount === 0) {
-    await db.user.create({
-      data: {
-        username: 'admin',
-        password: hashPassword('admin123'),
-        fullName: 'مدیر سیستم',
-        role: 'admin',
-        department: 'general',
-      },
-    })
-    await logAudit(null, 'bootstrap', 'auth', undefined, 'حساب ادمین پیش‌فرض در دیتابیس محلی خالی ساخته شد — admin/admin123')
+    await ensureInitialPull().catch(() => {})
+    userCount = await db.user.count()
+  }
+  if (userCount === 0) {
+    if (!dbInternal.hasLocal()) {
+      // استقرار وب (Vercel/سرور) روی هاست خالی — اولین ادمین
+      await db.user.create({
+        data: {
+          username: 'admin',
+          password: hashPassword('admin123'),
+          fullName: 'مدیر سیستم',
+          role: 'admin',
+          department: 'general',
+        },
+      })
+      await logAudit(null, 'bootstrap', 'auth', undefined, 'حساب ادمین پیش‌فرض روی هاست خالی ساخته شد — admin/admin123')
+    } else {
+      // دسکتاپ: هاست تنظیم شده ولی کاربرانش هنوز به محلی نرسیده — بدون حساب ساختگی
+      return NextResponse.json(
+        {
+          error:
+            'کاربران هاست هنوز دریافت نشده‌اند — اتصال هاست را در تنظیمات چک کنید یا چند لحظه بعد دوباره کوشش کنید (همگام‌سازی اول در پس‌زمینه انجام می‌شود).',
+          code: 'USERS_NOT_SYNCED',
+        },
+        { status: 503 }
+      )
+    }
   }
 
-  const user = await db.user.findUnique({ where: { username: uname } })
+  let user = await db.user.findUnique({ where: { username: uname } })
+  const localOk = !!user && verifyPassword(String(password), user.password)
+  if (!localOk) {
+    // ─── برگشت به هاست: شاید آینهٔ محلی قدیمی است ولی هاست همین کاربر را می‌شناسد ───
+    const hostUser = await verifyUserOnHost(uname, String(password))
+    if (hostUser) {
+      await mirrorHostUser(hostUser)
+      user = await db.user.findUnique({ where: { username: uname } })
+      await logAudit(
+        null,
+        'login_host_fallback',
+        'auth',
+        undefined,
+        `کاربر ${uname} مستقیم از هاست تأیید و آینهٔ محلی تازه شد`
+      )
+    }
+  }
   if (!user || !verifyPassword(String(password), user.password)) {
     const entry = failMap.get(lockKey) || { count: 0, lockedUntil: 0 }
     entry.count += 1

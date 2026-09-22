@@ -485,7 +485,11 @@ export default function SettingsModule() {
     try {
       const res = await connApi.reset()
       if (!res.ok) throw new Error(res.error || 'failed')
-      toast.success(t('به حالت دیتابیس محلی برگشتید — برنامه دوباره باز می‌شود…', 'ځایی حالت ته ورګرځېدل — پروګرام بیا پرانیستل کېږي…', 'Switched to local database — the app will restart…'))
+      toast.success(t(
+        'اتصال هاست حذف شد — برنامه در صفحهٔ راه‌اندازی هاست باز می‌شود (حالت محلی دیگر ورود ندارد)…',
+        'نښلون له هوسټ لیرې شو — پروګرام په امستنې پاڼه کې پرانیستل کېږي…',
+        'Host connection removed — the app will open on the host setup page (local-only mode no longer signs in)…'
+      ))
       setTimeout(() => {
         void connApi.relaunch()
       }, 1500)
@@ -1881,7 +1885,7 @@ export default function SettingsModule() {
                   {connApi && connInfo?.active && (
                     <Button variant="ghost" className="gap-2 text-destructive hover:text-destructive" onClick={resetToLocalDb} disabled={connResetting}>
                       <RotateCcw className="h-4 w-4" />
-                      {connResetting ? t('در حال تغییر…', 'په بدلون…', 'Switching…') : t('بازگشت به دیتابیس محلی', 'ځایی ډاټابیس ته بیرته‌ګرځېدل', 'Back to local database')}
+                      {connResetting ? t('در حال تغییر…', 'په بدلون…', 'Switching…') : t('حذف اتصال هاست (بازگشت به صفحهٔ راه‌اندازی)', 'له هوسټ نښلون لیرې کول (امستنې پاڼې ته)', 'Remove host connection (back to setup page)')}
                     </Button>
                   )}
                 </div>

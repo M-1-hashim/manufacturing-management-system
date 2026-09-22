@@ -1029,3 +1029,25 @@ export async function pruneServerTombstones(pair: ClientPair): Promise<void> {
     console.error('[sync] tombstone prune failed:', e)
   }
 }
+
+/* ----------------------- بکاپ اضطراری محلی (قبل از پذیرش هاست) ----------------------- */
+
+/**
+ * خواندن کامل جدول‌های سیستم از دیتابیس محلی — برای «بکاپ قبل از پذیرش هاست»:
+ * وقتی دستگاه تازهٔ دمو قرار است محتوایش با دیتای واقعی هاست جایگزین شود،
+ * اول همین خروجی در یک فایل JSON کنار دیتابیس محلی نوشته می‌شود تا هیچ
+ * داده‌ای حتی در بدترین حالت از دست نرود (بازگشت با بازیابی JSON ادمین).
+ */
+export async function dumpLocalTables(pair: ClientPair): Promise<{ table: string; rows: Row[] }[]> {
+  const out: { table: string; rows: Row[] }[] = []
+  for (const t of TABLES) {
+    try {
+      const rows = await del(pair.local, t.name).findMany({ take: TAKE_LIMIT })
+      out.push({ table: t.name, rows: rows.map((r) => (t.name === 'User' ? stripLocalOnlyFields(r) : r)) })
+    } catch (e) {
+      console.error(`[sync] dump ${t.name} failed:`, (e as Error)?.message || e)
+      out.push({ table: t.name, rows: [] })
+    }
+  }
+  return out
+}

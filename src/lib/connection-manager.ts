@@ -11,12 +11,15 @@ import {
   getLastTickResult,
   pruneServerTombstones,
   countMismatchTables,
+  dumpLocalTables,
   type ClientPair,
   type SyncSummary,
 } from '@/lib/sync-engine'
 import { ensureHostReady, createHostTables, migrateHostSchema } from '@/lib/host-setup'
 import { MYSQL_TABLE_NAMES } from '@/lib/mysql-ddl'
 import { ensureLocalSchema } from '@/lib/local-schema'
+import fs from 'fs'
+import path from 'path'
 
 /*
  * مدیریت اتصال + زمان‌بند همگام‌سازی لحظه‌ای — معماری محلی‌محور:
@@ -70,6 +73,8 @@ interface ManagerState {
   fails: number
   hostReady: boolean
   hostSetupTried: boolean
+  /** پذیرش هاست (کپی/جایگزینی اولین داده) این‌بار کوشش شده/شده */
+  adoptionTried: boolean
   /** استقرار وب روی هاست (بدون دیتابیس محلی) — جدول‌های هاست یک‌بار ساخته شدند */
   webHostReady: boolean
   webSetupTried: boolean
@@ -102,6 +107,7 @@ function st(): ManagerState {
       fails: 0,
       hostReady: false,
       hostSetupTried: false,
+      adoptionTried: false,
       webHostReady: false,
       webSetupTried: false,
       lastCheckAt: null,
@@ -161,6 +167,143 @@ async function pingMysql(): Promise<void> {
 /* ------------------------------- راه‌اندازی هاست ------------------------------- */
 
 /**
+ * هویت هاست فعلی — برای تشخیص «این دستگاه قبلاً به همین هاست وصل بوده یا نه».
+ * از env (سرور دسکتاپ آن را از db-connection.txt می‌سازد) وگرنه از DATABASE_URL.
+ * تغییر هاست (هاست/پورت/نام دیتابیس) = هویت جدید = پذیرش دوبارهٔ دادهٔ هاست.
+ */
+export function hostIdentity(): string {
+  const envId = String(process.env.ERP_HOST_IDENTITY || '').trim()
+  if (envId) return envId
+  const info = dbInternal.mysqlInfo()
+  return info ? `${info.host}:${info.port}/${info.database}` : ''
+}
+
+/** کلید متا در جدول Setting محلی — هویت آخرین هاستی که این دستگاه پذیرفته */
+const HOST_IDENTITY_META = 'sync.hostIdentity'
+/** مارکر «دیتای محلی دموی کارخانه است» — فقط در custom.db دمو سوار می‌شود */
+const DEMO_MARKER_META = 'device.demo'
+
+/**
+ * آیا دیتابیس محلی «دموی کارخانه» است (هیچ‌وقت به هاستی وصل نشده و مارکر دمو دارد)؟
+ * دیتای دمو هرگز به هاست push نمی‌شود — به‌جایش دستگاه دیتای واقعی هاست را «پذیرا» می‌شود.
+ * دستگاه‌های قدیمی (بدون مارکر) = دادهٔ واقعی محلی → رفتار محافظت‌شدهٔ قبلی.
+ */
+async function isDemoLocalDevice(pair: ClientPair): Promise<boolean> {
+  try {
+    const v = await getMeta(pair, DEMO_MARKER_META)
+    return v === '1'
+  } catch {
+    return false
+  }
+}
+
+/** مسیر پوشهٔ دیتابیس محلی — بکاپ قبل از پذیرش همان‌جا نوشته می‌شود */
+function localDbDir(): string | null {
+  const url = process.env.LOCAL_DATABASE_URL || process.env.DATABASE_URL || ''
+  if (!url.startsWith('file:')) return null
+  try {
+    return path.dirname(url.replace(/^file:/, ''))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * بکاپ کامل دیتای محلی قبل از جایگزینی با هاست — هیچ داده‌ای حتی در بدترین
+ * حالت از دست نمی‌رود؛ فایل JSON کنار دیتابیس محلی می‌ماند و با بازیابی
+ * JSON (تنظیمات → کاپی احتیاطی) قابل برگشت است.
+ */
+async function writePreAdoptionBackup(pair: ClientPair): Promise<string | null> {
+  try {
+    const dir = localDbDir()
+    if (!dir) return null
+    const tables = await dumpLocalTables(pair)
+    const payload = {
+      kind: 'mfg-pre-adoption-backup',
+      createdAt: new Date().toISOString(),
+      host: hostIdentity(),
+      tables,
+    }
+    const file = path.join(dir, `pre-adoption-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
+    fs.writeFileSync(file, JSON.stringify(payload), 'utf8')
+    console.log(`[conn] pre-adoption backup written: ${file}`)
+    return file
+  } catch (e) {
+    console.error('[conn] pre-adoption backup failed (adoption continues):', e)
+    return null
+  }
+}
+
+/**
+ * پذیرش هاست (Host Adoption) — قلب سیاست «ورود فقط با کاربران هاست»:
+ *
+ * دستگاه هرگز نباید کاربران ساختگی محلی را جلوی کاربران واقعی هاست پنهان کند.
+ * وقتی دستگاه هنوز به این هاست وصل نشده (هویت ثبت نشده):
+ *   • هاست داده دارد  → دستگاه دیتای واقعی هاست را «پذیرا» می‌شود
+ *     (کپی کامل هاست → محلی؛ قبلش بکاپ محلی نوشته می‌شود)
+ *   • هاست خالی است   →
+ *       - دستگاه واقعی (بدون مارکر دمو): کاربران/تنظیمات محلی به هاست کپی می‌شود (رفتار قدیمی)
+ *       - دستگاه دموی تازه: فقط یک ادمین تمیز (admin/admin123) روی هاست ساخته می‌شود؛
+ *         دیتای دمو هرگز به هاست نمی‌رود و محلی هم با هاست خالی جایگزین می‌شود
+ * بعد از پذیرش، هویت هاست ثبت می‌شود و تیک‌های معمولی دلتا کار می‌کنند.
+ */
+async function ensureHostAdoption(pair: ClientPair): Promise<boolean> {
+  const s = st()
+  if (s.adoptionTried) return true
+  s.adoptionTried = true
+  try {
+    const identity = hostIdentity()
+    if (!identity) return false
+    const known = await getMeta(pair, HOST_IDENTITY_META)
+    if (known === identity) {
+      initialPullDone = true
+      return true // این دستگاه قبلاً به همین هاست وصل بوده — سینک معمولی
+    }
+
+    const demo = await isDemoLocalDevice(pair)
+    const hostUsers = await pair.server.user.count()
+    console.log(
+      `[conn] host adoption needed (identity ${known ? 'changed' : 'missing'}) — ` +
+        `demo=${demo} hostUsers=${hostUsers}`
+    )
+
+    if (hostUsers > 0) {
+      // هاست دادهٔ واقعی دارد → دستگاه تبعیت می‌کند (دستگاه واقعی اول تغییرات صف‌شده را می‌فرستد)
+      if (demo) {
+        await writePreAdoptionBackup(pair)
+      } else {
+        try {
+          await runReconnectSync(pair) // push تغییرات محلی + اسنپ‌شات هاست
+        } catch (e) {
+          console.warn('[conn] adoption push-before-snapshot failed — snapshot continues:', (e as Error)?.message || e)
+        }
+      }
+      if (!demo) await writePreAdoptionBackup(pair)
+      const snap = await snapshotServerToLocal(pair)
+      s.lastSnapshotAt = new Date().toISOString()
+      s.lastSnapshotRows = snap.rows
+      console.log(`[conn] host adopted: local replaced from host (${snap.rows} rows)`)
+    } else if (demo) {
+      // هاست خالی + دستگاه دمو — ادمین تمیز در ensureHostReady ساخته شده (bootstrapFromLocal=false)
+      console.log('[conn] fresh demo device + empty host — clean admin seeded on host, demo data discarded locally')
+      const snap = await snapshotServerToLocal(pair)
+      s.lastSnapshotAt = new Date().toISOString()
+      s.lastSnapshotRows = snap.rows
+    } else {
+      console.log('[conn] real device + empty host — local users/settings were bootstrapped to host')
+    }
+
+    await setMeta(pair, HOST_IDENTITY_META, identity)
+    initialPullDone = true
+    return true
+  } catch (e) {
+    console.error('[conn] host adoption failed (will retry next check):', e)
+    s.adoptionTried = false
+    return false
+  }
+}
+
+/**
  * راه‌اندازی خودکار هاست — یک‌بار در طول عمر پروسه:
  * ساخت/تجدید جدول‌های هاست (19 جدول + ستون‌های جدید + جدول سنگ‌قبر)
  * + بوت‌استرپ استفاده‌کنندگان/تنظیمات وقتی هاست خالی است.
@@ -173,13 +316,20 @@ async function ensureHostOnce(): Promise<boolean> {
   if (!pair) return false
   s.hostSetupTried = true
   try {
-    const r = await ensureHostReady(pair)
+    // سیاست «ورود فقط با کاربران هاست»: دیتای دموی کارخانه هرگز به هاست خالی کپی نمی‌شود
+    const provisioned = (await getMeta(pair, HOST_IDENTITY_META).catch(() => null)) === hostIdentity()
+    const demo = provisioned ? false : await isDemoLocalDevice(pair)
+    const r = await ensureHostReady(pair, { bootstrapFromLocal: !demo })
     if (r.ok) {
       s.hostReady = true
       console.log(
         `[conn] host setup OK: tables ${r.tablesAfter}/${MYSQL_TABLE_NAMES.length}` +
           ` created=[${r.createdTables.join(',') || '-'}] migrated=[${r.migratedColumns.join(',') || '-'}]` +
-          (r.bootstrapped ? ` bootstrap(users:${r.copiedUsers}, settings:${r.copiedSettings})` : '')
+          (r.bootstrapped
+            ? r.seededCleanAdmin
+              ? ' clean-admin-seeded'
+              : ` bootstrap(users:${r.copiedUsers}, settings:${r.copiedSettings})`
+            : '')
       )
       return true
     }
@@ -260,6 +410,7 @@ async function switchToOnline(): Promise<void> {
   try {
     const ready = await ensureHostOnce()
     if (!ready) throw new Error('host setup failed')
+    await ensureHostAdoption(pair)
     // اگر دستگاه محلی خالی است (نصب تازه روی دستگاه جدید) → اول کپی کامل هاست
     await ensureInitialPull(pair)
     const summary = await runReconnectSync(pair, s.offlineSince)
@@ -355,11 +506,16 @@ export async function checkNow(): Promise<ReturnType<typeof getState>> {
       // برگشت خودکار به هاست + همگام‌سازی
       await switchToOnline()
     } else if (mode === 'host-mysql') {
-      // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/ستون‌ها/بوت‌استرپ) — یک‌بار
+      // اولین اتصال موفق: راه‌اندازی هاست (جدول‌ها/ستون‌ها) — یک‌بار
       // (استقرار وب بدون دیتابیس محلی — ensureWebHostOnce)
       const ready = (await ensureHostOnce()) || (await ensureWebHostOnce())
       if (ready) {
-        await ensureInitialPull()
+        const pair = getPair()
+        if (pair) {
+          // پذیرش هاست: اولین دیدار دستگاه و هاست → تصمیم کپی/جایگزینی داده
+          await ensureHostAdoption(pair)
+          await ensureInitialPull(pair)
+        }
       }
     }
   } catch (e) {

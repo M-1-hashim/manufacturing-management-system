@@ -39,6 +39,13 @@ let serverPort = null;
 let mainWindow = null;
 let quitting = false;
 let sshTunnelInstance = null; // تونل فعال (فقط در حالت ssh)
+/**
+ * هویت هاست فعلی — به سرور جاسازی‌شده پاس داده می‌شود (ERP_HOST_IDENTITY).
+ * سرور با آن می‌فهمد «این دستگاه قبلاً به همین هاست وصل بوده یا نه» (پذیرش دادهٔ هاست).
+ * در حالت ssh از sshHost/sshPort استفاده می‌کنیم نه 127.0.0.1:پورت‌تونل —
+ * چون پورت تونل در برخورد می‌تواند عوض شود و هویت نباید تغییر کند.
+ */
+let hostIdentityEnv = '';
 
 /* ---------------------------------------------------------------- logging */
 
@@ -358,6 +365,8 @@ function startServerOnPort(port, dbPath, dbUrlOverride) {
       HOSTNAME: '127.0.0.1',
       // مسیرهای فایل ریست رمز ادمین — سرور در هر POST /api/auth/login چک می‌کند
       ERP_ADMIN_RESET_FILES: adminResetCandidates().join('|'),
+      // هویت هاست برای موتور پذیرش داده (connection-manager)
+      ERP_HOST_IDENTITY: hostIdentityEnv,
     };
 
     let child = null;
@@ -820,6 +829,15 @@ async function main() {
   const dbPath = ensureDatabase();
   const cfg = parseActiveOverride();
   let dbOverride = cfg.active ? cfg.url : null;
+
+  // هویت هاست — قبل از شروع سرور ساخته می‌شود (حالت ssh: آدرس واقعی، نه تونل محلی)
+  if (cfg.active) {
+    hostIdentityEnv = cfg.sshMode
+      ? `${cfg.sshHost || ''}:${cfg.sshPort || '21098'}/${cfg.database || ''}`
+      : `${cfg.host || ''}:${cfg.port || '3306'}/${cfg.database || ''}`;
+  } else {
+    hostIdentityEnv = '';
+  }
 
   /*
    * حالت تونل SSH (هاست اشتراکی): اول تونل، بعد سرور.

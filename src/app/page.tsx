@@ -253,6 +253,22 @@ function LoginView() {
     return () => { alive = false }
   }, [])
 
+  // وضعیت واقعی اتصال هاست — فقط نسخهٔ ویندوز (سرور جاسازی‌شده):
+  // بنر «هاست تنظیم نشده / قطع است» تا کاربر بداند چرا با رمز قبلی داخل نمی‌شود
+  const isDesktopApp =
+    typeof window !== 'undefined' &&
+    (!!window.dbConnection || new URLSearchParams(window.location.search).has('desktop'))
+  const [dbInfo, setDbInfo] = useState<{ configuredForHost?: boolean; mode?: string; host?: string; database?: string } | null>(null)
+  useEffect(() => {
+    if (LOCAL_MODE || !isDesktopApp) return
+    let alive = true
+    fetch('/api/system/db-info', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j) setDbInfo(j) })
+      .catch(() => { /* بی‌اهیمت — بنر پنهان می‌ماند */ })
+    return () => { alive = false }
+  }, [isDesktopApp])
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -389,6 +405,41 @@ function LoginView() {
                   <span dir="ltr" className="font-mono font-semibold text-foreground">admin / admin123</span>
                 </p>
               )}
+            </div>
+          )}
+
+          {/* بنر وضعیت هاست — نسخهٔ ویندوز: تنظیم‌نبودن = ورود ممنوع */}
+          {dbInfo && dbInfo.configuredForHost === false && (
+            <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5 px-3.5 py-3 text-[12.5px]">
+              <p className="flex items-center gap-1.5 font-semibold text-destructive">
+                <CloudOff className="h-3.5 w-3.5 shrink-0" />
+                {t('اتصال به هاست تنظیم نشده است', 'نښلون له هوسټ سره تنظیم نه دی', 'Host connection is not configured')}
+              </p>
+              <p className="mt-1.5 leading-relaxed text-muted-foreground">
+                {t(
+                  'ورود فقط با کاربران هاست ممکن است. در صفحهٔ راه‌اندازی، مشخصات هاست را وارد کنید یا فایل تنظیمات را آپلود کنید.',
+                  'ننوتل یوازې د هوسټ کاروونکو سره کېږي. په امستنې پاڼه کې د هوسټ معلومات ډک کړئ یا د تنظیماتو فایل اپلوډ کړئ.',
+                  'Sign-in works only with host users. Enter host details or upload the setup file in the setup page.'
+                )}
+              </p>
+              <Button size="sm" className="mt-2.5 h-8" onClick={() => { window.location.href = '/?setup=1' }}>
+                {t('صفحهٔ راه‌اندازی هاست', 'د هوسټ امستنې پاڼه', 'Host setup page')}
+              </Button>
+            </div>
+          )}
+          {dbInfo && dbInfo.configuredForHost && dbInfo.mode === 'host-offline' && (
+            <div className="mb-4 rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3.5 py-2.5 text-[12.5px]">
+              <p className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
+                <CloudOff className="h-3.5 w-3.5 shrink-0" />
+                {t('هاست در دسترس نیست — با آینهٔ محلی کار می‌کنید', 'هوسټ لرې نه دی — له ځایي Mirror سره کار کوو', 'Host unreachable — working on the local mirror')}
+              </p>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                {t(
+                  'دیتای هاست روی همین دستگاه ذخیره است؛ بعد از وصل شدن انترنت، تغییرات خودکار همگام می‌شود.',
+                  'د هوسټ ډېټا په همدې وسیله کې خوندي ده؛ له انټرنټ وروسته تغییرات اتوماتیک سینکېږي.',
+                  'Host data is stored on this device; changes sync automatically once the internet is back.'
+                )}
+              </p>
             </div>
           )}
 
@@ -879,21 +930,22 @@ function Shell() {
 // ---------------- دروازهٔ راه‌اندازی اولیه ----------------
 /*
  * اولین باز شدن برنامه بعد از نصب → ویزارد تنظیمات (زبان/تم + هاست).
- * منطق تصمیم در src/lib/first-run.ts است (محض و قابل تست) — خلاصه:
- *   - نسخهٔ دسکتاپ (ویندوز): صفحهٔ اطلاعات هاست تا وقتی اتصال هاست **واقعاً**
- *     وصل نشده در هر اجرا نشان داده می‌شود — حتی اگر فایل db-connection.txt
- *     از قبل خط اتصال داشته باشد ولی عملاً وصل نمی‌شود (پروب TCP خرابی را
- *     می‌فهمد) ویزارد با مقادیر فعلی پیش‌پر و باز می‌شود. اگر کاربر «فقط این
- *     دستگاه» را انتخاب کند (فلگ mfg-setup-local-mode) دیگر تکرار نمی‌شود.
+ * منطق تصمیم در src/lib/first-run.ts است (محض و قابل تست) — خلاصه (v۱.۰.۲۸):
+ *   - نسخهٔ دسکتاپ (ویندوز): حقیقت سرور ملاک است — سرور بدون mysql:// بالا آمده
+ *     یعنی هاست تنظیم/اعمال نشده → ویزارد؛ تا هاست تنظیم نشود ورود محلی هم
+ *     وجود ندارد (سرور POST ورود را ۴۵۱ رد می‌کند). فلگ‌های قدیمی مرورگر
+ *     (mfg-setup-local-mode / mfg-setup-completed — حتی منتقل‌شده از نصب قبلی)
+ *     دیگر هیچ تاثیری ندارند. بعد از تنظیم هاست، ورود با کاربران هاست است و
+ *     دیتای هاست روی دستگاه هم ذخیره می‌شود (آینهٔ آفلاین).
  *   - نسخهٔ اندروید (LOCAL_MODE): بدون ذخیرهٔ «اطلاعات هاست» (آدرس سرور مرکزی)
  *     — یا آدرسِ ذخیره‌شدهٔ بدون تست موفق — ویزارد ادامه می‌کند، حتی اگر
  *     کاربرِ قدیمی ذخیره شده باشد. بعد از نخستین ورود موفق، حساب روی دستگاه
  *     ذخیره می‌شود و آفلاین هم ورود ممکن است.
  *   - نسخهٔ وب (مرورگر): ویزارد نمایش داده نمی‌شود — اتصال هاست از env هاست می‌آید.
  * درگاه اضطراری ?setup=1 ویزارد را همیشه و در همه‌جا باز می‌کند.
+ * ?desktop=1 (مثل خود ویزارد) شبیه‌سازی نسخهٔ ویندوز در مرورگر برای تست است.
  */
 const SETUP_FLAG = 'mfg-setup-completed'
-const LOCAL_ONLY_FLAG = 'mfg-setup-local-mode'
 
 /** نتیجهٔ پینگ ناموفق هاست — برای بنر دلیل داخل ویزارد */
 export interface DbPingFail {
@@ -910,14 +962,14 @@ function FirstRunGate() {
     let alive = true
     async function decide() {
       // درگاه اضطراری: باز کردن آدرس با ?setup=1 ویزارد را دوباره نشان می‌دهد
-      const forceSetup = new URLSearchParams(window.location.search).get('setup') === '1'
-      const localOnly = localStorage.getItem(LOCAL_ONLY_FLAG) === '1'
+      const params = new URLSearchParams(window.location.search)
+      const forceSetup = params.get('setup') === '1'
       const setupFlag = localStorage.getItem(SETUP_FLAG) === '1'
       const hasSavedUser = !!useAppStore.getState().user
       const hostCfg = getHostConfig()
       const base = {
         forceSetup,
-        localOnly,
+        localOnly: false, // فلگ «فقط این دستگاه» منسوخ — حقیقت سرور ملاک است
         setupFlag,
         hasSavedUser,
         localMode: LOCAL_MODE,
@@ -926,32 +978,49 @@ function FirstRunGate() {
         hostConfigUnverified: !!hostCfg && !hostCfg.verifiedAt,
       }
 
-      // ---- نسخهٔ دسکتاپ (ویندوز): وضعیت واقعی اتصال هاست بررسی می‌شود ----
-      if (window.dbConnection) {
+      // ---- نسخهٔ دسکتاپ (ویندوز): حقیقت سرور + وضعیت فایل اتصال بررسی می‌شود ----
+      // ?desktop=1 برای تست گیت در مرورگر (همان قرارداد ویزارد)
+      if (window.dbConnection || params.has('desktop')) {
         let infoActive = false
         let infoReachable: boolean | null = null
         let infoDbOk: boolean | null = null
+        let serverConfigured: boolean | null = null
+        let serverOfflineNeverSynced = false
         try {
-          const info = await window.dbConnection.info()
-          infoActive = !!info.active
-          infoReachable = typeof info.reachable === 'boolean' ? info.reachable : null
-          // پروب TCP فقط «پورت باز» را می‌گوید — پینگ واقعی MySQL هم لازم است:
-          // با فایل فعال و پورت باز، نام دیتابیس/رمز غلط فقط اینجا پیدا می‌شود
-          if (infoActive && infoReachable !== false && !localOnly) {
-            try {
-              const r = await fetch('/api/system/host-ping', { cache: 'no-store' })
-              if (r.ok) {
-                const j = await r.json()
-                infoDbOk = typeof j.ok === 'boolean' ? j.ok : null
-                if (infoDbOk === false && alive) {
-                  setPingFail({ kind: j.kind ?? null, error: j.error ?? null })
+          // حقیقت سرور — DATABASE_URL واقعاً mysql است؟ (نسخه‌های قدیمی سرور: null)
+          try {
+            const r = await fetch('/api/system/db-info', { cache: 'no-store' })
+            if (r.ok) {
+              const j = await r.json()
+              serverConfigured = typeof j.configuredForHost === 'boolean' ? j.configuredForHost : null
+              // تنظیم‌شده ولی هرگز واقعاً وصل نشده (هیچ اسنپ‌شاتی از هاست گرفته نشده) —
+              // احتمالاً مقادیر غلط: ویزارد با بنر دلیل باز می‌شود نه صفحهٔ ورود آینهٔ دمو
+              serverOfflineNeverSynced =
+                serverConfigured === true &&
+                j.mode === 'host-offline' &&
+                !j.lastSnapshotAt
+            }
+          } catch { serverConfigured = null }
+          if (window.dbConnection) {
+            const info = await window.dbConnection.info()
+            infoActive = !!info.active
+            infoReachable = typeof info.reachable === 'boolean' ? info.reachable : null
+            // پروب TCP + پینگ MySQL فقط برای پیش‌پرکردن/بنر دلیل داخل ویزارد لازم است
+            if (infoActive && infoReachable !== false) {
+              try {
+                const r = await fetch('/api/system/host-ping', { cache: 'no-store' })
+                if (r.ok) {
+                  const j = await r.json()
+                  infoDbOk = typeof j.ok === 'boolean' ? j.ok : null
+                  if (infoDbOk === false && alive) {
+                    setPingFail({ kind: j.kind ?? null, error: j.error ?? null })
+                  }
                 }
-              }
-              // اگر endpoint نبود (نسخه‌های قدیمی سرور) → null — بدون حلقهٔ ویزارد
-            } catch { infoDbOk = null }
+              } catch { infoDbOk = null }
+            }
           }
         } catch { /* IPC در دسترس نیست — ویزارد نشان بده */ }
-        const d = decideFirstRun({ ...base, desktop: true, infoActive, infoReachable, infoDbOk })
+        const d = decideFirstRun({ ...base, desktop: true, serverConfigured, serverOfflineNeverSynced, infoActive, infoReachable, infoDbOk })
         if (!alive) return
         if (d === 'app') {
           localStorage.setItem(SETUP_FLAG, '1')
@@ -962,7 +1031,7 @@ function FirstRunGate() {
         return
       }
 
-      const d = decideFirstRun({ ...base, desktop: false, infoActive: false, infoReachable: null, infoDbOk: null })
+      const d = decideFirstRun({ ...base, desktop: false, serverConfigured: null, infoActive: false, infoReachable: null, infoDbOk: null })
       if (!alive) return
       if (d === 'wizard') {
         setState('wizard')

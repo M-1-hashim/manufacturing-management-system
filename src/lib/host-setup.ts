@@ -1,4 +1,5 @@
 import { dbInternal } from '@/lib/db'
+import { hashPassword } from '@/lib/passwords'
 import { MYSQL_TABLES, MYSQL_TABLE_NAMES } from '@/lib/mysql-ddl'
 import type { ClientPair } from '@/lib/sync-engine'
 
@@ -34,6 +35,8 @@ export interface HostSetupReport {
   bootstrapped: boolean
   copiedUsers: number
   copiedSettings: number
+  /** ادمین تمیز (بدون دیتای دمو) روی هاست خالی ساخته شد */
+  seededCleanAdmin: boolean
   error?: string
 }
 
@@ -224,8 +227,17 @@ async function hostCounts(client: ClientPair['server']): Promise<{ users: number
 
 /**
  * راه‌اندازی کامل هاست: جدول‌ها + مهاجرت ستون‌ها + بوت‌استرپ کاربران سیستم/تنظیمات.
+ *
+ * `bootstrapFromLocal` — کپی کاربران/تنظیمات محلی به هاستِ خالی:
+ *   • true  (رفتار قدیمی): دستگاه واقعی که مدت‌ها محلی کار کرده، هاست خالی را با کاربران خود راه می‌اندازد
+ *   • false (نصب تازهٔ دمو): دیتای دمو هرگز به هاست نمی‌رود — به‌جایش یک ادمین تمیز
+ *     (admin/admin123) مستقیم روی هاست ساخته می‌شود تا ورود اولین بار با هاست انجام شود
  */
-export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport> {
+export async function ensureHostReady(
+  pair: ClientPair,
+  opts?: { bootstrapFromLocal?: boolean }
+): Promise<HostSetupReport> {
+  const bootstrapFromLocal = opts?.bootstrapFromLocal !== false
   const report: HostSetupReport = {
     ok: false,
     hostReachable: false,
@@ -237,6 +249,7 @@ export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport
     bootstrapped: false,
     copiedUsers: 0,
     copiedSettings: 0,
+    seededCleanAdmin: false,
   }
   try {
     const ddl = await createHostTables(pair.server)
@@ -258,17 +271,36 @@ export async function ensureHostReady(pair: ClientPair): Promise<HostSetupReport
     // بوت‌استرپ — فقط وقتی هاست واقعاً خالی است
     const counts = await hostCounts(pair.server)
     if (counts.users === 0) {
-      const localUsers = await pair.local.user.findMany()
-      if (localUsers.length > 0) {
-        for (let i = 0; i < localUsers.length; i += 100) {
-          const chunk = localUsers.slice(i, i + 100).map((u) => ({ ...u }))
-          await pair.server.user.createMany({ data: chunk, skipDuplicates: true as never })
+      if (bootstrapFromLocal) {
+        const localUsers = await pair.local.user.findMany()
+        if (localUsers.length > 0) {
+          for (let i = 0; i < localUsers.length; i += 100) {
+            const chunk = localUsers.slice(i, i + 100).map((u) => ({ ...u }))
+            await pair.server.user.createMany({ data: chunk, skipDuplicates: true as never })
+          }
+          report.copiedUsers = localUsers.length
+          report.bootstrapped = true
         }
-        report.copiedUsers = localUsers.length
-        report.bootstrapped = true
+      } else {
+        // نصب تازهٔ دمو + هاست خالی → ادمین تمیز روی هاست (بدون هیچ دیتای دمو)
+        try {
+          await pair.server.user.create({
+            data: {
+              username: 'admin',
+              password: hashPassword('admin123'),
+              fullName: 'مدیر سیستم',
+              role: 'admin',
+              department: 'general',
+            },
+          })
+          report.seededCleanAdmin = true
+          report.bootstrapped = true
+        } catch (e) {
+          console.error('[host-setup] clean admin seed failed:', (e as Error)?.message || e)
+        }
       }
     }
-    if (counts.settings === 0) {
+    if (counts.settings === 0 && bootstrapFromLocal) {
       const localSettings = await pair.local.setting.findMany()
       const rows = localSettings.filter((s) => !String(s.key).startsWith('sync.'))
       if (rows.length > 0) {

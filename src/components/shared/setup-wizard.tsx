@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
-  Factory, HardDrive, Cloud, Globe, Server, KeyRound, Database,
+  Factory, Cloud, Globe, Server, KeyRound, Database,
   ArrowLeft, ArrowRight, Check, CheckCircle2, RefreshCw, ShieldCheck, Info, MonitorSmartphone, AlertTriangle,
   FileText, FolderOpen, FileClock, FilePlus2, Upload,
 } from 'lucide-react'
@@ -45,8 +45,8 @@ const COLOR_THEMES = [
 ] as const
 
 const SETUP_FLAG = 'mfg-setup-completed'
-// اگر کاربر در ویزارد «فقط این دستگاه» را انتخاب کند، دیگر ویزارد تکرار نمی‌شود
-const LOCAL_ONLY_FLAG = 'mfg-setup-local-mode'
+// سیاست v۱.۰.۲۸: گزینهٔ «فقط این دستگاه» حذف شد — تا هاست تنظیم نشود
+// برنامه باز نمی‌شود (ورود فقط با کاربران هاست؛ فلگ قدیمی هم دیگر خوانده نمی‌شود)
 
 function applyTheme(id: string) {
   if (id === 'emerald') document.documentElement.removeAttribute('data-theme')
@@ -77,6 +77,24 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  /** شمارش معکوس ری‌استارت خودکار در گام پایانی — تا اتصال جدید حتماً اعمال شود */
+  const [restartIn, setRestartIn] = useState(3)
+  useEffect(() => {
+    if (step !== 4 || !conn || !saved) return
+    setRestartIn(3)
+    const id = setInterval(() => {
+      setRestartIn((n) => {
+        if (n <= 1) {
+          clearInterval(id)
+          void conn.relaunch()
+          return 0
+        }
+        return n - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [step, conn, saved])
   const [formError, setFormError] = useState<string | null>(null)
   /** نتیجهٔ آخرین تست ناموفق — برای پیام دقیق + چک‌لیست رفع مشکل */
   const [testFail, setTestFail] = useState<{ kind?: string; error?: string } | null>(null)
@@ -272,9 +290,8 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
     }
   }
 
-  function finish(localOnly = false) {
+  function finish() {
     localStorage.setItem(SETUP_FLAG, '1')
-    if (localOnly) localStorage.setItem(LOCAL_ONLY_FLAG, '1')
     onDone()
   }
 
@@ -517,60 +534,45 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
             <div className="space-y-5">
               <div>
                 <h2 className="font-semibold text-base">{t('دیتای برنامه کجا ذخیره شود؟', 'د پروګرام ډاټا چېرې خوندي شي؟', 'Where should your data be stored?')}</h2>
-                <p className="text-xs text-muted-foreground mt-1">{t('هر زمان می‌توانید از تنظیمات تغییرش دهید', 'هر وخت کولای شئ له امستنو بدل کړئ', 'You can change this anytime in Settings')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('دیتا روی هاست شما متمرکز و روی هر دستگاه هم آینهٔ آفلاین ذخیره می‌شود', 'ډاټا په هوسټ کې متمرکز او په هر وسیله کې هم افلاین Mirror کېږي', 'Data lives on your host and is mirrored offline on every device')}</p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                {/* هاست — پیشنهادی */}
-                <button
-                  onClick={() => { if (isDesktop) setStep(3) }}
-                  disabled={!isDesktop}
-                  className={cn(
-                    'relative rounded-xl border-2 p-5 text-start transition-all',
-                    isDesktop
-                      ? 'border-primary/50 bg-primary/5 hover:border-primary hover:-translate-y-0.5 cursor-pointer'
-                      : 'border-border opacity-55 cursor-not-allowed'
+              {/* هاست — تنها راه (سیاست ورود با کاربران هاست) */}
+              <button
+                onClick={() => { if (isDesktop) setStep(3) }}
+                disabled={!isDesktop}
+                className={cn(
+                  'relative rounded-xl border-2 p-5 text-start w-full transition-all',
+                  isDesktop
+                    ? 'border-primary/50 bg-primary/5 hover:border-primary hover:-translate-y-0.5 cursor-pointer'
+                    : 'border-border opacity-55 cursor-not-allowed'
+                )}
+              >
+                <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-3">
+                  <Cloud className="h-6 w-6" />
+                </div>
+                <p className="font-bold text-sm">{t('هاست انترنتی — همهٔ دستگاه‌ها به یک دیتا', 'انټرنټي هوسټ — ټول وسیلې یوې ډاټا ته', 'Internet host — all devices share one database')}</p>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-5">
+                  {t(
+                    'دیتا روی هاست شما ذخیره می‌شود؛ ورود همهٔ کاربران با حساب‌های هاست انجام می‌شود و روی هر کامپیوتر آینهٔ آفلاین هم نگه‌داری می‌شود.',
+                    'ډاټا ستاسو په هوسټ کې خوندي کېږي؛ ننوتل د ټولو کاروونکو د هوسټ حسابونو سره کېږي او په هر کمپیوټر کې افلاین Mirror هم ساتل کېږي.',
+                    'Data lives on your host; everyone signs in with host accounts and each computer keeps an offline mirror.'
                   )}
-                >
-                  <span className="absolute top-3 end-3 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5">
-                    {t('پیشنهادی', 'سپارښتنه', 'Recommended')}
-                  </span>
-                  <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-3">
-                    <Cloud className="h-6 w-6" />
-                  </div>
-                  <p className="font-bold text-sm">{t('هاست انترنتی', 'انټرنټي هوسټ', 'Internet host')}</p>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-5">
-                    {t(
-                      'دیتا روی هاست شما ذخیره می‌شود؛ همهٔ کامپیوترها به یک دیتای مشترک وصل‌اند و کاپی احتیاطی روی هاست انجام می‌شود.',
-                      'ډاټا ستاسو په هوسټ کې خوندي کېږي؛ ټول کمپیوټره یوې شریکې ډاټا ته نښلي او بیکاپ په هوسټ کې کېږي.',
-                      'Data lives on your host; all computers share one database and backups run on the host.'
-                    )}
+                </p>
+                {!isDesktop && (
+                  <p className="text-[11px] text-amber-600 mt-2 font-medium">
+                    {t('فقط در نسخهٔ ویندوز (دسکتاپ) قابل تنظیم است', 'یوازې په ویندوز نسخه کې تنظیمېدلی شي', 'Only configurable in the Windows desktop app')}
                   </p>
-                  {!isDesktop && (
-                    <p className="text-[11px] text-amber-600 mt-2 font-medium">
-                      {t('فقط در نسخهٔ ویندوز (دسکتاپ) قابل تنظیم است', 'یوازې په ویندوز نسخه کې تنظیمېدلی شي', 'Only configurable in the Windows desktop app')}
-                    </p>
-                  )}
-                </button>
+                )}
+              </button>
 
-                {/* محلی */}
-                <button
-                  onClick={() => finish(true)}
-                  className="rounded-xl border-2 border-border p-5 text-start transition-all hover:border-foreground/30 hover:-translate-y-0.5 cursor-pointer"
-                >
-                  <div className="h-11 w-11 rounded-xl bg-muted text-foreground flex items-center justify-center mb-3">
-                    <HardDrive className="h-6 w-6" />
-                  </div>
-                  <p className="font-bold text-sm">{t('فقط این دستگاه', 'یوازې همدا دستگاه', 'This device only')}</p>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-5">
-                    {t(
-                      'دیتا فقط روی همین کامپیوتر می‌ماند — بدون نیاز به هاست و انترنت. بعداً قابل انتقال به هاست است.',
-                      'ډاټا یوازې په همدې کمپیوټر پاتې کېږي — پرته له هوسټ او انټرنټ. وروسته هوسټ ته د انتقال وړ ده.',
-                      'Data stays on this computer only — no host or internet needed. Migratable later.'
-                    )}
-                  </p>
-                </button>
-              </div>
+              <p className="text-[11.5px] text-muted-foreground leading-5 rounded-lg border bg-muted/40 p-2.5">
+                {t(
+                  'از این نسخه به بعد، برنامه بدون اتصال به هاست باز نمی‌شود — دیتای تک‌دستگاهی و حساب‌های محلی حذف شد تا همهٔ کامپیوترها همیشه یک دیتای واحد داشته باشند.',
+                  'له دې نسخې وروسته، پروګرام پرته له هوسټ نه پرانیستل کېږي — ځایي حسابونه لیرې شوې ترڅو ټول کمپیوټره تل یوه ډاټا ولري.',
+                  'From this version on, the app will not open without a host connection — local-only accounts were removed so all computers always share one database.'
+                )}
+              </p>
 
               <Button variant="ghost" className="w-full" onClick={() => setStep(1)}>
                 <BackArrow className="h-4 w-4" />
@@ -952,7 +954,7 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
             </div>
           )}
 
-          {/* ================= گام 4: پایان ================= */}
+          {/* ================= گام 4: پایان — اعمال اتصال با ری‌استارت خودکار ================= */}
           {step === 4 && (
             <div className="text-center space-y-5 py-2">
               <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -962,24 +964,38 @@ export default function SetupWizard({ onDone, dbPing }: { onDone: () => void; db
                 <h2 className="font-bold text-lg">{t('تنظیمات ذخیره شد ✓', 'امستنې وثابت شوې ✓', 'Settings saved ✓')}</h2>
                 <p className="text-[13px] text-muted-foreground mt-2 leading-6">
                   {t(
-                    'برنامه برای اعمال اتصال جدید یک‌بار راه‌اندازی مجدد می‌شود. بعد از باز شدن، جدول‌های دیتابیس خودکار روی هاست ساخته می‌شوند و می‌توانید داخل شوید.',
-                    'پروګرام د نوي نښلون لپاره یو ځل بیا پرانیستل کېږي. له پرانیستلو وروسته د ډاټابیس جدولونه په اتومات ډول په هوسټ کې جوړېږي او ننوتل کولای شئ.',
-                    'The app will restart once to apply the new connection. After reopening, database tables are created automatically on the host and you can sign in.'
+                    'برنامه برای اعمال اتصال جدید یک‌بار راه‌اندازی مجدد می‌شود. بعد از باز شدن، جدول‌های دیتابیس خودکار روی هاست ساخته می‌شوند و ورود با کاربران هاست انجام می‌شود.',
+                    'پروګرام د نوي نښلون لپاره یو ځل بیا پرانیستل کېږي. له پرانیستلو وروسته جدولونه په اتومات ډول په هوسټ کې جوړېږي او ننوتل د هوسټ کاروونکو سره کېږي.',
+                    'The app will restart once to apply the new connection. After reopening, tables are created on the host and you sign in with host users.'
                   )}
                 </p>
               </div>
-              {conn && (
-                <Button size="lg" className="h-12 px-8 text-base" onClick={() => { void conn.relaunch() }}>
-                  <RefreshCw className="h-5 w-5" />
-                  {t('راه‌اندازی مجدد برنامه', 'پروګرام بیا پرانیستل', 'Restart the app now')}
-                </Button>
+              {conn ? (
+                <div className="space-y-3">
+                  <p className="text-[12.5px] text-muted-foreground flex items-center justify-center gap-2" aria-live="polite">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    {t(
+                      `راه‌اندازی مجدد خودکار تا ${restartIn} ثانیه…`,
+                      `پروګرام په اتومات ډول له ${restartIn} ثانیو بیا پرانیستل کېږي…`,
+                      `Restarting automatically in ${restartIn}s…`
+                    )}
+                  </p>
+                  <Button size="lg" className="h-12 px-8 text-base" onClick={() => { void conn.relaunch() }}>
+                    <RefreshCw className="h-5 w-5" />
+                    {t('راه‌اندازی مجدد همین حالا', 'همدا اوس بیا پرانیستل', 'Restart now')}
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <Button variant="ghost" size="sm" onClick={() => finish()}>
+                    <MonitorSmartphone className="h-4 w-4" />
+                    {t('ادامه به برنامه', 'پروګرام ته دوام', 'Continue to the app')}
+                  </Button>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {t('این حالت فقط برای تست مرورگر است — در نسخهٔ ویندوز برنامه خودکار ری‌استارت می‌شود.', 'دا حالت یوازې د براوزر ازموینې لپاره دی — په ویندوز کې پروګرام اتوماتیک بیا پرانیستل کېږي.', 'Browser-test mode only — the Windows app restarts automatically.')}
+                  </p>
+                </div>
               )}
-              <div>
-                <Button variant="ghost" size="sm" onClick={() => finish()}>
-                  <MonitorSmartphone className="h-4 w-4" />
-                  {t('بعداً راه‌اندازی می‌کنم — ادامه به برنامه', 'وروسته بیا پرانیزم — پروګرام ته دوام', 'Restart later — continue to the app')}
-                </Button>
-              </div>
             </div>
           )}
         </div>
