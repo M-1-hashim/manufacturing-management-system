@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getLiveRates } from '@/lib/exchange-rate'
 
 // GET /api/dashboard — همه داده‌های خلاصه داشبورد در یک درخواست
 export async function GET() {
   try {
+    // تجدید خودکار اسعار (sarafi.af) — کش حافظه ۱ ساعته؛ فقط وقتی تجدید خودکار فعال باشد
+    // تنظیمات به‌روز می‌شود تا مصارف/گزارش‌ها همیشه نرخ تازه را ببینند. هرگز مسیر را نمی‌شکند.
+    await getLiveRates().catch(() => null)
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -2,7 +2,7 @@
 
 // ماژول تنظیمات — معلومات شرکت، اسعار، مالیات پیش‌فرض + کاپی احتیاطی خودکار
 import { useEffect, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput, MonitorDown } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Coins, Percent, Save, Calendar, Languages, DatabaseBackup, Download, Trash2, RefreshCw, HardDriveDownload, Upload, RotateCcw, Wifi, WifiOff, ArrowLeftRight, Smartphone, FileJson, Server, FileDown, BookOpen, FolderOpen, ExternalLink, Database, KeyRound, ShieldCheck, Palette, Sun, Moon, Check, Table2, FolderInput, MonitorDown, UserMinus, CalendarX } from 'lucide-react'
 import { PageHeader, LoadingBlock } from '@/components/shared/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -788,6 +788,7 @@ export default function SettingsModule() {
         pkrRate: form.pkrRate ?? '1',
         defaultTax: form.defaultTax ?? '2',
         ratesAutoSync: form.ratesAutoSync ?? '1',
+        absentDeductionPerDay: form.absentDeductionPerDay ?? '',
       })
       toast.success(t('تنظیمات ذخیره شد', 'امستنې خوندي شوې', 'Settings saved'))
       refetch()
@@ -912,7 +913,7 @@ export default function SettingsModule() {
                 <div className="min-w-0">
                   <Label htmlFor="ratesAutoSync" className="cursor-pointer">{t('تجدید خودکار نرخ‌ها', 'اتوماتیک بروز رسانی نرخونه', 'Auto-update rates')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('نرخ‌ها هر ساعت از انترنت گرفته و ذخیره می‌شوند؛ در قطعی انترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له انټرنټ اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly and stored; last known rates are used when offline.')}
+                    {t('نرخ‌ها هر ساعت از سرای افغانی (sarafi.af) گرفته و ذخیره می‌شوند؛ در قطعی انترنت آخرین نرخ استفاده می‌شود.', 'نرخونه هر ساعت له سرای افغاني (sarafi.af) اخیستل او ذخیره کیږي؛ د انټرنټ پرېکېدو کې وروستنی نرخ کارول کیږي.', 'Rates are fetched hourly from sarafi.af and stored; last known rates are used when offline.')}
                   </p>
                 </div>
                 <Switch id="ratesAutoSync" checked={form.ratesAutoSync !== '0'} onCheckedChange={(v) => void toggleAutoSync(v)} />
@@ -945,6 +946,46 @@ export default function SettingsModule() {
           </Card>
         </div>
       </div>
+
+      {/* کسر خودکار غیبت از معاش */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserMinus className="h-4 w-4 text-primary" />
+            {t('کسر خودکار غیبت از معاش', 'اتوماتيک د غېبت کسر له معاشه', 'Automatic absence deduction')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="absentDeductionPerDay">
+                {t('کسر به‌ازای هر روز غیبت (AFG)', 'د هر ورځې غېبت کسر (AFG)', 'Deduction per absent day (AFG)')}
+              </Label>
+              <Input
+                id="absentDeductionPerDay"
+                dir="ltr"
+                type="number"
+                min="0"
+                step="0.01"
+                className="text-end"
+                placeholder={t('خالی = ۱/۳۰ معاش', 'تش = ۱/۳۰ معاش', 'Empty = 1/30 of salary')}
+                value={form.absentDeductionPerDay ?? ''}
+                onChange={(e) => set('absentDeductionPerDay', e.target.value)}
+              />
+            </div>
+            <div className="flex items-start gap-2 text-xs text-muted-foreground rounded-lg border border-dashed p-2.5">
+              <CalendarX className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <p>
+                {t(
+                  'در ثبت پرداخت معاش، روزهای غایبِ همان ماه شمسی از حاضری شمرده می‌شوند و به این مقدار از معاش کم می‌شود. اگر خالی بماند، یک‌سی‌ام معاش ماهانهٔ همان کارمند به‌ازای هر روز غیبت کسر می‌شود.',
+                  'د معاش ورکولو په ثبت کې، د همدې میاشتې غېبت ورځې له حاضرو څخه شمېرل کیږي او دا اند له معاشه کم کیږي. که تش پرېښودل شي، د هر کوونکي د میاشتني معاش ۱/۳ برخه د هرې ورځې غېبت لپاره کم کیږي.',
+                  'When recording a salary payment, absent days of that Shamsi month are counted from attendance and deducted at this rate. If empty, 1/30 of the monthly salary is deducted per absent day.'
+                )}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* زبان و تقویم */}
       <Card>

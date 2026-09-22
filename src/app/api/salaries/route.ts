@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { tallyAttendance, absenceDeduction } from '@/lib/salary-deduction'
 
 // GET /api/salaries?employeeId= — پرداخت‌های معاش
 export async function GET(req: Request) {
@@ -44,8 +45,31 @@ export async function POST(req: Request) {
     const employee = await db.employee.findUnique({ where: { id: employeeId } })
     if (!employee) return NextResponse.json({ error: 'کارمند یافت نشد' }, { status: 404 })
 
+    // کسر خودکار غیبت — روزهای «غایب» ثبت‌شدهٔ حاضری در همین ماه شمسی شمرده می‌شوند و
+    // به مقدار تنظیم‌شده (absentDeductionPerDay؛ خالی → ۱/۳۰ معاش) از معاش کم می‌شود.
+    // applyDeduction=false → کسر صفر می‌ماند (پرداخت کامل دستی). روزهای غیبت همیشه ثبت می‌شوند.
+    const attRows = await db.attendance.findMany({
+      where: { employeeId },
+      select: { status: true, date: true },
+      take: 5000,
+    })
+    const stats = tallyAttendance(attRows, month)
+    const settingRow = await db.setting
+      .findUnique({ where: { key: 'absentDeductionPerDay' } })
+      .catch(() => null)
+    const applyDeduction = body.applyDeduction !== false
+    const { deduction } = absenceDeduction(employee.salary, stats.absentDays, settingRow?.value)
+
     const row = await db.salaryPayment.create({
-      data: { employeeId, month, amount, date, notes },
+      data: {
+        employeeId,
+        month,
+        amount,
+        absentDays: stats.absentDays,
+        deduction: applyDeduction ? deduction : 0,
+        date,
+        notes,
+      },
       include: { employee: { select: { name: true } } },
     })
     return NextResponse.json(row, { status: 201 })

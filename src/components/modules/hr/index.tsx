@@ -1,7 +1,7 @@
 'use client'
 
 // ماژول منابع بشری — کارکنان، حاضری، معاش و اجرت
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Banknote,
   CalendarCheck,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFetch } from '@/lib/hooks'
+import { apiGet } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
 import { formatMoney, formatNumber, jalaliMonthName, STATUS_COLORS, toJalaliStr } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -103,9 +104,24 @@ interface Sal {
   employeeId: string
   month: string
   amount: number
+  absentDays?: number
+  deduction?: number
   date: string
   notes?: string | null
   employee?: { name: string }
+}
+
+// پاسخ پیش‌نمایش کسر غیبت — آینهٔ GET /api/salaries/preview
+interface SalPreview {
+  salary: number
+  absentDays: number
+  presentDays: number
+  leaveDays: number
+  rangeOk: boolean
+  perDay: number
+  deduction: number
+  suggestedAmount: number
+  alreadyPaid: number | null
 }
 
 // هدف حذف با تأیید — کارمند / رکورد حاضری / پرداخت معاش
@@ -183,6 +199,35 @@ export default function HrModule() {
   const [pAmount, setPAmount] = useState('')
   const [pNotes, setPNotes] = useState('')
   const [pSaving, setPSaving] = useState(false)
+  const [pPreview, setPPreview] = useState<SalPreview | null>(null)
+  const [pPreviewLoading, setPPreviewLoading] = useState(false)
+
+  // پیش‌نمایش کسر غیبت — هر بار کارمند/ماه معتبر تغییر کند، از سرور گرفته می‌شود
+  // و مبلغ پیشنهادی (معاش − کسر) پیش‌فرض می‌گردد؛ کاربر همچنان می‌تواند آن را دستی تغییر دهد
+  useEffect(() => {
+    const monthOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(pMonth.trim())
+    if (!payOpen || !pEmpId || !monthOk) {
+      setPPreview(null)
+      return
+    }
+    let alive = true
+    setPPreviewLoading(true)
+    apiGet<SalPreview>(`/api/salaries/preview?employeeId=${encodeURIComponent(pEmpId)}&month=${encodeURIComponent(pMonth.trim())}`)
+      .then((r) => {
+        if (!alive) return
+        setPPreview(r)
+        if (r.rangeOk && r.suggestedAmount > 0) setPAmount(String(r.suggestedAmount))
+      })
+      .catch(() => {
+        if (alive) setPPreview(null)
+      })
+      .finally(() => {
+        if (alive) setPPreviewLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [pEmpId, pMonth, payOpen])
 
   // چاپ — فیش معاش و گزارش حاضری
   const [printSal, setPrintSal] = useState<Sal | null>(null)
@@ -378,6 +423,7 @@ export default function HrModule() {
     setPMonth('')
     setPAmount('')
     setPNotes('')
+    setPPreview(null)
     setPayOpen(true)
   }
   async function submitPay() {
@@ -1040,6 +1086,44 @@ export default function HrModule() {
               <Label>{t('یادداشت', 'یادښت', 'Notes')}</Label>
               <Textarea rows={2} value={pNotes} onChange={(e) => setPNotes(e.target.value)} />
             </div>
+
+            {/* پیش‌نمایش کسر خودکار غیبت */}
+            {pPreview && pPreview.rangeOk && (
+              <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3 text-sm">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <UserX className="h-4 w-4 shrink-0 text-red-600" />
+                  {t('کسر خودکار غیبت', 'اتوماتيک د غېبت کسر', 'Automatic absence deduction')}
+                  {pPreviewLoading && (
+                    <span className="text-xs text-muted-foreground">{t('...', '...', '...')}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <span className="text-muted-foreground">{t('معاش اساسی', 'بنسټیز معاش', 'Base salary')}</span>
+                  <span className="text-end font-medium" dir="ltr">{formatNumber(pPreview.salary)} AFG</span>
+                  <span className="text-muted-foreground">{t('روزهای غیبت این ماه', 'د دې میاشتې غېبت ورځې', 'Absent days this month')}</span>
+                  <span className={cn('text-end font-medium', pPreview.absentDays > 0 && 'text-red-600')} dir="ltr">
+                    {formatNumber(pPreview.absentDays)}
+                  </span>
+                  <span className="text-muted-foreground">{t('کسر روزانه', 'ورځنی کسر', 'Per-day deduction')}</span>
+                  <span className="text-end" dir="ltr">{formatNumber(pPreview.perDay, 2)} AFG</span>
+                  <span className="text-muted-foreground">{t('مجموع کسر', 'ټول کسر', 'Total deduction')}</span>
+                  <span className={cn('text-end font-medium', pPreview.deduction > 0 && 'text-red-600')} dir="ltr">
+                    − {formatNumber(pPreview.deduction, 2)} AFG
+                  </span>
+                  <span className="text-muted-foreground">{t('حاضری/رخصتی', 'حاضره/رخصتي', 'Present / leave')}</span>
+                  <span className="text-end" dir="ltr">{formatNumber(pPreview.presentDays)} / {formatNumber(pPreview.leaveDays)}</span>
+                </div>
+                {pPreview.alreadyPaid !== null && (
+                  <p className="text-xs text-amber-600">
+                    {t(
+                      `هشدار: برای این ماه قبلاً پرداخت ${formatNumber(pPreview.alreadyPaid)} AFG ثبت شده است.`,
+                      `خبرداری: د دې میاشتې لپاره مخکې ${formatNumber(pPreview.alreadyPaid)} AFG پرداخت ثبت شوی.`,
+                      `Warning: a payment of ${formatNumber(pPreview.alreadyPaid)} AFG was already recorded for this month.`
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayOpen(false)}>
@@ -1139,6 +1223,22 @@ function SalarySlipDialog({
             label: t('معاش اساسی', 'بنسټیز معاش', 'Base salary'),
             value: emp ? formatMoney(emp.salary) : '—',
           },
+          ...(payment.absentDays
+            ? [
+                {
+                  label: t('روزهای غیبت', 'غېبت ورځې', 'Absent days'),
+                  value: formatNumber(payment.absentDays),
+                },
+              ]
+            : []),
+          ...(payment.deduction
+            ? [
+                {
+                  label: t('کسر غیبت', 'د غېبت کسر', 'Absence deduction'),
+                  value: `− ${formatMoney(payment.deduction)}`,
+                },
+              ]
+            : []),
         ]}
         grandLabel={t('پرداخت‌شده', 'پرداخت شوی', 'Paid')}
         grandValue={formatMoney(payment.amount)}

@@ -1,22 +1,27 @@
 'use client'
 
 /**
- * هندلرهای پرداخت معاش — آینهٔ src/app/api/salaries/route.ts و [id]/route.ts
+ * هندلرهای پرداخت معاش — آینهٔ src/app/api/salaries/route.ts، preview/route.ts و [id]/route.ts
  * GET با ضمیمهٔ کارمند {name} — ترتیب date و سپس createdAt نزولی (حداکثر 500)
+ * کسر خودکار غیبت مثل هاست: روزهای غایب ماه شمسی × نرخ روزانه (absentDeductionPerDay یا ۱/۳۰ معاش)
  */
 
 import { ApiError, bodyAs, route, type RouteDef } from '../types'
-import { newRow, readCol, writeCol, type Row } from '../db'
+import { newRow, readCol, writeCol, getSetting, type Row } from '../db'
+import { tallyAttendance, absenceDeduction } from '@/lib/salary-deduction'
 
 interface LocalSalaryPayment extends Row {
   employeeId: string
   month: string
   amount: number
+  absentDays: number
+  deduction: number
   date: string
   notes: string | null
 }
 interface LocalEmployee extends Row {
   name: string
+  salary?: number
 }
 
 function timeOf(v: unknown): number {
@@ -30,6 +35,46 @@ function withEmployee(s: LocalSalaryPayment, employees: LocalEmployee[]) {
 }
 
 export const routes: RouteDef[] = [
+  // GET /api/salaries/preview?employeeId=&month= — پیش‌نمایش کسر غیبت (قبل از /api/salaries/:id)
+  route('GET', '/api/salaries/preview', (ctx) => {
+    const employeeId = String(ctx.url.searchParams.get('employeeId') ?? '')
+    const month = String(ctx.url.searchParams.get('month') ?? '').trim()
+    if (!employeeId) throw new ApiError(400, 'کارمند انتخاب نشده است')
+    if (!/^\d{4}-\d{2}$/.test(month)) throw new ApiError(400, 'ماه باید به شکل 1403-01 باشد')
+
+    const employees = readCol<LocalEmployee>('employees')
+    const employee = employees.find((e) => e.id === employeeId)
+    if (!employee) throw new ApiError(404, 'کارمند یافت نشد')
+    const salary = Number(employee.salary) || 0
+
+    const attRows = readCol<{ status: string; date: string }>('attendance').filter(
+      (a) => a.employeeId === employeeId
+    )
+    const stats = tallyAttendance(attRows, month)
+    const { perDay, deduction } = absenceDeduction(
+      salary,
+      stats.absentDays,
+      getSetting('absentDeductionPerDay')
+    )
+    const suggestedAmount = Math.max(0, Math.round((salary - deduction) * 100) / 100)
+
+    const paid = readCol<LocalSalaryPayment>('salaries').find(
+      (s) => s.employeeId === employeeId && s.month === month
+    )
+
+    return {
+      salary,
+      absentDays: stats.absentDays,
+      presentDays: stats.presentDays,
+      leaveDays: stats.leaveDays,
+      rangeOk: stats.rangeOk,
+      perDay,
+      deduction,
+      suggestedAmount,
+      alreadyPaid: paid ? paid.amount : null,
+    }
+  }),
+
   // GET /api/salaries?employeeId= — پرداخت‌های معاش
   route('GET', '/api/salaries', (ctx) => {
     const employeeId = ctx.url.searchParams.get('employeeId') || undefined
@@ -70,10 +115,24 @@ export const routes: RouteDef[] = [
       date = parsed
     }
 
+    // کسر خودکار غیبت — مثل هاست (applyDeduction=false → پرداخت کامل دستی)
+    const attRows = readCol<{ status: string; date: string }>('attendance').filter(
+      (a) => a.employeeId === employeeId
+    )
+    const stats = tallyAttendance(attRows, month)
+    const applyDeduction = body.applyDeduction !== false
+    const { deduction } = absenceDeduction(
+      Number(employee.salary) || 0,
+      stats.absentDays,
+      getSetting('absentDeductionPerDay')
+    )
+
     const row = newRow({
       employeeId,
       month,
       amount,
+      absentDays: stats.absentDays,
+      deduction: applyDeduction ? deduction : 0,
       date: date.toISOString(),
       notes,
     })

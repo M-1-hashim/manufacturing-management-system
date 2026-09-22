@@ -71,7 +71,12 @@ const SYNC_COLUMNS: { table: string; columns: { name: string; sql: string }[] }[
   { table: 'Expense', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
   { table: 'Employee', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
   { table: 'Attendance', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
-  { table: 'SalaryPayment', columns: [{ name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' }] },
+  { table: 'SalaryPayment', columns: [
+    { name: 'updatedAt', sql: 'ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)' },
+    // کسر خودکار غیبت از معاش — ارتقای هاست‌های قدیمی (v2.1+)
+    { name: 'absentDays', sql: 'ADD COLUMN `absentDays` INT NOT NULL DEFAULT 0' },
+    { name: 'deduction', sql: 'ADD COLUMN `deduction` DOUBLE NOT NULL DEFAULT 0' },
+  ] },
   {
     table: 'Setting',
     columns: [

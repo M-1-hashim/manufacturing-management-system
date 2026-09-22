@@ -353,6 +353,8 @@ model SalaryPayment {
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   month      String // مثال: 1403-01 (شمسی)
   amount     Float
+  absentDays Int    @default(0) // روزهای غیبت ثبت‌شدهٔ این ماه در لحظهٔ پرداخت
+  deduction  Float  @default(0) // مبلغ کسر غیبت از معاش (به افغانی)
   date       DateTime @default(now())
   notes      String?  @db.Text
   createdAt  DateTime @default(now())

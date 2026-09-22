@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getLiveRates } from '@/lib/exchange-rate'
 
 // GET /api/reports?range=90 — گزارشات کامل (فروش، تولید، مالی، انبار)
 export async function GET(req: Request) {
   try {
+    // تجدید خودکار اسعار (sarafi.af) — کش حافظه ۱ ساعته؛ هرگز مسیر را نمی‌شکند
+    await getLiveRates().catch(() => null)
     const { searchParams } = new URL(req.url)
     let range = Number(searchParams.get('range') ?? '90')
     if (!Number.isFinite(range) || range <= 0) range = 90

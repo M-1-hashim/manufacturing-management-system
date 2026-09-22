@@ -1,6 +1,7 @@
 // اسعار لحظه‌ای — دریافت از API عمومی واقعی (رایگان بدون کلید)
-// منبع اصلی: exchangerate-api.com (open.er-api.com)
-// منبع کاپی احتیاطی: fawazahmed0 currency-api روی CDN jsDelivr
+// منبع اصلی: sarafi.af (سرای افغانی — مرجع بازار کابل) — https://sarafi.af/api/rates
+// کاپی احتیاطی ۱: exchangerate-api.com (open.er-api.com)
+// کاپی احتیاطی ۲: fawazahmed0 currency-api روی CDN jsDelivr
 // کش حافظه 1 ساعته + ذخیره در دیتابیس تا حتی هنگام قطع انترنت، آخرین نرخ در دسترس باشد
 import { db } from '@/lib/db'
 
@@ -50,7 +51,41 @@ interface ProviderResult {
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
-// ---- منبع اصلی: open.er-api.com ----
+// ---- منبع اصلی: sarafi.af — سرای افغانی (بازار کابل) ----
+// پاسخ: آرایه‌ای از { currency، buy_rate، sell_rate، updated_at } — نرخ‌ها به افغانی
+// قرارداد نمایش کلدار در سرای افغانی «هر ۱۰۰۰ کلدار» است (مثلاً 226 AFG → 0.226 به‌ازای هر کلدار
+// — با نرخ کراس er-api تأیید شد). گارد اعتبار زیر اگر روزی قرارداد عوض شود منبع را رد می‌کند
+// تا کاپی احتیاطی استفاده شود — نه نرخ غلط.
+async function fromSarafi(): Promise<ProviderResult> {
+  const j = (await fetchJson('https://sarafi.af/api/rates')) as Array<{
+    currency?: string
+    buy_rate?: string
+    sell_rate?: string
+    updated_at?: string
+  }>
+  if (!Array.isArray(j)) throw new Error('sarafi: bad payload')
+  const pick = (cur: string) => j.find((r) => String(r.currency ?? '').toUpperCase() === cur)
+  const usdRow = pick('USD')
+  if (!usdRow) throw new Error('sarafi: USD row missing')
+  const mid = (r: { buy_rate?: string; sell_rate?: string }) =>
+    (Number(r.buy_rate) + Number(r.sell_rate)) / 2
+  const usd = mid(usdRow)
+  const pkrRow = pick('PKR')
+  const pkr = pkrRow ? mid(pkrRow) / 1000 : 0 // قرارداد ۱۰۰۰ کلدار → نرخ واحد
+  if (!(usd >= 10 && usd <= 500)) throw new Error(`sarafi: USD out of range (${usd})`)
+  if (pkrRow && !(pkr >= 0.005 && pkr <= 5)) throw new Error(`sarafi: PKR out of range (${pkr})`)
+  const stamps = [usdRow.updated_at, pkrRow?.updated_at]
+    .filter((s): s is string => Boolean(s))
+    .sort()
+  return {
+    usd: round2(usd),
+    pkr: pkrRow ? round2(pkr) : 0,
+    source: 'sarafi.af',
+    updatedAt: stamps.length ? new Date(stamps[stamps.length - 1]).toISOString() : new Date().toISOString(),
+  }
+}
+
+// ---- کاپی احتیاطی ۱: open.er-api.com ----
 async function fromErApi(): Promise<ProviderResult> {
   const j = (await fetchJson('https://open.er-api.com/v6/latest/USD')) as {
     result?: string
@@ -76,7 +111,7 @@ async function fromErApi(): Promise<ProviderResult> {
   }
 }
 
-// ---- منبع کاپی احتیاطی: currency-api روی jsDelivr ----
+// ---- کاپی احتیاطی ۲: currency-api روی jsDelivr ----
 async function fromJsDelivr(): Promise<ProviderResult> {
   const j = (await fetchJson(
     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json'
@@ -94,7 +129,7 @@ async function fromJsDelivr(): Promise<ProviderResult> {
 }
 
 async function fetchLive(): Promise<ProviderResult> {
-  const providers = [fromErApi, fromJsDelivr]
+  const providers = [fromSarafi, fromErApi, fromJsDelivr]
   let lastErr: unknown = null
   for (const p of providers) {
     try {

@@ -386,6 +386,8 @@ export const MYSQL_TABLES: DdlTable[] = [
       `  \`employeeId\` VARCHAR(191) NOT NULL,\n` +
       `  \`month\` VARCHAR(191) NOT NULL,\n` +
       `  \`amount\` DOUBLE NOT NULL,\n` +
+      `  \`absentDays\` INT NOT NULL DEFAULT 0,\n` +
+      `  \`deduction\` DOUBLE NOT NULL DEFAULT 0,\n` +
       `  \`date\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +
       `  \`notes\` TEXT NULL,\n` +
       `  \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n` +

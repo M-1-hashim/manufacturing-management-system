@@ -77,6 +77,6 @@ export function decideFirstRun(i: FirstRunInput): FirstRunDecision {
   // ---------- نسخهٔ وب / بقیهٔ حالت‌ها ----------
   if (i.setupFlag) return 'app'
   if (i.hasSavedUser) return 'app'
-  if (i.localMode) return 'wizard' // دفاعی — بالاتر پوشش داده شده (به‌جز دمو)
+  if (i.localMode && !i.demoMode) return 'wizard' // دفاعی — دمو ویزارد ندارد؛ مستقیم صفحهٔ ورود
   return 'app' // وب تازه / دمو — بدون ویزارد
 }

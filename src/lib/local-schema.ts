@@ -333,12 +333,18 @@ const SPECS: TableSpec[] = [
       "employeeId" TEXT NOT NULL,
       "month" TEXT NOT NULL,
       "amount" REAL NOT NULL,
+      "absentDays" INTEGER NOT NULL DEFAULT 0,
+      "deduction" REAL NOT NULL DEFAULT 0,
       "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "notes" TEXT,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
-    columns: [],
+    /* نصب‌های قدیمی (≤۲.۰.۰) ستون‌های کسر غیبت را ندارند — ALTER خودکار در اجرا */
+    columns: [
+      { name: 'absentDays', ddl: '"absentDays" INTEGER NOT NULL DEFAULT 0' },
+      { name: 'deduction', ddl: '"deduction" REAL NOT NULL DEFAULT 0' },
+    ],
     indexes: [],
   },
   {
